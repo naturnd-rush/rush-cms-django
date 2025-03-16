@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "RUSH Initiative Admin Site"
+version = "0.1.0"
+description = "Admin website for the RUSH Initiative"
+authors = ["Samuel Morris <dodobird181@gmail.com>"]
+license = "GNU GENERAL PUBLIC LICENSE v3"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = "^5.1.7"
+psycopg = {extras = ["binary"], version = "^3.2.6"}
+django-summernote = "^0.8.20.0"
+graphene-django = "^3.2.3"
+django-simple-history = "^3.8.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
