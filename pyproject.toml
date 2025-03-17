@@ -14,6 +14,7 @@ psycopg = {extras = ["binary"], version = "^3.2.6"}
 django-summernote = "^0.8.20.0"
 graphene-django = "^3.2.3"
 django-simple-history = "^3.8.0"
+pillow = "^11.1.0"
 
 [build-system]
 requires = ["poetry-core"]
