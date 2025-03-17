@@ -103,9 +103,87 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
 
 
+class MapDataAdminForm(forms.ModelForm):
+    class Meta:
+        model = MapData
+        fields = "__all__"
+        widgets = {
+            "geojson": forms.Textarea(
+                attrs={"rows": 35, "cols": 120, "id": "geojson-input"}
+            ),
+        }
+
+    class Media:
+        css = {
+            "all": [
+                "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+            ]
+        }
+        js = [
+            "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+            # "/static/admin/js/geojson_preview.js",  # custom preview
+        ]
+
+
 @admin.register(MapData)
 class MapDataAdmin(SimpleHistoryAdmin):
+    form = MapDataAdminForm
     exclude = ["id"]
+    list_display = ["name", "provider"]
+
+    def render_change_form(self, request, context, *args, **kwargs):
+        obj = context.get("original")
+        geojson_data = obj.geojson if obj and obj.geojson else {}
+
+        # Leaflet map HTML preview with input handling for dynamic updates
+        leaflet_html = f"""
+        <div id="map-preview" style="height: 400px; margin-bottom: 1em;"></div>
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {{
+                // Initialize map
+                let map = L.map('map-preview').setView([0, 0], 2);
+                L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                    maxZoom: 18,
+                    attribution: '© OpenStreetMap contributors'
+                }}).addTo(map);
+
+                // Handle GeoJSON data and update the map
+                let geojsonData = {geojson_data};
+                let geoJsonLayer;
+                
+                if (geojsonData && geojsonData.type === "FeatureCollection") {{
+                    geoJsonLayer = L.geoJSON(geojsonData).addTo(map);
+                    map.fitBounds(geoJsonLayer.getBounds());
+                }}
+                
+                // Monitor for changes in the GeoJSON input
+                const geojsonInput = document.getElementById('geojson-input');
+                if (geojsonInput) {{
+                    geojsonInput.addEventListener('input', function() {{
+                        let data = null;
+                        try {{
+                            data = JSON.parse(geojsonInput.value);
+                        }} catch (e) {{
+                            console.warn("Invalid GeoJSON:", e);
+                            data = JSON.parse("{{}}");
+                        }}
+                        finally {{
+                            if (geoJsonLayer) {{
+                                map.removeLayer(geoJsonLayer);
+                            }}
+                            geoJsonLayer = L.geoJSON(data).addTo(map);
+                            map.fitBounds(geoJsonLayer.getBounds());
+                        }}
+                    }});
+                }}
+            }});
+        </script>
+        """
+
+        # Inject the map preview into the help text of the geojson field
+        context["adminform"].form.fields["geojson"].help_text = mark_safe(leaflet_html)
+
+        return super().render_change_form(request, context, *args, **kwargs)
 
 
 class InitiativeForm(forms.ModelForm):
