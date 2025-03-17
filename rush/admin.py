@@ -121,7 +121,7 @@ class MapDataAdminForm(forms.ModelForm):
         }
         js = [
             "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
-            # "/static/admin/js/geojson_preview.js",  # custom preview
+            # "/static/admin/js/geojson_preview.js",  # custom preview TODO uncomment this and move the file
         ]
 
 
@@ -136,6 +136,7 @@ class MapDataAdmin(SimpleHistoryAdmin):
         geojson_data = obj.geojson if obj and obj.geojson else {}
 
         # Leaflet map HTML preview with input handling for dynamic updates
+        # TODO: Move this to a dedicated JS file.
         leaflet_html = f"""
         <div id="map-preview" style="height: 400px; margin-bottom: 1em;"></div>
         <script>
