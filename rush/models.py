@@ -79,16 +79,15 @@ class SubQuestion(models.Model):
 
 class Question(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
+    title = models.CharField(max_length=255)
+    subtitle = models.TextField()
+    image = models.ImageField(upload_to="question_images/", null=True, blank=True)
+    content = models.TextField()
     layer = models.ForeignKey(
         to=Layer,
         # Prevent a Layer from being deleted if a Question relies on it
         on_delete=models.PROTECT,
     )
-    title = models.CharField(max_length=255)
-    subtitle = models.TextField()
-    image = models.ImageField(upload_to="question_images/", null=True, blank=True)
-    content = models.TextField()
-
     sub_question = models.ForeignKey(
         to=SubQuestion,
         null=True,
@@ -96,6 +95,7 @@ class Question(models.Model):
         # If a SubQuestion is deleted, nothing happens to this Question
         on_delete=models.DO_NOTHING,
     )
+    initiatives = models.ManyToManyField(to="Initiative")
 
     history = HistoricalRecords()
 
@@ -105,4 +105,18 @@ class Question(models.Model):
 
 class Initiative(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
-    # TODO: complete this model
+    image = models.ImageField(upload_to="initiative_images/", null=True, blank=True)
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    tags = models.ManyToManyField(to="InitiativeTag", related_name="initiatives")
+
+    def __str__(self):
+        return self.title
+
+
+class InitiativeTag(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
