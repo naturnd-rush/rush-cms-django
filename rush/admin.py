@@ -109,7 +109,7 @@ class MapDataAdminForm(forms.ModelForm):
         fields = "__all__"
         widgets = {
             "geojson": forms.Textarea(
-                attrs={"rows": 35, "cols": 120, "id": "geojson-input"}
+                attrs={"rows": 20, "cols": 150, "id": "geojson-input"}
             ),
         }
 
