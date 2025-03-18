@@ -1,12 +1,18 @@
+import logging
+from typing import Any, Dict
+
 from django import forms
 from django.contrib import admin
 from django.db import models
+from django.template.loader import render_to_string
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin
 from simple_history.admin import SimpleHistoryAdmin
 
 from .models import Initiative, InitiativeTag, Layer, MapData, Question, SubQuestion
+
+logger = logging.getLogger(__name__)
 
 
 def image_html(image_url: str, image_width: int = 200) -> str:
@@ -32,6 +38,25 @@ def content_preview_fn(
         return format_html(content[:preview_chars] + "...")
 
     return inner
+
+
+def get_map_preview_html(
+    geojson: Dict[str, Any],
+    change_element_id: str,
+    height: str = "400px",
+) -> str:
+    """
+    Return an HTML + JS snippet that renders
+    """
+    leaflet_html = render_to_string(
+        template_name="admin/geojson_map_preview.html",
+        context={
+            "geojson_data": geojson,
+            "height": height,
+            "change_element_id": change_element_id,
+        },
+    )
+    return mark_safe(leaflet_html)
 
 
 class QuestionForm(forms.ModelForm):
@@ -102,8 +127,21 @@ class SubQuestionAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
 class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
 
+    def render_change_form(self, request, context, *args, **kwargs):
+        obj = context.get("original")
+        geojson = obj.map_data.geojson if obj and obj.map_data.geojson else {}
+        map_preview_html = get_map_preview_html(geojson, "id_map_data")
+
+        try:
+            context["adminform"].form.fields["map_data"].help_text = map_preview_html
+        except (KeyError, AttributeError):
+            logger.exception("Failed to inject map preview.")
+        finally:
+            return super().render_change_form(request, context, *args, **kwargs)
+
 
 class MapDataAdminForm(forms.ModelForm):
+
     class Meta:
         model = MapData
         fields = "__all__"
@@ -112,17 +150,6 @@ class MapDataAdminForm(forms.ModelForm):
                 attrs={"rows": 20, "cols": 150, "id": "geojson-input"}
             ),
         }
-
-    class Media:
-        css = {
-            "all": [
-                "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-            ]
-        }
-        js = [
-            "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
-            # "/static/admin/js/geojson_preview.js",  # custom preview TODO uncomment this and move the file
-        ]
 
 
 @admin.register(MapData)
@@ -133,58 +160,15 @@ class MapDataAdmin(SimpleHistoryAdmin):
 
     def render_change_form(self, request, context, *args, **kwargs):
         obj = context.get("original")
-        geojson_data = obj.geojson if obj and obj.geojson else {}
+        geojson = obj.geojson if obj and obj.geojson else {}
+        map_preview_html = get_map_preview_html(geojson, "geojson-input")
 
-        # Leaflet map HTML preview with input handling for dynamic updates
-        # TODO: Move this to a dedicated JS file.
-        leaflet_html = f"""
-        <div id="map-preview" style="height: 400px; margin-bottom: 1em;"></div>
-        <script>
-            document.addEventListener("DOMContentLoaded", function () {{
-                // Initialize map
-                let map = L.map('map-preview').setView([0, 0], 2);
-                L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-                    maxZoom: 18,
-                    attribution: '© OpenStreetMap contributors'
-                }}).addTo(map);
-
-                // Handle GeoJSON data and update the map
-                let geojsonData = {geojson_data};
-                let geoJsonLayer;
-                
-                if (geojsonData && geojsonData.type === "FeatureCollection") {{
-                    geoJsonLayer = L.geoJSON(geojsonData).addTo(map);
-                    map.fitBounds(geoJsonLayer.getBounds());
-                }}
-                
-                // Monitor for changes in the GeoJSON input
-                const geojsonInput = document.getElementById('geojson-input');
-                if (geojsonInput) {{
-                    geojsonInput.addEventListener('input', function() {{
-                        let data = null;
-                        try {{
-                            data = JSON.parse(geojsonInput.value);
-                        }} catch (e) {{
-                            console.warn("Invalid GeoJSON:", e);
-                            data = JSON.parse("{{}}");
-                        }}
-                        finally {{
-                            if (geoJsonLayer) {{
-                                map.removeLayer(geoJsonLayer);
-                            }}
-                            geoJsonLayer = L.geoJSON(data).addTo(map);
-                            map.fitBounds(geoJsonLayer.getBounds());
-                        }}
-                    }});
-                }}
-            }});
-        </script>
-        """
-
-        # Inject the map preview into the help text of the geojson field
-        context["adminform"].form.fields["geojson"].help_text = mark_safe(leaflet_html)
-
-        return super().render_change_form(request, context, *args, **kwargs)
+        try:
+            context["adminform"].form.fields["geojson"].help_text = map_preview_html
+        except (KeyError, AttributeError):
+            logger.exception("Failed to inject map preview.")
+        finally:
+            return super().render_change_form(request, context, *args, **kwargs)
 
 
 class InitiativeForm(forms.ModelForm):
