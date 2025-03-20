@@ -1,6 +1,7 @@
 # questions/models.py
 
 import uuid
+from datetime import datetime, timedelta
 
 from django.db import models
 from simple_history.models import HistoricalRecords
@@ -30,6 +31,21 @@ class MapData(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class TemporaryMapData(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
+    map_data = models.ForeignKey(
+        to=MapData,
+        # Delete this temporary map data if the underlying map data is deleted.
+        on_delete=models.CASCADE,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    lifespan = models.DurationField(default=timedelta(minutes=5))
+
+    @property
+    def should_remove(self) -> bool:
+        return datetime.now() > self.created_at + self.lifespan
 
 
 class Layer(models.Model):

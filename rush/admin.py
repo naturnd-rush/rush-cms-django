@@ -40,25 +40,6 @@ def content_preview_fn(
     return inner
 
 
-def get_map_preview_html(
-    geojson: Dict[str, Any],
-    change_element_id: str,
-    height: str = "400px",
-) -> str:
-    """
-    Return an HTML + JS snippet that renders
-    """
-    leaflet_html = render_to_string(
-        template_name="admin/geojson_map_preview.html",
-        context={
-            "geojson_data": geojson,
-            "height": height,
-            "change_element_id": change_element_id,
-        },
-    )
-    return mark_safe(leaflet_html)
-
-
 class QuestionForm(forms.ModelForm):
     """
     Override the default add/change page for the Question model admin.

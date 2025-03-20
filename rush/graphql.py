@@ -47,6 +47,7 @@ class Query(graphene.ObjectType):
         return MapData.objects.all()
 
     def resolve_map_data(root, info, id):
+        # TODO: Add fetching for TemporaryMapData objects
         return MapData.objects.get(pk=id)
 
 
