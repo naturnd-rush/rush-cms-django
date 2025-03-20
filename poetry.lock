@@ -109,6 +109,20 @@ django = "*"
 dev = ["django-dummy-plug", "pytest", "pytest-django"]
 
 [[package]]
+name = "gdal"
+version = "3.8.4"
+description = "GDAL: Geospatial Data Abstraction Library"
+optional = false
+python-versions = ">=3.6.0"
+groups = ["main"]
+files = [
+    {file = "GDAL-3.8.4.tar.gz", hash = "sha256:7c51e0ae7a7ccf43ad9e4bf435176baa9276653dfa16fd167c3632f6e7275207"},
+]
+
+[package.extras]
+numpy = ["numpy (>1.0.0)"]
+
+[[package]]
 name = "graphene"
 version = "3.4.3"
 description = "GraphQL Framework for Python"
@@ -484,4 +498,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "e5e0a2c5fbfbc8ffeb0850b40fa0095c37382f5d2ad6bd9bc84932442a800a9e"
+content-hash = "131d0950769d301257db357cbbe8f5f5be199d42840a51bb1fcabd0d41cf63ce"
