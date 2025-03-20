@@ -15,6 +15,7 @@ django-summernote = "^0.8.20.0"
 graphene-django = "^3.2.3"
 django-simple-history = "^3.8.0"
 pillow = "^11.1.0"
+django-leaflet = "^0.31.0"
 
 [build-system]
 requires = ["poetry-core"]
