@@ -1,7 +1,7 @@
 import graphene
 from graphene_django.types import DjangoObjectType
 
-from .models import MapData, Question
+from .models.models import MapData, Question
 
 """
 GraphQL Schema for RUSH models. This file defines what data GraphQL

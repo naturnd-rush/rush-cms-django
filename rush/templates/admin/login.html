@@ -1,0 +1,12 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div class="login-container">
+    <h2>Login to Sam-Admin</h2>
+    <form method="post" action="{% url 'admin:login' %}">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit">Log in</button>
+    </form>
+  </div>
+{% endblock %}
