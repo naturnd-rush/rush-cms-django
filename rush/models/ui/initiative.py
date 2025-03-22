@@ -1,6 +1,6 @@
 import uuid
 
-from .. import models
+from django.db import models
 
 
 class Initiative(models.Model):

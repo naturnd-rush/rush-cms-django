@@ -1,7 +1,7 @@
 import graphene
 from graphene_django.types import DjangoObjectType
 
-from .models.models import MapData, Question
+from rush import models
 
 """
 GraphQL Schema for RUSH models. This file defines what data GraphQL
@@ -11,13 +11,13 @@ is allowed to query and communicate to the frontend.
 
 class QuestionType(DjangoObjectType):
     class Meta:
-        model = Question
+        model = models.Question
         fields = ["id", "title", "content"]
 
 
 class MapDataType(DjangoObjectType):
     class Meta:
-        model = MapData
+        model = models.MapData
         fields = [
             "id",
             "name",
@@ -38,16 +38,16 @@ class Query(graphene.ObjectType):
     map_data = graphene.Field(MapDataType, id=graphene.Int(required=True))
 
     def resolve_all_questions(root, info):
-        return Question.objects.all()
+        return models.Question.objects.all()
 
     def resolve_question(root, info, id):
-        return Question.objects.get(pk=id)
+        return models.Question.objects.get(pk=id)
 
     def resolve_all_map_datas(root, info):
-        return MapData.objects.all()
+        return models.MapData.objects.all()
 
     def resolve_map_data(root, info, id):
-        return MapData.objects.get(pk=id)
+        return models.MapData.objects.get(pk=id)
 
 
 def get_schema() -> graphene.Schema:

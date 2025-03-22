@@ -1,8 +1,7 @@
-# questions/models.py
-
 import uuid
 
-from .. import geo_models, history_models, models
+import django.db.models as models
+from simple_history.models import HistoricalRecords
 
 
 class Provider(models.TextChoices):
@@ -25,7 +24,7 @@ class MapData(models.Model):
     icon_url_template = models.CharField(max_length=1024, null=True, blank=True)
     image_url_template = models.CharField(max_length=1024, null=True, blank=True)
 
-    history = history_models.HistoricalRecords()
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
@@ -42,7 +41,7 @@ class Layer(models.Model):
         on_delete=models.PROTECT,
     )
 
-    history = history_models.HistoricalRecords()
+    history = HistoricalRecords()
 
     def __str__(self):
         return self.title

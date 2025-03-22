@@ -36,7 +36,7 @@ def get_map_preview_html(
     height: str = "400px",
 ) -> str:
     """
-    Return an HTML + JS snippet that renders
+    Return an HTML + JS snippet that renders TODO
     """
     leaflet_html = render_to_string(
         template_name="admin/geojson_map_preview.html",
