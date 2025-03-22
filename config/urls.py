@@ -21,9 +21,11 @@ from django.contrib import admin
 from django.urls import include, path
 from graphene_django.views import GraphQLView
 
+from rush import views
 from rush.graphql import get_schema
 
 urlpatterns = [
+    path("admin/login/", views.rush_login_view),
     path("admin/", admin.site.urls),
     path("summernote/", include("django_summernote.urls")),
     path("graphql/", GraphQLView.as_view(graphiql=True, schema=get_schema())),

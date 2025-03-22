@@ -21,3 +21,6 @@ docker run --name rush_postgis_container \
   -p 5432:5432 \
   -d postgis/postgis
 ```
+
+## Deploy Notes
+1. Must run `python manage.py collectstatic`.
