@@ -24,8 +24,5 @@ def rush_login_view(request):
     return render(
         request=request,
         template_name="admin/rush_login_page.html",
-        context={
-            "form": form,
-            "site_header": "RUSH Admin",
-        },
+        context={"form": form},
     )

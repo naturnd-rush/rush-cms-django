@@ -64,7 +64,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -144,6 +144,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # TODO: I probably want to do this for deployment too, should be good enough for a small app for now...
 if DEBUG:
     STATICFILES_DIRS = [BASE_DIR / "static"]
+
+
+SITE_NAME = "RUSH Admin"
 
 
 # Simple history configuration

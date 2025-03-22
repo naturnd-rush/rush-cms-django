@@ -54,6 +54,12 @@ class InitiativeAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
             return ", ".join([tag.name for tag in obj.tags.all()])
         return "No Tags"
 
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == "tags":
+            # Tags not required to create an initiative
+            kwargs["required"] = False
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
     get_tags.short_description = "Tags"
 
 

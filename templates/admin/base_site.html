@@ -1,0 +1,22 @@
+{% extends "admin/base.html" %}
+
+{% block title %}RUSH Administration{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">RUSH Admin</a></div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+<style>
+  :root {
+    --secondary: #507d44 !important;
+    --primary: #0b5135 !important;
+    --link-fg: #0b5135 !important;
+    --breadcrumbs-bg: #0b5135 !important;
+    --default-button-bg: #cc6b27 !important;
+    --accent: white !important;
+  }
+</style>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
