@@ -1,0 +1,19 @@
+name: Deploy on Push
+
+on:
+  push:
+    branches:
+      - main  # Change branch if needed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Webhook to Django
+        run: |
+          curl -X POST "$WEBHOOK_URL" \
+          -H "Content-Type: application/json" \
+          -H "X-GitHub-Event: push" \
+          -d '{"repository": "${{ github.repository }}", "ref": "${{ github.ref }}"}'
+        env:
+          WEBHOOK_URL: 'https://google.com'
