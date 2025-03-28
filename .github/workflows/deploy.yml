@@ -1,19 +1,25 @@
-name: Deploy on Push
+name: Deploy prod when push to main
 
 on:
   push:
     branches:
-      - main  # Change branch if needed
+      - main
 
 jobs:
-  deploy:
+  send_webhook:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Send Webhook to Django
-        run: |
-          curl -X POST "$WEBHOOK_URL" \
-          -H "Content-Type: application/json" \
-          -H "X-GitHub-Event: push" \
-          -d '{"repository": "${{ github.repository }}", "ref": "${{ github.ref }}"}'
+      - name: Send webhook to Django
         env:
-          WEBHOOK_URL: 'https://google.com'
+          WEBHOOK_URL: "http://your-server.com/webhook/github/"
+          SECRET: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}
+        run: |
+          PAYLOAD='{"repository": "${{ github.repository }}", "ref": "${{ github.ref }}", "action": "deploy-prod"}'
+
+          SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')
+
+          curl -X POST "$WEBHOOK_URL" \
+               -H "Content-Type: application/json" \
+               -H "X-Hub-Signature-256: sha256=$SIGNATURE" \
+               -d "$PAYLOAD"
