@@ -17,6 +17,7 @@ django-simple-history = "^3.8.0"
 pillow = "^11.1.0"
 django-leaflet = "^0.31.0"
 gdal = "3.8.4"
+gunicorn = "^23.0.0"
 
 [build-system]
 requires = ["poetry-core"]

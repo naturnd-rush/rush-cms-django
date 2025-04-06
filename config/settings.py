@@ -24,9 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-z!1a$c^76(g=(dnt=w*&ez-x9x*rhx9e0_gfl)982-fd8_!mel"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
+SECURE_PROXY_SSL_HEADER = ["HTTP_X_FORWARDED_PROTO", "https"]
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["67.231.28.76"]
 
 
 # Application definition
@@ -86,9 +87,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": "rush",
+        "NAME": "rush_prod",
         "USER": "rush_admin",
-        "PASSWORD": "password",
+        "PASSWORD": "htHgDhxJ8XtT93496HflngJp97fywJCLEx3Iq6phr1DG2ay3Nj",
         "HOST": "localhost",
         "PORT": "5432",
     }
@@ -130,6 +131,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
