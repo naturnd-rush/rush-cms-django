@@ -10,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send webhook to Django
+      - name: Send Deploy Webhook to RUSH Admin Site
         env:
-          WEBHOOK_URL: "http://your-server.com/webhook/github/"
+          WEBHOOK_URL: "http://whatstherush.earth/webhook/github/"
           SECRET: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}
         run: |
           PAYLOAD='{"repository": "${{ github.repository }}", "ref": "${{ github.ref }}", "action": "deploy-prod"}'
