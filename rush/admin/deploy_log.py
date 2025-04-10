@@ -1,14 +1,14 @@
 from django.contrib import admin
+from django.template.response import TemplateResponse
 
 from rush.models import DeployLog
 
 
 @admin.register(DeployLog)
 class DeployLogAdmin(admin.ModelAdmin):
-    list_display = ("filename", "get_file_path")
-    search_fields = ("filename",)
+    exclude = ["id"]
+    list_display = ["filename"]
+    readonly_fields = ("filename", "log_contents")
 
-    def get_file_path(self, obj):
-        return obj.get_file_path()
-
-    get_file_path.short_description = "Log File Path"
+    def log_contents(self, obj):
+        return obj.get_log_contents()

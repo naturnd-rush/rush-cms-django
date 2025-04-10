@@ -16,3 +16,12 @@ class DeployLog(models.Model):
     def get_file_path(self):
         # For getting the actual path of the deploy log file on the server
         return os.path.join(settings.DEPLOY_LOGS_DIR, self.filename)
+
+    def get_log_contents(self):
+        try:
+            with open(self.get_file_path(), "r") as f:
+                return f.read()
+        except FileNotFoundError:
+            return "Log file not found."
+        except Exception as e:
+            return f"Error reading log file: {str(e)}"
