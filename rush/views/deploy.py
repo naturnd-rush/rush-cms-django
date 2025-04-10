@@ -74,19 +74,20 @@ def _auth_deploy_request(request: HttpRequest, logger) -> None:
     Authenticate the deploy request by returning 403 (Permission Denied)
     if the hashed payload (request body) doesn't match the request signature.
     """
+    payload = request.body.decode()
     logger.info("request meta: %s", request.META)
     if signature := request.META.get("HTTP_X_HUB_SIGNATURE_256", None):
         sha1_signature = signature.split("=")[-1]
         valid_signature = hmac.new(
             bytes(settings.DEPLOY_GITHUB_WEBHOOK_SECRET, "utf-8"),
-            msg=request.body,
+            msg=payload,
             digestmod=hashlib.sha1,
         ).hexdigest()
         logger.info(
             "incoming sig %s, valid sig %s, and payload %s",
             sha1_signature,
             valid_signature,
-            request.body,
+            payload,
         )
         if hmac.compare_digest(valid_signature, sha1_signature):
             return
