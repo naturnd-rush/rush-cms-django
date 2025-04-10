@@ -13,6 +13,7 @@ Deployment checklist: https://docs.djangoproject.com/en/5.1/howto/deployment/che
 """
 
 import os
+from datetime import datetime
 from pathlib import Path
 
 # pulls env vars from .env file
@@ -24,6 +25,8 @@ DEBUG = config("DJANGO_DEBUG", cast=bool)
 ALLOWED_HOSTS = [
     host for host in config("DJANGO_ALLOWED_HOSTS", cast=str).split(",") if host != ""
 ]
+MEDIA_ROOT = config("DJANGO_MEDIA_ROOT", cast=str)
+STATIC_ROOT = config("DJANGO_STATIC_ROOT", cast=str)
 GDAL_LIBRARY_PATH = config("GDAL_LIBRARY_PATH", cast=str)
 DATABASES = {
     "default": {
@@ -35,6 +38,13 @@ DATABASES = {
         "PORT": config("POSTGRES_DATABASE_PORT", cast=str),
     }
 }
+DEPLOY_DOMAIN_NAME = config("DEPLOY_DOMAIN_NAME", cast=str)
+DEPLOY_LOGS_DIR = config("DEPLOY_LOGS_DIR", cast=str)
+DEPLOY_GITHUB_REPO = config("DEPLOY_GITHUB_REPO", cast=str)
+DEPLOY_GITHUB_WEBHOOK_SECRET = config("DEPLOY_GITHUB_WEBHOOK_SECRET", cast=str)
+DEPLOY_GUNICORN_SOCKET_PATH = config("DEPLOY_GUNICORN_SOCKET_PATH", cast=str)
+DEPLOY_NGINX_CONFIG_PATH = config("DEPLOY_NGINX_CONFIG_PATH", cast=str)
+DEPLOY_NGINX_ENABLED_PATH = config("DEPLOY_NGINX_ENABLED_PATH", cast=str)
 
 # Application definition
 INSTALLED_APPS = [
@@ -83,6 +93,25 @@ TEMPLATES = [
     },
 ]
 
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "default": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["default"],
+            "level": "INFO",
+            "propagate": True,
+        },
+    },
+}
+
 WSGI_APPLICATION = "config.wsgi.application"
 
 
@@ -117,24 +146,15 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
-STATIC_URL = "/static/"
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Summernote rich text editor configuration
-MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# Serve static files in development
-# TODO: I probably want to do this for deployment too, should be good enough for a small app for now...
-if DEBUG:
-    STATICFILES_DIRS = [BASE_DIR / "static"]
+MEDIA_URL = "/media/"
+STATIC_URL = "/static/"
+
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 
 SITE_NAME = "RUSH Admin"
