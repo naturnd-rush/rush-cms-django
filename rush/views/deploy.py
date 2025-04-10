@@ -91,7 +91,6 @@ def _auth_deploy_request(request: HttpRequest, logger) -> None:
         if hmac.compare_digest(valid_signature, sha1_signature):
             return
     logger.warning("Request for deployment aborted. Invalid signature. %s", request)
-
     raise PermissionDenied
 
 
