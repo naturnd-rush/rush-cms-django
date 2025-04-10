@@ -6,24 +6,24 @@ import subprocess
 import sys
 from datetime import datetime
 
-import requests
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from jinja2 import Template
 
+from rush.models import DeployLog
 
-def get_file_logger(directory: str, file_prefix: str) -> logging.Logger:
+
+def _get_deploy_file_logger(directory: str, file_prefix: str) -> logging.Logger:
     """
     Get logger that writes to a timestamped file in the given directory.
     """
     os.makedirs(directory, exist_ok=True)
     log_filename = f'{file_prefix}{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.log'
+    DeployLog.objects.create(filename=log_filename)
     log_filepath = os.path.join(directory, log_filename)
-
-    latest_log_filename = f"{file_prefix}latest.log"
-    latest_log_filepath = os.path.join(directory, latest_log_filename)
+    latest_log_filepath = os.path.join(directory, "latest.log")
 
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     file_handler = logging.FileHandler(log_filepath)
@@ -131,9 +131,6 @@ def _deploy(logger: logging.Logger) -> JsonResponse:
         run_command("sudo systemctl restart nginx", logger, capture_output=False)
         run_command("sudo systemctl restart gunicorn", logger, capture_output=False)
 
-        # 6. Perform health check
-        health_check(logger)
-
         logger.info("Deployment completed successfully!")
         return JsonResponse({"status": "success"})
 
@@ -147,19 +144,6 @@ def deploy_webhook_handler(request: HttpRequest) -> JsonResponse:
     """
     Deploy view with request authentication.
     """
-    logger = get_file_logger(settings.DEPLOY_LOGS_DIR, "deploy_")
+    logger = _get_deploy_file_logger(settings.DEPLOY_LOGS_DIR, "deploy_")
     _auth_deploy_request(request, logger)
     _deploy(logger)
-
-
-def health_check(logger):
-    """Health check to ensure the deployed site is working"""
-    try:
-        response = requests.get(f"https://{settings.DEPLOY_DOMAIN_NAME}/admin/")
-        if response.status_code != 200:
-            raise Exception(
-                f"Health check failed with status code: {response.status_code}"
-            )
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Health check failed: {e}")
-        sys.exit(1)
