@@ -101,6 +101,20 @@ def _deploy(logger: logging.Logger) -> JsonResponse:
         logger.info("Installing dependencies...")
         run_command(f"poetry install", logger, capture_output=False)
 
+        logger.info("Making migrations...")
+        run_command(
+            f"poetry run python manage.py makemigrations",
+            logger,
+            capture_output=False,
+        )
+
+        logger.info("Migrating...")
+        run_command(
+            f"poetry run python manage.py migrate",
+            logger,
+            capture_output=False,
+        )
+
         logger.info("Collecting staticfiles...")
         run_command(
             f"poetry run python manage.py collectstatic --noinput",
