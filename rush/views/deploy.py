@@ -22,13 +22,26 @@ def get_file_logger(directory: str, file_prefix: str) -> logging.Logger:
     log_filename = f'{file_prefix}{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.log'
     log_filepath = os.path.join(directory, log_filename)
 
+    latest_log_filename = f"{file_prefix}latest.log"
+    latest_log_filepath = os.path.join(directory, latest_log_filename)
+
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     file_handler = logging.FileHandler(log_filepath)
     file_handler.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     file_handler.setFormatter(formatter)
+
+    # also write to latest.log for easy access
+    latest_log_file_handler = logging.FileHandler(latest_log_filepath)
+    latest_log_file_handler.setLevel(logging.INFO)
+    latest_log_file_handler.setFormatter(formatter)
+
+    # also write to console
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
 
     logger = logging.getLogger(__name__)
     logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
     logger.setLevel(logging.INFO)
     return logger
 
