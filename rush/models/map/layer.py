@@ -29,6 +29,10 @@ class MapData(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        # better plural name in the admin table list
+        verbose_name_plural = "Map Data"
+
 
 class Layer(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)

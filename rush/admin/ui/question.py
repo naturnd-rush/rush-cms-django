@@ -15,7 +15,15 @@ class QuestionForm(forms.ModelForm):
 
     class Meta:
         model = models.Question
-        fields = ["title", "subtitle", "image", "content", "initiatives"]
+        fields = [
+            "layer",
+            "title",
+            "subtitle",
+            "image",
+            "content",
+            "sub_question",
+            "initiatives",
+        ]
 
     def __init__(self, *args, **kwargs):
         """

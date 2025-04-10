@@ -58,6 +58,21 @@ argon2 = ["argon2-cffi (>=19.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-colorfield"
+version = "0.12.0"
+description = "color field for django models with a nice color-picker in the admin."
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "django_colorfield-0.12.0-py3-none-any.whl", hash = "sha256:ceb9a312e01773a0d609847eb308e3b81ac18c33874d17b2c7135a8d1b2ec86d"},
+    {file = "django_colorfield-0.12.0.tar.gz", hash = "sha256:9fbace0e3bf7126acab33daa52a5ae2fe0b339aeee30233f52bf911b685c0c71"},
+]
+
+[package.dependencies]
+Pillow = ">=9.0.0"
+
+[[package]]
 name = "django-leaflet"
 version = "0.31.0"
 description = "Use Leaflet in your django projects"
@@ -510,4 +525,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "d05145bd48c7de08af10a556e1370a9a7c33cbf459faa4e101477ef046ca063d"
+content-hash = "1929b15640f20d918ace943d317728ad2d39a758f0d9bf9162c1f65a0f4fbc5f"
