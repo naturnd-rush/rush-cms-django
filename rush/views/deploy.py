@@ -58,9 +58,13 @@ def run_command(command, logger, capture_output=False):
             text=True,
             capture_output=capture_output,
         )
+        if result.stdout:
+            logger.info(f"STDOUT: {result.stdout}")
         if capture_output:
             return result.stdout.strip()
     except subprocess.CalledProcessError as e:
+        if result.stderr:
+            logger.error(f"STDERR: {result.stderr}")
         logger.error(f"Error running command: {e.args}")
         sys.exit(1)
 
