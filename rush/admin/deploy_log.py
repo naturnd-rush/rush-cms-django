@@ -11,4 +11,5 @@ class DeployLogAdmin(admin.ModelAdmin):
     readonly_fields = ("filename", "log_contents")
 
     def log_contents(self, obj):
+
         return obj.get_log_contents()
