@@ -78,7 +78,7 @@ def _auth_deploy_request(request: HttpRequest, logger) -> None:
     if signature := request.META.get("HTTP_X_HUB_SIGNATURE_256", None):
         sha1_signature = signature.split("=")[-1]
         valid_signature = hmac.new(
-            bytes(settings.GITHUB_WEBHOOK_SECRET, "utf-8"),
+            bytes(settings.DEPLOY_GITHUB_WEBHOOK_SECRET, "utf-8"),
             msg=request.body,
             digestmod=hashlib.sha1,
         ).hexdigest()
