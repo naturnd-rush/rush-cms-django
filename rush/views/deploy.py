@@ -144,6 +144,7 @@ def deploy_webhook_handler(request: HttpRequest) -> JsonResponse:
     """
     Deploy view with request authentication.
     """
+
     logger = _get_deploy_file_logger(settings.DEPLOY_LOGS_DIR, "deploy_")
     _auth_deploy_request(request, logger)
     _deploy(logger)
