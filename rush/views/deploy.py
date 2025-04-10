@@ -109,6 +109,7 @@ def _deploy(logger: logging.Logger) -> JsonResponse:
         )
 
         logger.info("Migrating...")
+
         run_command(
             f"poetry run python manage.py migrate",
             logger,
