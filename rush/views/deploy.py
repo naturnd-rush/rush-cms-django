@@ -62,6 +62,7 @@ def run_command(command, logger, capture_output=False):
             logger.info(f"STDOUT: {result.stdout}")
         if capture_output:
             return result.stdout.strip()
+
     except subprocess.CalledProcessError as e:
         if result.stderr:
             logger.error(f"STDERR: {result.stderr}")
