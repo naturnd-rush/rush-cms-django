@@ -100,9 +100,9 @@ def _deploy(logger: logging.Logger) -> JsonResponse:
             template_content = template_file.read()
         template = Template(template_content)
         nginx_config = template.render(
-            allowed_hosts=" ".join(settings.ALLOWED_HOSTS),
-            domain_name=settings.DOMAIN_NAME,
-            project_dir=project_dir,
+            # allowed_hosts=" ".join(settings.ALLOWED_HOSTS),
+            domain=settings.DEPLOY_DOMAIN_NAME,
+            # project_dir=project_dir,
             gunicorn_sock_path=settings.DEPLOY_GUNICORN_SOCKET_PATH,
             static_root=settings.STATIC_ROOT,
             media_root=settings.MEDIA_ROOT,
