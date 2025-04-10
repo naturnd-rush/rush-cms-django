@@ -83,6 +83,7 @@ def _auth_deploy_request(request: HttpRequest, logger) -> None:
             msg=payload,
             digestmod=hashlib.sha1,
         ).hexdigest()
+
         logger.info(
             "incoming sig %s, valid sig %s, and payload %s",
             sha1_signature,
