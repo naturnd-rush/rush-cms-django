@@ -83,7 +83,7 @@ def _deploy(logger: logging.Logger) -> JsonResponse:
 
         logger.info("Pulling repo...")
         os.makedirs(project_dir, exist_ok=True)
-        run_command(f"git -C {project_dir} pull {settings.DEPLOY_GITHUB_REPO}", logger)
+        run_command(f"git -C {project_dir} pull origin main", logger)
 
         logger.info("Installing dependencies...")
         run_command(f"poetry install", logger, capture_output=False)
