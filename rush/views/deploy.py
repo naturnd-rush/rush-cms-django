@@ -75,7 +75,7 @@ def _auth_deploy_request(request: HttpRequest, logger) -> None:
     if the hashed payload (request body) doesn't match the request signature.
     """
     logger.info("request meta: %s", request.META)
-    if signature := request.META.get("X-Hub-Signature-256", None):
+    if signature := request.META.get("HTTP_X_HUB_SIGNATURE_256", None):
         sha1_signature = signature.split("=")[-1]
         valid_signature = hmac.new(
             bytes(settings.GITHUB_WEBHOOK_SECRET, "utf-8"),
