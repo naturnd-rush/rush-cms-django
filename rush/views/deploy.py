@@ -90,6 +90,7 @@ def _auth_deploy_request(request: HttpRequest, logger) -> None:
         valid_signature,
         request.body,
     )
+
     raise PermissionDenied
 
 
