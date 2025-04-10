@@ -8,29 +8,35 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
+
+Deployment checklist: https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/.
 """
 
 import os
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# pulls env vars from .env file
+from decouple import config
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-z!1a$c^76(g=(dnt=w*&ez-x9x*rhx9e0_gfl)982-fd8_!mel"
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
-
+SECRET_KEY = config("DJANGO_SECRET_KEY", cast=str)
+DEBUG = config("DJANGO_DEBUG", cast=bool)
+ALLOWED_HOSTS = [
+    host for host in config("DJANGO_ALLOWED_HOSTS", cast=str).split(",") if host != ""
+]
+GDAL_LIBRARY_PATH = config("GDAL_LIBRARY_PATH", cast=str)
+DATABASES = {
+    "default": {
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "NAME": config("POSTGRES_DATABASE_NAME", cast=str),
+        "USER": config("POSTGRES_DATABASE_USERNAME", cast=str),
+        "PASSWORD": config("POSTGRES_DATABASE_PASSWORD", cast=str),
+        "HOST": config("POSTGRES_DATABASE_HOST", cast=str),
+        "PORT": config("POSTGRES_DATABASE_PORT", cast=str),
+    }
+}
 
 # Application definition
-
 INSTALLED_APPS = [
     # default django apps
     "django.contrib.admin",
@@ -78,21 +84,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
-
-
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": "rush",
-        "USER": "rush_admin",
-        "PASSWORD": "password",
-        "HOST": "localhost",
-        "PORT": "5432",
-    }
-}
 
 
 # Password validation
@@ -163,4 +154,3 @@ LEAFLET_CONFIG = {
     "TILES": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     "ATTRIBUTION_PREFIX": "Powered by Leaflet",
 }
-GDAL_LIBRARY_PATH = "/usr/lib/x86_64-linux-gnu/libgdal.so.34"
