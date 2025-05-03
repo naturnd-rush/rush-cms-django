@@ -36,7 +36,7 @@ class DeployRunner:
             valid_signature = hmac.new(
                 settings.DEPLOY_GITHUB_WEBHOOK_SECRET.encode("utf-8"),
                 msg=payload,
-                digestmod=hashlib.sha1,
+                digestmod=hashlib.sha256,
             ).hexdigest()
 
             self.logger.info(
