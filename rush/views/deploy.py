@@ -29,7 +29,6 @@ class DeployRunner:
         """
         if not request:
             raise PermissionDenied
-        self.logger.info("Request meta: %s", request.META)
         if signature := request.META.get("HTTP_X_HUB_SIGNATURE_256", None):
             payload = request.body
             sha1_signature = signature.split("=")[-1]
@@ -38,17 +37,12 @@ class DeployRunner:
                 msg=payload,
                 digestmod=hashlib.sha256,
             ).hexdigest()
-
-            self.logger.info(
-                "incoming sig %s, valid sig %s, and payload %s",
-                sha1_signature,
-                valid_signature,
-                payload,
-            )
             if hmac.compare_digest(valid_signature, sha1_signature):
+                self.logger.info("Signature valid! Beginning deployment...")
                 return
         self.logger.warning(
-            "Request for deployment aborted. Invalid signature. %s", sha1_signature
+            "Request for deployment aborted. Invalid signature. %s",
+            sha1_signature,
         )
         raise PermissionDenied
 
