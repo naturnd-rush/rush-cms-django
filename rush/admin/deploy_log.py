@@ -6,6 +6,7 @@ from rush.models import DeployLog
 @admin.register(DeployLog)
 class DeployLogAdmin(admin.ModelAdmin):
     exclude = ["id"]
+    ordering = ["-created_at"]
     list_display = ["created_at", "status"]
     readonly_fields = ("status", "created_at", "log_contents")
 
