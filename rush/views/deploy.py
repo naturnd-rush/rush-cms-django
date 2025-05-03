@@ -55,10 +55,10 @@ class DeployRunner:
     def run(self) -> DeployStatus:
         self.log = DeployLog.objects.create(status=DeployStatus.IN_PROGRESS)
         self.logger: logging.Logger = self.create_logger(self.log)
-        if self.needs_auth:
-            self._authenticate(self.request)
 
         try:
+            if self.needs_auth:
+                self._authenticate(self.request)
             self.execute(f"git -C {self.deploy_dir()} pull origin main")
             self.execute("poetry install")
             self.execute("poetry run python manage.py makemigrations")
