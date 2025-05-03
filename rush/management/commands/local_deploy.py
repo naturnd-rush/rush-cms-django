@@ -1,12 +1,14 @@
-from django.conf import settings
+import json
+
 from django.core.management.base import BaseCommand
 
-from rush.views.deploy import _deploy, _get_deploy_file_logger
+from rush.models import DeployLog, DeployStatus
+from rush.views.deploy import DeployRunner
 
 
 class Command(BaseCommand):
     help = "Attempt to deploy the admin site locally (for testing purposes.)"
 
     def handle(self, *args, **options):
-        logger = _get_deploy_file_logger(settings.DEPLOY_LOGS_DIR, "deploy_")
-        _deploy(logger)
+        runner = DeployRunner(needs_auth=False)
+        runner.run()

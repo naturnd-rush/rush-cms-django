@@ -1,177 +1,157 @@
 import hashlib
 import hmac
 import logging
-import os
 import subprocess
 import sys
-from datetime import datetime
 
+import jinja2
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from jinja2 import Template
 
-from rush.models import DeployLog
-
-
-def _get_deploy_file_logger(directory: str, file_prefix: str) -> logging.Logger:
-    """
-    Get logger that writes to a timestamped file in the given directory.
-    """
-    os.makedirs(directory, exist_ok=True)
-    log_filename = f'{file_prefix}{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.log'
-    DeployLog.objects.create(filename=log_filename)
-    log_filepath = os.path.join(directory, log_filename)
-    latest_log_filepath = os.path.join(directory, "latest.log")
-
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    file_handler = logging.FileHandler(log_filepath)
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(formatter)
-
-    # also write to latest.log for easy access
-    latest_log_file_handler = logging.FileHandler(latest_log_filepath)
-    latest_log_file_handler.setLevel(logging.INFO)
-    latest_log_file_handler.setFormatter(formatter)
-
-    # also write to console
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
-
-    logger = logging.getLogger(__name__)
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-    logger.setLevel(logging.INFO)
-    return logger
+from rush.models import DeployLog, DeployStatus
 
 
-def run_command(command, logger, capture_output=False):
-    """
-    Run a shell command and capture the output or raise error on failure.
-    """
-    try:
-        result = subprocess.run(
+class DeployRunner:
+
+    NGINX_CONFIG_TEMPLATE_PATH = "nginx.conf.template"
+
+    def __init__(self, needs_auth=True, request=None) -> "DeployRunner":
+        self.logger = None
+        self.logfile = None
+        self.request = request
+        self.needs_auth = needs_auth
+
+    def _authenticate(self, request: HttpRequest) -> None:
+        """
+        Fails if the request signature is invalid.
+        """
+        if not request:
+            raise PermissionDenied
+        self.logger.info("Request meta: %s", request.META)
+        if signature := request.META.get("HTTP_X_HUB_SIGNATURE_256", None):
+            payload = request.body
+            sha1_signature = signature.split("=")[-1]
+            valid_signature = hmac.new(
+                settings.DEPLOY_GITHUB_WEBHOOK_SECRET.encode("utf-8"),
+                msg=payload,
+                digestmod=hashlib.sha1,
+            ).hexdigest()
+
+            self.logger.info(
+                "incoming sig %s, valid sig %s, and payload %s",
+                sha1_signature,
+                valid_signature,
+                payload,
+            )
+            if hmac.compare_digest(valid_signature, sha1_signature):
+                return
+        self.logger.warning(
+            "Request for deployment aborted. Invalid signature. %s", sha1_signature
+        )
+        raise PermissionDenied
+
+    def run(self) -> DeployStatus:
+        self.log = DeployLog.objects.create(status=DeployStatus.IN_PROGRESS)
+        self.logger: logging.Logger = self.create_logger(self.log)
+        if self.needs_auth:
+            self._authenticate(self.request)
+
+        try:
+            self.execute(f"git -C {self.deploy_dir()} pull origin main")
+            self.execute("poetry install")
+            self.execute("poetry run python manage.py makemigrations")
+            self.execute("poetry run python manage.py migrate")
+            self.execute("poetry run python manage.py collectstatic --noinput")
+            self.logger.info("Populating nginx config...")
+            config = self.populate_nginx_config()
+            self.logger.info("Saving nginx config...")
+            with open(settings.DEPLOY_NGINX_CONFIG_PATH, "w") as file:
+                file.write(config)
+            # symlink config to the enabled directory (this enables the site)
+            self.execute(
+                f"ln -sf {settings.DEPLOY_NGINX_CONFIG_PATH} {settings.DEPLOY_NGINX_ENABLED_PATH}"
+            )
+            self.execute("sudo systemctl restart nginx")
+            self.execute("sudo systemctl restart gunicorn")
+            self.logger.info("Deployment succeeded.")
+            return self.update_status_and_return(DeployStatus.SUCCEEDED)
+
+        except Exception as e:
+            self.logger.error(f"Deployment failed!", exc_info=e)
+            return self.update_status_and_return(DeployStatus.FAILED)
+            # return JsonResponse({"status": DeployStatus.FAILED}, status=500)
+
+    def populate_nginx_config(self) -> str:
+        """Render the nginx config using the current ENV vars for deployment."""
+        with open(self.NGINX_CONFIG_TEMPLATE_PATH, "r") as file:
+            template_content = file.read()
+            template = jinja2.Template(template_content)
+            return template.render(
+                domain=settings.DEPLOY_DOMAIN_NAME,
+                gunicorn_sock_path=settings.DEPLOY_GUNICORN_SOCKET_PATH,
+                static_root=settings.STATIC_ROOT,
+                media_root=settings.MEDIA_ROOT,
+            )
+
+    def update_status_and_return(self, status: DeployStatus) -> DeployStatus:
+        self.log.status = status
+        self.log.full_clean()
+        self.log.save()
+        return self.log.status
+
+    def deploy_dir(self) -> str:
+        """Deploy in a development directory if DEBUG is True. Otherwise, overwrite the current project."""
+        dev_dir = f"{settings.BASE_DIR}/.dev-deploy-project-dir"
+        return settings.BASE_DIR if not settings.DEBUG else dev_dir
+
+    def execute(self, command: str) -> None:
+        """Execute a shell command."""
+        self.logger.info(f"Executing: '{command}'...")
+        process = subprocess.Popen(
             command,
             shell=True,
-            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            capture_output=capture_output,
+            bufsize=1,
         )
-        if result.stdout:
-            logger.info(f"STDOUT: {result.stdout}")
-        if capture_output:
-            return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        if result.stderr:
-            logger.error(f"STDERR: {result.stderr}")
-        logger.error(f"Error running command: {e.args}")
-        sys.exit(1)
+        while True:
+            line = process.stdout.readline()
+            if line == "" and process.poll() is not None:
+                # exit condition
+                break
+            if line and line.strip() != "":
+                self.logger.info(line.strip())
+        process.wait()
 
+    def create_logger(self, log: DeployLog) -> logging.Logger:
+        filepath = log.filepath()
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
-def _auth_deploy_request(request: HttpRequest, logger) -> None:
-    """
-    Authenticate the deploy request by returning 403 (Permission Denied)
-    if the hashed payload (request body) doesn't match the request signature.
-    """
-    logger.info("request meta: %s", request.META)
-    if signature := request.META.get("HTTP_X_HUB_SIGNATURE_256", None):
-        payload = request.body
-        sha1_signature = signature.split("=")[-1]
-        valid_signature = hmac.new(
-            settings.DEPLOY_GITHUB_WEBHOOK_SECRET.encode("utf-8"),
-            msg=payload,
-            digestmod=hashlib.sha1,
-        ).hexdigest()
+        # write logs to the deploy log file
+        file_handler = logging.FileHandler(filepath)
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
 
-        logger.info(
-            "incoming sig %s, valid sig %s, and payload %s",
-            sha1_signature,
-            valid_signature,
-            payload,
-        )
-        if hmac.compare_digest(valid_signature, sha1_signature):
-            return
-    logger.warning("Request for deployment aborted. Invalid signature. %s", request)
-    raise PermissionDenied
+        # also write to the console
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(formatter)
 
-
-def _deploy(logger: logging.Logger) -> JsonResponse:
-    """
-    Deploy the admin site.
-    """
-    try:
-        logger.info("Deploying...")
-        project_dir = settings.BASE_DIR
-        if settings.DEBUG == True:
-            # for local testing
-            project_dir = f"{project_dir}/.dev-deploy-project-dir"
-
-        logger.info("Pulling repo...")
-        os.makedirs(project_dir, exist_ok=True)
-        run_command(f"git -C {project_dir} pull origin main", logger)
-
-        logger.info("Installing dependencies...")
-        run_command(f"poetry install", logger, capture_output=False)
-
-        logger.info("Making migrations...")
-        run_command(
-            f"poetry run python manage.py makemigrations",
-            logger,
-            capture_output=False,
-        )
-
-        logger.info("Migrating...")
-        run_command(
-            f"poetry run python manage.py migrate",
-            logger,
-            capture_output=False,
-        )
-
-        logger.info("Collecting staticfiles...")
-        run_command(
-            f"poetry run python manage.py collectstatic --noinput",
-            logger,
-            capture_output=False,
-        )
-
-        logger.info("Building nginx config...")
-        with open("nginx.conf", "r") as template_file:
-            template_content = template_file.read()
-        template = Template(template_content)
-        nginx_config = template.render(
-            # allowed_hosts=" ".join(settings.ALLOWED_HOSTS),
-            domain=settings.DEPLOY_DOMAIN_NAME,
-            # project_dir=project_dir,
-            gunicorn_sock_path=settings.DEPLOY_GUNICORN_SOCKET_PATH,
-            static_root=settings.STATIC_ROOT,
-            media_root=settings.MEDIA_ROOT,
-        )
-        with open(settings.DEPLOY_NGINX_CONFIG_PATH, "w") as f:
-            f.write(nginx_config)
-        run_command(
-            f"ln -sf {settings.DEPLOY_NGINX_CONFIG_PATH} {settings.DEPLOY_NGINX_ENABLED_PATH}",
-            logger,
-        )
-
-        logger.info("Restarting services...")
-        run_command("sudo systemctl restart nginx", logger, capture_output=False)
-        run_command("sudo systemctl restart gunicorn", logger, capture_output=False)
-
-        logger.info("Deployment completed successfully!")
-        return JsonResponse({"status": "success"})
-
-    except Exception as e:
-        logger.error(f"Deployment failed: {e}")
-        return JsonResponse({"status": "failed"}, status=500)
+        # return the logger
+        logger = logging.getLogger(__name__)
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+        logger.setLevel(logging.INFO)
+        return logger
 
 
 @csrf_exempt
 def deploy_webhook_handler(request: HttpRequest) -> JsonResponse:
     """
-    Deploy view with request authentication.
+    Deploy endpoint.
     """
-
-    logger = _get_deploy_file_logger(settings.DEPLOY_LOGS_DIR, "deploy_")
-    _auth_deploy_request(request, logger)
-    _deploy(logger)
+    runner = DeployRunner(needs_auth=True, request=request)
+    status = runner.run()
+    return JsonResponse({"status": status})
