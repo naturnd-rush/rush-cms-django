@@ -12,8 +12,6 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 Deployment checklist: https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/.
 """
 
-import os
-from datetime import datetime
 from pathlib import Path
 
 # pulls env vars from .env file
