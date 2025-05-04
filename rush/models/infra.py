@@ -4,6 +4,10 @@ import uuid
 from django.conf import settings
 from django.db import models
 
+"""
+Django models related to backend infrastructure, e.g., logs.
+"""
+
 
 class DeployStatus(models.TextChoices):
     IN_PROGRESS = "in_progress"
@@ -13,7 +17,7 @@ class DeployStatus(models.TextChoices):
 
 class DeployLog(models.Model):
     """
-    A file that records the logs from a deploy.
+    A file that records the logs from deploying code.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)

@@ -9,7 +9,7 @@ from rush.admin import utils
 
 class QuestionForm(forms.ModelForm):
     """
-    Override the defaultsadd/change page for the Question model admin.
+    Override the default add/change page for the Question model admin.
     TODO: Maybe delete this form and inject JS for preview using readonly_fields?
     """
 
@@ -18,7 +18,6 @@ class QuestionForm(forms.ModelForm):
         fields = [
             "layer",
             "title",
-            "subtitle",
             "image",
             "content",
             "sub_question",
@@ -48,7 +47,6 @@ class QuestionAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     summernote_fields = ["content"]
     list_display = [
         "title",
-        "subtitle",
         "content_preview",
         "image_preview",
         "get_initiatives",
@@ -72,8 +70,8 @@ class QuestionAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     get_initiatives.short_description = "Initiatives"
 
 
-@admin.register(models.SubQuestion)
-class SubQuestionAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
+@admin.register(models.QuestionTab)
+class QuestionTabAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
-    list_display = ["title", "subtitle", "content_preview"]
+    list_display = ["title", "content_preview"]
     content_preview = utils.content_preview_fn()
