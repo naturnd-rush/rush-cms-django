@@ -75,3 +75,21 @@ class InitiativeTag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+from django.db import models
+
+
+class GPTLayer(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+
+class GPTQuestion(models.Model):
+    text = models.CharField(max_length=255)
+    layers = models.ManyToManyField(GPTLayer, related_name="questions", blank=True)
+
+    def __str__(self):
+        return self.text

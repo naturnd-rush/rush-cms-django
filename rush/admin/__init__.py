@@ -1,3 +1,2 @@
-from rush.admin.deploy_log import DeployLog
-from rush.admin.map import layer, style
-from rush.admin.ui import initiative, question
+# We need to import admin models here so Django picks them up...
+from rush.admin import infra, map, site
