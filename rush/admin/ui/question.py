@@ -16,11 +16,10 @@ class QuestionForm(forms.ModelForm):
     class Meta:
         model = models.Question
         fields = [
-            "layer",
+            # "layers",
             "title",
             "image",
-            "content",
-            "sub_question",
+            # "tabs",
             "initiatives",
         ]
 
@@ -41,17 +40,14 @@ class QuestionForm(forms.ModelForm):
 
 
 @admin.register(models.Question)
-class QuestionAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
+class QuestionAdmin(SimpleHistoryAdmin):
     exclude = ["id"]
     form = QuestionForm
-    summernote_fields = ["content"]
     list_display = [
         "title",
-        "content_preview",
         "image_preview",
         "get_initiatives",
     ]
-    content_preview = utils.content_preview_fn()
     filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
 
     def image_preview(self, obj):
@@ -73,5 +69,6 @@ class QuestionAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
 @admin.register(models.QuestionTab)
 class QuestionTabAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
+    summernote_fields = ["content"]
     list_display = ["title", "content_preview"]
     content_preview = utils.content_preview_fn()

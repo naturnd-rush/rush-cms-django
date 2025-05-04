@@ -23,21 +23,9 @@ class Question(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     title = models.CharField(max_length=255)
     image = models.ImageField(upload_to="question_images/", null=True, blank=True)
-    content = models.TextField()
     initiatives = models.ManyToManyField(to="Initiative")
+    questions = models.ManyToManyField(to="Layer", related_name="questions")
     history = HistoricalRecords()
-    layer = models.ForeignKey(
-        to="Layer",
-        # Prevent a Layer from being deleted if a Question relies on it
-        on_delete=models.PROTECT,
-    )
-    sub_question = models.ForeignKey(
-        to="QuestionTab",
-        null=True,
-        blank=True,
-        # If a QuestionTab is deleted, nothing happens to this Question
-        on_delete=models.DO_NOTHING,
-    )
 
     def __str__(self):
         return self.title
@@ -49,13 +37,17 @@ class QuestionTab(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     title = models.CharField(max_length=255)
     content = models.TextField()
-
-    button_text = models.CharField(max_length=255)
-
+    question = models.ForeignKey(
+        null=True,
+        # Delete all QuestionTabs when a Question is deleted.
+        to="Question",
+        on_delete=models.CASCADE,
+        related_name="tabs",
+    )
     history = HistoricalRecords()
 
     def __str__(self):
-        return f"{self.title} - {self.subtitle}"
+        return f"{self.title} for question: '{self.question.title}'"
 
 
 class Initiative(models.Model):

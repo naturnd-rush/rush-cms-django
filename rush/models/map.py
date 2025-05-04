@@ -160,17 +160,19 @@ class MapData(models.Model):
 
 
 class Layer(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
-    title = models.CharField(max_length=255)
-    description = models.TextField()
+    """
+    MapData + Styling + Legend information combo.
+    """
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
+    name = models.CharField(max_length=255)
+    description = models.TextField()
     map_data = models.ForeignKey(
         to=MapData,
-        # Prevent MapData from being deleted if a Layer relies on it
+        # MapData deletion should fail if a Layer references it.
         on_delete=models.PROTECT,
     )
-
     history = HistoricalRecords()
 
     def __str__(self):
-        return self.title
+        return self.name

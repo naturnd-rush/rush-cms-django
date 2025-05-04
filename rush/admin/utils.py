@@ -8,6 +8,7 @@ from django.utils.safestring import mark_safe
 def image_html(image_url: str, image_width: int = 200) -> str:
     """
     Return HTML for rendering an image.
+    TODO: See if I can't get the image preview to live-reload by injecting some JS here...
     """
     return mark_safe(f'<img src="{image_url}" width="{image_width}" height="auto" />')
 
