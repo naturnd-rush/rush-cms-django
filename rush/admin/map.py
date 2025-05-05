@@ -26,9 +26,13 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
         js = ["refresh_layer_map_data.js"]
 
     def render_change_form(self, request, context, *args, **kwargs):
-        obj = context.get("original")
-        geojson = obj.map_data.geojson if obj and obj.map_data.geojson else {}
-        map_preview_html = utils.get_map_preview_html(geojson, "id_map_data")
+        # obj = context.get("original")
+        # geojson = obj.map_data.geojson if obj and obj.map_data.geojson else {}
+        map_preview_html = mark_safe(
+            '<div id="map-preview" style="height: 400px; margin-bottom: 1em;"></div>'
+            '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />'
+            '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>'
+        )
 
         try:
             context["adminform"].form.fields["map_data"].help_text = map_preview_html

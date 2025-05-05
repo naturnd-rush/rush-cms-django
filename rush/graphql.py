@@ -30,12 +30,50 @@ class MapDataType(DjangoObjectType):
         ]
 
 
+class StylesOnLayersType(DjangoObjectType):
+    class Meta:
+        model = models.StylesOnLayer
+        fields = [
+            "id",
+            "style",
+            "layer",
+        ]
+
+
+class StyleType(DjangoObjectType):
+    class Meta:
+        model = models.Style
+        fields = [
+            "id",
+            "draw_stroke",
+            "stroke_color",
+            "stroke_weight",
+            "stroke_opacity",
+            "stroke_line_cap",
+            "stroke_line_join",
+            "stroke_dash_array",
+            "stroke_dash_offset",
+            "draw_fill",
+            "fill_color",
+            "fill_opacity",
+            "name",
+        ]
+
+
 class Query(graphene.ObjectType):
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
 
     all_map_datas = graphene.List(MapDataType)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
+
+    all_styles_on_layers = graphene.List(StylesOnLayersType)
+    styles_on_layer = graphene.Field(
+        StylesOnLayersType, id=graphene.UUID(required=True)
+    )
+
+    all_styles = graphene.List(StyleType)
+    style = graphene.Field(StyleType, id=graphene.UUID(required=True))
 
     def resolve_all_questions(root, info):
         return models.Question.objects.all()
@@ -48,6 +86,18 @@ class Query(graphene.ObjectType):
 
     def resolve_map_data(root, info, id):
         return models.MapData.objects.get(pk=id)
+
+    def resolve_all_styles_on_layers(root, info):
+        return models.StylesOnLayer.objects.all()
+
+    def resolve_styles_on_layer(root, info, id):
+        return models.StylesOnLayer.objects.get(pk=id)
+
+    def resolve_all_styles(root, info):
+        return models.Style.objects.all()
+
+    def resolve_style(root, info, id):
+        return models.Style.objects.get(pk=id)
 
 
 def get_schema() -> graphene.Schema:
