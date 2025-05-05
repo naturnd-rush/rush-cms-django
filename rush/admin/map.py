@@ -22,6 +22,9 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
     inlines = [StyleOnLayerInline]
 
+    class Media:
+        js = ["refresh_layer_map_data.js"]
+
     def render_change_form(self, request, context, *args, **kwargs):
         obj = context.get("original")
         geojson = obj.map_data.geojson if obj and obj.map_data.geojson else {}

@@ -32,10 +32,10 @@ class MapDataType(DjangoObjectType):
 
 class Query(graphene.ObjectType):
     all_questions = graphene.List(QuestionType)
-    question = graphene.Field(QuestionType, id=graphene.Int(required=True))
+    question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
 
     all_map_datas = graphene.List(MapDataType)
-    map_data = graphene.Field(MapDataType, id=graphene.Int(required=True))
+    map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
 
     def resolve_all_questions(root, info):
         return models.Question.objects.all()
