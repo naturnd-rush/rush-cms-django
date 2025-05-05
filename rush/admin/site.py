@@ -1,7 +1,9 @@
 from django import forms
 from django.contrib import admin
 from django.db import models
-from django_summernote.admin import SummernoteModelAdmin
+from django.urls import reverse
+from django.utils.html import format_html_join
+from django_summernote.admin import SummernoteInlineModelAdmin, SummernoteModelAdmin
 from simple_history.admin import SimpleHistoryAdmin
 
 from rush import models
@@ -39,7 +41,11 @@ class InitiativeAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     form = InitiativeForm
     list_display = ["title", "content_preview", "image_preview", "get_tags"]
     content_preview = utils.content_preview_fn()
-    filter_horizontal = ["tags"]  # better admin editing for many-to-many fields
+    autocomplete_fields = [
+        # uses the searchable textbox in the admin form to add/remove Tags
+        "tags"
+    ]
+    search_fields = ["title"]
 
     def image_preview(self, obj):
         """
@@ -49,6 +55,7 @@ class InitiativeAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
             return utils.image_html(obj.image.url)
         return "No image"
 
+    @admin.display(description="Tags")
     def get_tags(self, obj):
         if obj.tags.count() > 0:
             return ", ".join([tag.name for tag in obj.tags.all()])
@@ -60,24 +67,36 @@ class InitiativeAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
             kwargs["required"] = False
         return super().formfield_for_manytomany(db_field, request, **kwargs)
 
-    get_tags.short_description = "Tags"
-
 
 @admin.register(models.InitiativeTag)
 class InitiativeTagAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
-    list_display = ["name", "get_initiatives"]
+    list_display = ["name", "tagged_initiatives"]
+    search_fields = ["name"]
 
     # Reverse relation is readonly in the add/change view for now, we can
     # change this later, but the solution is a little complicated.
-    readonly_fields = ["get_initiatives"]
+    readonly_fields = ["tagged_initiatives"]
 
-    def get_initiatives(self, obj):
-        if obj.initiatives.count() > 0:
-            return ", ".join([initiative.title for initiative in obj.initiatives.all()])
-        return "No Initiatives"
-
-    get_initiatives.short_description = "Initiatives"
+    @admin.display(description="Initiatives with this tag")
+    def tagged_initiatives(self, obj):
+        initiatives = obj.initiatives.all()
+        if not initiatives.exists():
+            return "-"
+        return format_html_join(
+            ", ",
+            '<a href="{}">{}</a>',
+            [
+                (
+                    reverse("admin:rush_initiative_change", args=[initiative.pk]),
+                    initiative.title,
+                )
+                for initiative in initiatives
+            ],
+        )
+        # if obj.initiatives.count() > 0:
+        #     return ", ".join([initiative.title for initiative in obj.initiatives.all()])
+        # return "No Initiatives"
 
 
 class QuestionForm(forms.ModelForm):
@@ -112,6 +131,24 @@ class QuestionForm(forms.ModelForm):
         return image
 
 
+@admin.register(models.QuestionTab)
+class QuestionTabAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
+    exclude = ["id"]
+    summernote_fields = ["content"]
+    list_display = ["title", "content_preview"]
+    content_preview = utils.content_preview_fn()
+
+
+class QuestionTabInline(admin.TabularInline, SummernoteInlineModelAdmin):
+    """
+    Allow editing of QuestionTab objects straight from the Question form.
+    """
+
+    exclude = ["id"]
+    model = models.QuestionTab
+    extra = 1  # show 1 extra empty form
+
+
 @admin.register(models.Question)
 class QuestionAdmin(SimpleHistoryAdmin):
     exclude = ["id"]
@@ -121,7 +158,9 @@ class QuestionAdmin(SimpleHistoryAdmin):
         "image_preview",
         "get_initiatives",
     ]
-    filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
+    autocomplete_fields = ["initiatives"]
+    inlines = [QuestionTabInline]
+    # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
 
     def image_preview(self, obj):
         """
@@ -131,17 +170,8 @@ class QuestionAdmin(SimpleHistoryAdmin):
             return utils.image_html(obj.image.url)
         return "No image"
 
+    @admin.display(description="Initiatives")
     def get_initiatives(self, obj):
         if obj.initiatives.count() > 0:
             return ", ".join([initiative.title for initiative in obj.initiatives.all()])
         return "No Initiatives"
-
-    get_initiatives.short_description = "Initiatives"
-
-
-@admin.register(models.QuestionTab)
-class QuestionTabAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
-    exclude = ["id"]
-    summernote_fields = ["content"]
-    list_display = ["title", "content_preview"]
-    content_preview = utils.content_preview_fn()
