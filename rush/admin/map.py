@@ -12,9 +12,15 @@ from rush.admin import utils
 logger = logging.getLogger(__name__)
 
 
+class StyleOnLayerInline(admin.TabularInline):
+    model = models.StylesOnLayer
+    extra = 1
+
+
 @admin.register(models.Layer)
 class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
+    inlines = [StyleOnLayerInline]
 
     def render_change_form(self, request, context, *args, **kwargs):
         obj = context.get("original")
@@ -45,6 +51,14 @@ class MapDataAdminForm(forms.ModelForm):
 class MapDataAdmin(SimpleHistoryAdmin):
     form = MapDataAdminForm
     exclude = ["id"]
+    exclude = [
+        # for now, exclude these because they are confusing to people who just wanna upload GeoJson
+        *exclude,
+        "ogm_map_id",
+        "feature_url_template",
+        "icon_url_template",
+        "image_url_template",
+    ]
     list_display = ["name", "provider"]
 
     def render_change_form(self, request, context, *args, **kwargs):

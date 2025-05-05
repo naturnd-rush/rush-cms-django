@@ -174,7 +174,18 @@ class Layer(models.Model):
         # MapData deletion should fail if a Layer references it.
         on_delete=models.PROTECT,
     )
+    styles = models.ManyToManyField(Style, through="StylesOnLayer")
     history = HistoricalRecords()
 
     def __str__(self):
         return self.name
+
+
+class StylesOnLayer(models.Model):
+    """
+    Through table for adding multiple Styles on a single Layer with the ability to
+    reuse styles on other Layers.
+    """
+
+    style = models.ForeignKey(Style, on_delete=models.CASCADE)
+    layer = models.ForeignKey(Layer, on_delete=models.CASCADE)
