@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     "graphene_django",  # GraphQL support
     "simple_history",  # Simple changelog + diff for select models
     "leaflet",  # Leaflet Django integration
+    "colorfield",  # Django Admin colorpicker UI
 ]
 
 MIDDLEWARE = [

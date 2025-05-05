@@ -78,19 +78,11 @@ class StyleForm(forms.ModelForm):
             "name",
         ]
         widgets = {
-            "stroke_weight": forms.NumberInput(
-                attrs={
-                    "type": "range",
-                    "min": "0",
-                    "max": "15",
-                    "step": "1",
-                    "oninput": 'document.getElementById("id_stroke_weight").innerHTML = this.value',
-                }
-            ),
+            "stroke_weight": utils.SliderAndTextboxNumberInput(max=30, step=0.05),
         }
 
     class Media:
-        js = ["style_preview.js"]
+        js = ["style_preview.js", "slider_textbox_input_sync.js"]
 
 
 @admin.register(models.Style)
