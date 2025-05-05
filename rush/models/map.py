@@ -59,48 +59,49 @@ class Style(models.Model):
         help_text="Check this box when you want to draw the line. Unchecking this box, for example, "
         + "will remove the borders from a polygon."
     )
-    stroke_color = ColorField(default="#FFFFFF")
-    stroke_weight = models.DecimalField(max_digits=10, decimal_places=2, default=1)
-    stroke_opacity = models.DecimalField(max_digits=5, decimal_places=3, default=1.00)
+    stroke_color = ColorField(default="#FFFFFF", verbose_name="Color")
+    stroke_weight = models.DecimalField(
+        max_digits=10, decimal_places=2, default=1, verbose_name="Thickness"
+    )
+    stroke_opacity = models.DecimalField(
+        max_digits=5, decimal_places=3, default=1.00, verbose_name="Transparency"
+    )
     stroke_line_cap = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-linecap#usage_notes.
         max_length=32,
         choices=LineCap.choices,
         default=LineCap.ROUND,
+        help_text="The shape of the end of a stroke. Options: butt, round, or square.",
     )
     stroke_line_join = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-linejoin#usage_context.
         max_length=32,
         choices=LineJoin.choices,
         default=LineJoin.ROUND,
+        help_text="The shape used to join two lines. Options: miter, round, or bevel.",
     )
     stroke_dash_array = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-dasharray#example.
         max_length=32,
         validators=[validate_only_integers_and_whitespace],
-        help_text="Only digits and whitespace allowed (e.g., '12 34 56')",
         null=True,
         blank=True,
+        help_text="The pattern of dashes and gaps for the outline, e.g., '5 5' for 5 pixel long lines "
+        + "separated by 5 pixels of whiespace. Only digits and whitespace are allowed (e.g., '12 34 56')",
     )
     stroke_dash_offset = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-dashoffset#example.
         max_length=32,
         null=True,
         blank=True,
+        help_text="Offset where the dash pattern starts along the outline path.",
     )
     draw_fill = models.BooleanField(
-        help_text="Check this box if you want to fill a polygon.",
+        help_text="Check this box if you want to fill the polygon.",
         default=True,
     )
     fill_color = ColorField(
         default="#FFFFFF",
-        null=True,
-        blank=True,
-    )
-    fill_weight = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=1,
         null=True,
         blank=True,
     )
@@ -112,6 +113,7 @@ class Style(models.Model):
         blank=True,
     )
     fill_rule = models.CharField(
+        # Unused for now.
         max_length=32,
         choices=FillRule.choices,
         null=True,

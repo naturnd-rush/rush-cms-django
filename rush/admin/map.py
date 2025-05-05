@@ -65,6 +65,8 @@ class StyleForm(forms.ModelForm):
     class Meta:
         model = models.Style
         fields = [
+            # Stroke data
+            "draw_stroke",
             "stroke_color",
             "stroke_weight",
             "stroke_opacity",
@@ -72,13 +74,20 @@ class StyleForm(forms.ModelForm):
             "stroke_line_join",
             "stroke_dash_array",
             "stroke_dash_offset",
-            # name at end of submission. I feel like people will want to create the style, and then name it
-            # after they have a solid idea of what it will look like, but that's just me.
-            "draw_stroke",
+            # Fill data
+            "draw_fill",
+            "fill_color",
+            "fill_opacity",
+            # "fill_rule", <-- gonna handle this later. Seems like an extreme edge-case for using the admin site.
+            # I put the style name at end of submission because I feel like people will want to create
+            # the style, and then name it after they have a solid idea of what it will look like, but that's just me.
             "name",
         ]
         widgets = {
             "stroke_weight": utils.SliderAndTextboxNumberInput(max=30, step=0.05),
+            "stroke_opacity": utils.SliderAndTextboxNumberInput(),
+            "stroke_dash_offset": utils.SliderAndTextboxNumberInput(max=100, step=1),
+            "fill_opacity": utils.SliderAndTextboxNumberInput(),
         }
 
     class Media:
