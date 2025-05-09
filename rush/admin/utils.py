@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.contrib import admin
 from django.db import models
 from django.template.loader import render_to_string
@@ -10,6 +11,9 @@ class SliderAndTextboxNumberInput(forms.Widget):
     """
     A number input Django form widget that provides both a slider and an
     input textbox so the user can choose their preferred way to enter data.
+
+    NOTE: For this widget to work the corresponding `slider_textbox_input_sync.js`
+          script must be included in the Django form Media subclass.
     """
 
     def __init__(self, attrs=None, min=0, max=1, step=0.01):
@@ -33,10 +37,6 @@ class SliderAndTextboxNumberInput(forms.Widget):
                 "min": str(self.min),
                 "max": str(self.max),
                 "step": str(self.step),
-                # "oninput": (
-                #     f'var input_el=document.getElementById("id_{fieldname}");'
-                #     f'input_el.value=this.value; input_el.dispatchEvent(new Event("input",{{bubbles:true}}));'
-                # ),
             }
         )
         self.number_input = forms.NumberInput(
@@ -45,14 +45,6 @@ class SliderAndTextboxNumberInput(forms.Widget):
                 "min": str(self.min),
                 "max": str(self.max),
                 "step": str(self.step),
-                # "oninput": (
-                #     f'var input_el=document.getElementById("slider_{fieldname}");'
-                #     f'input_el.value=this.value; input_el.dispatchEvent(new Event("input",{{bubbles:true}}));'
-                # ),
-                # "onfocus": (
-                #     f'var input_el = document.getElementById("id_{fieldname}");'
-                #     f'input_el.value="";'
-                # ),
             }
         )
 
@@ -80,6 +72,34 @@ class SliderAndTextboxNumberInput(forms.Widget):
                 {slider_html}<div style="margin-right: 15px; display: inline;"></div>{number_html}
             </div>
         """
+        )
+
+
+class LiveImagePreviewInput(forms.ClearableFileInput):
+    """
+    An image upload input field with life-previewing of the selected image.
+
+    NOTE: For this widget to work the corresponding `live_image_preview_refresh.js`
+          script must be included in the Django form Media subclass.
+    """
+
+    def __init__(self, attrs=None):
+        super().__init__(attrs)
+
+    def render(self, name, value, attrs=None, renderer=None) -> str:
+        image_upload_html = forms.ClearableFileInput().render(
+            name=name,
+            value=value,
+            attrs={**self.attrs, "id": f"live_image_input_{name}"},
+            renderer=renderer,
+        )
+        src = f"{settings.MEDIA_URL}{value}" if value else "#"
+        return mark_safe(
+            f"""
+            {image_upload_html}
+            <div style="margin-right: 15px;"></div>
+            <img id="live_image_preview_{name}" src="{src}" style="max-width: 200px; display: block;" />
+            """
         )
 
 

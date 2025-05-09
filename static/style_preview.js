@@ -18,8 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const drawFill = document.querySelector('#id_draw_fill');
     const fillColor = document.querySelector('#id_fill_color');
     const fillOpacity = document.querySelector('#id_fill_opacity');
-    const fillRule = document.querySelector('#id_fill_rule');
+    // Fill rule not included for now...
+    // const fillRule = document.querySelector('#id_fill_rule');
 
+    // Marker options
+    const drawMarker = document.querySelector('#id_draw_marker');
+    const markerIcon = document.querySelector('#id_image_upload_marker_icon');
+    const markerOpacity = document.querySelector('#id_marker_icon_opacity');
 
     // Hooks into a preview box provided by the style admin class.
     const previewBox = document.getElementById('style_preview');
@@ -27,6 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Abort if no style preview box found.
         if (!previewBox) return;
         let svg = '<svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">'
+        if (drawMarker.checked === true) {
+            //svg += '<image href="' + iconUr
+            //const iconUrl = previewBox.dataset.iconUrl;  // e.g. "/media/icons/myicon.png"l + '" x="80" y="10" width="32" height="32" />';
+            console.log(markerIcon);
+        }
         svg += '<polygon points="20,20 100,40 140,80 60,120 20,80"'
         if (drawStroke.checked === true){
             svg += 'stroke="' + strokeColor.value + '"'
@@ -64,6 +74,11 @@ document.addEventListener('DOMContentLoaded', () => {
         drawFill, 
         fillColor, 
         fillOpacity,
+
+        // Marker event listeners
+        drawMarker,
+        //markerIcon,
+        markerOpacity,
 
     ].forEach(input => {
         input.addEventListener('input', updatePreview);

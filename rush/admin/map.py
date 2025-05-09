@@ -99,6 +99,10 @@ class StyleForm(forms.ModelForm):
             "draw_fill",
             "fill_color",
             "fill_opacity",
+            # Icon data
+            "draw_marker",
+            "marker_icon",
+            "marker_icon_opacity",
             # "fill_rule", <-- gonna handle this later. Seems like an extreme edge-case for using the admin site.
             # I put the style name at end of submission because I feel like people will want to create
             # the style, and then name it after they have a solid idea of what it will look like, but that's just me.
@@ -109,10 +113,16 @@ class StyleForm(forms.ModelForm):
             "stroke_opacity": utils.SliderAndTextboxNumberInput(),
             "stroke_dash_offset": utils.SliderAndTextboxNumberInput(max=100, step=1),
             "fill_opacity": utils.SliderAndTextboxNumberInput(),
+            "marker_icon_opacity": utils.SliderAndTextboxNumberInput(),
+            "marker_icon": utils.LiveImagePreviewInput(),
         }
 
     class Media:
-        js = ["style_preview.js", "slider_textbox_input_sync.js"]
+        js = [
+            "style_preview.js",
+            "slider_textbox_input_sync.js",
+            "live_image_preview_refresh.js",
+        ]
 
 
 @admin.register(models.Style)

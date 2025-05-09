@@ -113,15 +113,29 @@ class Style(models.Model):
         blank=True,
     )
     fill_rule = models.CharField(
-        # Unused for now.
+        # Unused in the admin form for now.
         max_length=32,
         choices=FillRule.choices,
         null=True,
         blank=True,
     )
-
-    # marker_icon =
-    # marker_icon_opacity =
+    draw_marker = models.BooleanField(
+        help_text="Check this box if you want to draw the marker icon on each point this style is applied to.",
+        default=True,
+    )
+    marker_icon = models.ImageField(
+        upload_to="marker_icons/",
+        null=True,
+        blank=True,
+        help_text="The image that will appear at each point this style is applied to.",
+    )
+    marker_icon_opacity = models.DecimalField(
+        max_digits=5,
+        decimal_places=3,
+        default=1.00,
+        null=True,
+        blank=True,
+    )
 
     # TODO: Add _hover style and _active style recursive foreign keys.
 
