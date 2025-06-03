@@ -78,7 +78,7 @@ class Style(models.Model):
         max_length=32,
         choices=LineJoin.choices,
         default=LineJoin.ROUND,
-        help_text="The shape used to join two lines. Options: miter, round, or bevel.",
+        help_text="The shape used to join two lines. Options: arcs, bevel, miter, miter clip, or round.",
     )
     stroke_dash_array = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-dasharray#example.
