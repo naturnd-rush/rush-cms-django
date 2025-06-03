@@ -3,6 +3,82 @@
  * admin field is changed and injects it into the page as a hidden element so it can be
  * used to render the Layer's map preview.
  */
+
+class GraphQLError extends Error {
+
+    status: number;
+    responseBody: string;
+
+    constructor(status: number, responseBody: string) {
+        super(`GraphQL request failed with status ${status}`);
+        this.status = status;
+        this.responseBody = responseBody;
+    }
+}
+
+/**
+ * Query the GraphQL API.
+ * @param query The GraphQL Query to execute.
+ * @returns A JSON response Promise.
+ */
+async function queryGraphQL(query: string): Promise<JSON> {
+    const response = await fetch("/graphql/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            // TODO Add CSRF token here
+        },
+        body: query,
+    });
+    if (200 === response.status){
+        return response.json();
+    }
+    const errorText = await response.text();
+    throw new GraphQLError(response.status, errorText);
+}
+
+
+/**
+ * The related StyleOnLayerInline data from all styles.
+ */
+async function getStyleData(): Promise<Array<JSON>> {
+    
+    const styles: Array<JSON> = [];
+    const stylesOnLayerSelector = "[id^='id_stylesonlayer_set-'][id$='-style']";
+    const stylesOnLayerEls = document.querySelectorAll(stylesOnLayerSelector);
+    const stylesOnLayerQuery = `
+        query ($id: UUID!) {
+            style(id: $id) {
+                drawStroke
+                strokeColor
+                strokeWeight
+                strokeOpacity
+                strokeLineCap
+                strokeLineJoin
+                strokeDashArray
+                strokeDashOffset
+                drawFill
+                fillColor
+                fillOpacity
+            }
+        }
+    `;
+
+    for(const stylesOnLayerEl of stylesOnLayerEls){
+        const styleId = stylesOnLayerEl.nodeValue;
+        console.log('getStyleData() found styleId: ' + styleId);
+        const styleQuery = JSON.stringify({
+            query: stylesOnLayerQuery,
+            variables: {id: styleId},
+        });
+        const styleData = await queryGraphQL(styleQuery);
+        styles.push(styleData);
+    }
+    
+    return styles;
+}
+
 document.addEventListener('DOMContentLoaded', function () {
 
     const select = document.getElementById('id_map_data');

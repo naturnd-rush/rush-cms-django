@@ -23,7 +23,7 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     inlines = [StyleOnLayerInline]
 
     class Media:
-        js = ["refresh_layer_map_data.js"]
+        js = ["refresh_layer_map_data.ts"]
 
     def render_change_form(self, request, context, *args, **kwargs):
         # obj = context.get("original")

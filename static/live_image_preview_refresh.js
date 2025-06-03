@@ -1,5 +1,7 @@
 /***
  * This script renders a live-preview of 
+ * 
+ * TODO: WIP
  */
 document.addEventListener("DOMContentLoaded", function () {
     const liveImagePreviewElements = document.querySelectorAll('[id^="live_image_input"]');
