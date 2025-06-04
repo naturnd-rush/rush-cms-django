@@ -1,46 +1,35 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-import { getStyleData, StyleNotFound } from "./graphql.js";
+import { modelFromData, Style } from "./graphql.js";
 /// <reference types="leaflet" />
 /************
  * This script refreshes map data using the GraphQL API whenever the "map_data" Django
  * admin field is changed and injects it into the page as a hidden element so it can be
  * used to render the Layer's map preview.
  ************/
-function getLayerStyleData() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const styles = [];
-        const stylesOnLayerSelector = "[id^='id_stylesonlayer_set-'][id$='-style']";
-        const stylesOnLayerEls = document.querySelectorAll(stylesOnLayerSelector);
-        for (const stylesOnLayerEl of stylesOnLayerEls) {
-            if (!(stylesOnLayerEl instanceof HTMLSelectElement)) {
-                console.error("Expected element to be an HTMLSelectElement: ", stylesOnLayerEl);
-                continue;
-            }
-            const styleModelId = stylesOnLayerEl.value;
-            if (styleModelId === "") {
-                // empty style dropdown
-                continue;
-            }
-            const style = yield getStyleData(styleModelId);
-            if (style instanceof StyleNotFound) {
-                console.error("Style not found.", { "id": styleModelId });
-                continue;
-            }
-            styles.push(style);
-        }
-        return styles;
-    });
-}
+// async function getLayerStyleData(): Promise<Array<Style>> {
+//     const styles: Array<Style> = [];
+//     const stylesOnLayerSelector = "[id^='id_stylesonlayer_set-'][id$='-style']";
+//     const stylesOnLayerEls = document.querySelectorAll(stylesOnLayerSelector);
+//     for(const stylesOnLayerEl of stylesOnLayerEls){
+//         if (!(stylesOnLayerEl instanceof HTMLSelectElement)) {
+//             console.error("Expected element to be an HTMLSelectElement: ", stylesOnLayerEl);
+//             continue;
+//         }
+//         const styleModelId = stylesOnLayerEl.value;
+//         if (styleModelId === ""){
+//             // empty style dropdown
+//             continue;
+//         }
+//         const style = await getStyleData(styleModelId);
+//         if (style instanceof StyleNotFound){
+//             console.error("Style not found.", {"id": styleModelId});
+//             continue;
+//         }
+//         styles.push(style);
+//     }
+//     return styles;
+// }
 document.addEventListener('DOMContentLoaded', function () {
-    getLayerStyleData().then(styleList => console.log(styleList));
+    console.log(modelFromData(Style, {}));
     // const select = document.getElementById('id_map_data');
     // const stylesOnLayersGroup = document.getElementById('stylesonlayer_set-group');
     // // Initialize leaflet map

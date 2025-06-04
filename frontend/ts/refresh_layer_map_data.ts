@@ -1,4 +1,4 @@
-import { getStyleData, StyleNotFound, Style } from "./graphql.js";
+import { modelFromData, Style } from "./graphql.js";
 import * as L from "leaflet";
 /// <reference types="leaflet" />
 
@@ -9,36 +9,36 @@ import * as L from "leaflet";
  ************/
 
 
-async function getLayerStyleData(): Promise<Array<Style>> {
+// async function getLayerStyleData(): Promise<Array<Style>> {
     
-    const styles: Array<Style> = [];
-    const stylesOnLayerSelector = "[id^='id_stylesonlayer_set-'][id$='-style']";
-    const stylesOnLayerEls = document.querySelectorAll(stylesOnLayerSelector);
+//     const styles: Array<Style> = [];
+//     const stylesOnLayerSelector = "[id^='id_stylesonlayer_set-'][id$='-style']";
+//     const stylesOnLayerEls = document.querySelectorAll(stylesOnLayerSelector);
 
-    for(const stylesOnLayerEl of stylesOnLayerEls){
-        if (!(stylesOnLayerEl instanceof HTMLSelectElement)) {
-            console.error("Expected element to be an HTMLSelectElement: ", stylesOnLayerEl);
-            continue;
-        }
-        const styleModelId = stylesOnLayerEl.value;
-        if (styleModelId === ""){
-            // empty style dropdown
-            continue;
-        }
-        const style = await getStyleData(styleModelId);
-        if (style instanceof StyleNotFound){
-            console.error("Style not found.", {"id": styleModelId});
-            continue;
-        }
-        styles.push(style);
-    }
+//     for(const stylesOnLayerEl of stylesOnLayerEls){
+//         if (!(stylesOnLayerEl instanceof HTMLSelectElement)) {
+//             console.error("Expected element to be an HTMLSelectElement: ", stylesOnLayerEl);
+//             continue;
+//         }
+//         const styleModelId = stylesOnLayerEl.value;
+//         if (styleModelId === ""){
+//             // empty style dropdown
+//             continue;
+//         }
+//         const style = await getStyleData(styleModelId);
+//         if (style instanceof StyleNotFound){
+//             console.error("Style not found.", {"id": styleModelId});
+//             continue;
+//         }
+//         styles.push(style);
+//     }
     
-    return styles;
-}
+//     return styles;
+// }
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    getLayerStyleData().then(styleList => console.log(styleList))
+    console.log(modelFromData(Style, {}));
 
     // const select = document.getElementById('id_map_data');
     // const stylesOnLayersGroup = document.getElementById('stylesonlayer_set-group');

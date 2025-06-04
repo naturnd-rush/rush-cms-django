@@ -1,33 +1,35 @@
 /**
- * This module provides a way to interface with the GraphQL API.
+ * This module provides a way to retrieve data from the GraphQL API by defining different object
+ * types whose attributes will be fetched from the API's corresponding object type and returned.
  */
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 /**
- * Something went wrong while trying to access the GraphQL API.
+ * A GraphQL query failed.
  */
-export class GraphQLError extends Error {
-    constructor(status, responseBody) {
-        super(`GraphQL request failed with status ${status}`);
-        this.status = status;
-        this.responseBody = responseBody;
-    }
+export class GraphQLQueryFailed {
+    constructor(errors) { }
 }
-export class StyleNotFound {
+/**
+ * Internal type for understanding the shape of a GraphQL query response.
+ */
+class GraphQLQueryResponse {
+    constructor(data, errors) { }
 }
+/**
+ * The object you're looking for could not be found.
+ */
+export class NotFound {
+}
+/**
+ * A map layer style.
+ */
 export class Style {
-    constructor(
+    constructor(GRAPHQL_SINGLE_MODEL_NAME = "style", GRAPHQL_ALL_MODEL_NAMES = "allStyles", 
     // stroke options
     drawStroke, strokeColor, strokeWeight, strokeOpacty, strokeLineJoin, strokeDashArray, strokeDashOffset, 
     // fill options
     drawFill, fillColor, fillOpacity) {
+        this.GRAPHQL_SINGLE_MODEL_NAME = GRAPHQL_SINGLE_MODEL_NAME;
+        this.GRAPHQL_ALL_MODEL_NAMES = GRAPHQL_ALL_MODEL_NAMES;
         this.drawStroke = drawStroke;
         this.strokeColor = strokeColor;
         this.strokeWeight = strokeWeight;
@@ -40,62 +42,109 @@ export class Style {
         this.fillOpacity = fillOpacity;
     }
 }
-/**
- * Query the GraphQL API.
- * @param query The GraphQL Query to execute.
- * @returns A JSON response Promise.
- * @throws GraphQLError when the request fails.
- */
-export function queryGraphQL(query) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const response = yield fetch("/graphql/", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                // TODO Add CSRF token here
-            },
-            body: query,
-        });
-        if (200 === response.status) {
-            return response.json();
-        }
-        const errorText = yield response.text();
-        throw new GraphQLError(response.status, errorText);
-    });
+export function modelFromData(ModelClass, data) {
+    // Create an uninitialized object
+    const instance = Object.create(ModelClass.prototype);
+    // Assign matching keys from `data` to the new instance
+    const fields = Object.keys(data);
+    for (const field of fields) {
+        instance[field] = data[field];
+    }
+    return instance;
 }
-/**
- * Get "Style" data for a single object.
- * @param styleModelId the Django "Style" model id to fetch.
- * @returns Style data for the given object.
- */
-export function getStyleData(styleModelId) {
-    return __awaiter(this, void 0, void 0, function* () {
-        var _a, _b;
-        const stylesOnLayerQuery = `
-        query ($id: UUID!) {
-            style(id: $id) {
-                drawStroke
-                strokeColor
-                strokeWeight
-                strokeOpacity
-                strokeLineCap
-                strokeLineJoin
-                strokeDashArray
-                strokeDashOffset
-                drawFill
-                fillColor
-                fillOpacity
-            }
-        }
-    `;
-        const style = yield queryGraphQL(JSON.stringify({
-            query: stylesOnLayerQuery,
-            variables: { id: styleModelId },
-        }));
-        if (((_a = style === null || style === void 0 ? void 0 : style.data) === null || _a === void 0 ? void 0 : _a.style) === null || ((_b = style === null || style === void 0 ? void 0 : style.data) === null || _b === void 0 ? void 0 : _b.style) === undefined) {
-            return new StyleNotFound();
-        }
-        return style.data.style;
-    });
-}
+// /**
+//  * 
+//  * @param modelType the type of GraphQL model to get by ID.
+//  * @param modelId the ID of the model to get.
+//  * @returns 
+//  */
+// async function getById<T extends GraphQLModel>(modelType: T, modelId: string): Promise<T | NotFound | GraphQLQueryFailed> {
+//     function buildQueryString(): string {
+//         const fields = Object.keys(modelType)
+//             .filter((key) => key !== "GRAPHQL_SINGLE_MODEL_NAME" && key !== "GRAPHQL_ALL_MODEL_NAMES")
+//             .join("\n");
+//         const query = `
+//             query ($id: UUID!) {
+//                 $modelName(id: $id) {
+//                     $fieldss
+//                 }
+//             }
+//         `;
+//         return JSON.stringify({
+//             query,
+//             variables: {
+//                 id: modelId,
+//                 modelName: modelType.GRAPHQL_SINGLE_MODEL_NAME,
+//                 fields: fields,
+//             },
+//         });
+//     }
+//     const queryString = buildQueryString();
+//     console.log("Query string is: " + queryString);
+//     const response = await fetch("/graphql/", {
+//         method: "POST",
+//         headers: {
+//             "Content-Type": "application/json",
+//             "Accept": "application/json",
+//             // TODO Add CSRF token here
+//         },
+//         body: queryString,
+//     });
+//     const responseJson = await response.json();
+//     if (200 !== response.status){
+//         // HTTP status error
+//         return new GraphQLQueryFailed(responseJson.errors);
+//     }
+//     const modelData: Object = responseJson?.data[modelType.GRAPHQL_SINGLE_MODEL_NAME];
+//     if (modelData === null || modelData === undefined){
+//         // no model data on query response
+//         return NotFound
+//     }
+//     // if we have some model data, then try to construct the model object
+// }
+// /**
+//  * Get "Style" data for a single object.
+//  * @param styleModelId the Django "Style" model id to fetch.
+//  * @returns Style data for the given object.
+//  */
+// export async function getStyleData(styleModelId: string): Promise<Style | StyleNotFound> {
+//     const stylesOnLayerQuery = `
+//         query ($id: UUID!) {
+//             style(id: $id) {
+//                 drawStroke
+//                 strokeColor
+//                 strokeWeight
+//                 strokeOpacity
+//                 strokeLineCap
+//                 strokeLineJoin
+//                 strokeDashArray
+//                 strokeDashOffset
+//                 drawFill
+//                 fillColor
+//                 fillOpacity
+//             }
+//         }
+//     `;
+//     const style = await queryGraphQL(
+//         JSON.stringify({
+//             query: stylesOnLayerQuery,
+//             variables: {id: styleModelId},
+//         }
+//     ));
+//     if (style?.data?.style === null || style?.data?.style === undefined){
+//         return new StyleNotFound();
+//     }
+//     const styleData = style.data.style;
+//     return new Style(
+//         styleData.drawStroke,
+//         styleData.strokeColor,
+//         styleData.strokeWeight,
+//         styleData.strokeOpacity,
+//         styleData.strokeLineCap,
+//         styleData.strokeLineJoin,
+//         styleData.strokeDashOffset,
+//         styleData.drawFill,
+//         styleData.fillColor,
+//         styleData.fillOpacity,
+//     );
+// }
