@@ -1,1 +1,1 @@
-{"root":["../frontend/ts/graphql.ts","../frontend/ts/refresh_layer_map_data.ts"],"version":"5.8.3"}
+{"root":["../frontend/ts/refresh_layer_map_data.ts","../frontend/ts/graphql/api.ts","../frontend/ts/graphql/schema.ts"],"version":"5.8.3"}

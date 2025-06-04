@@ -1,4 +1,4 @@
-import { modelFromData, Style } from "./graphql.js";
+import { test } from "./graphql/api.js";
 /// <reference types="leaflet" />
 /************
  * This script refreshes map data using the GraphQL API whenever the "map_data" Django
@@ -29,7 +29,7 @@ import { modelFromData, Style } from "./graphql.js";
 //     return styles;
 // }
 document.addEventListener('DOMContentLoaded', function () {
-    console.log(modelFromData(Style, {}));
+    console.log(test());
     // const select = document.getElementById('id_map_data');
     // const stylesOnLayersGroup = document.getElementById('stylesonlayer_set-group');
     // // Initialize leaflet map

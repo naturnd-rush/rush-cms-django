@@ -1,4 +1,4 @@
-import { modelFromData, Style } from "./graphql.js";
+import { test } from "./graphql/api.js";
 import * as L from "leaflet";
 /// <reference types="leaflet" />
 
@@ -38,7 +38,7 @@ import * as L from "leaflet";
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    console.log(modelFromData(Style, {}));
+    console.log(test());
 
     // const select = document.getElementById('id_map_data');
     // const stylesOnLayersGroup = document.getElementById('stylesonlayer_set-group');
