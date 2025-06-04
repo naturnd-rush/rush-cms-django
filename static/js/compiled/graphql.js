@@ -20,6 +20,26 @@ export class GraphQLError extends Error {
         this.responseBody = responseBody;
     }
 }
+export class StyleNotFound {
+}
+export class Style {
+    constructor(
+    // stroke options
+    drawStroke, strokeColor, strokeWeight, strokeOpacty, strokeLineJoin, strokeDashArray, strokeDashOffset, 
+    // fill options
+    drawFill, fillColor, fillOpacity) {
+        this.drawStroke = drawStroke;
+        this.strokeColor = strokeColor;
+        this.strokeWeight = strokeWeight;
+        this.strokeOpacty = strokeOpacty;
+        this.strokeLineJoin = strokeLineJoin;
+        this.strokeDashArray = strokeDashArray;
+        this.strokeDashOffset = strokeDashOffset;
+        this.drawFill = drawFill;
+        this.fillColor = fillColor;
+        this.fillOpacity = fillOpacity;
+    }
+}
 /**
  * Query the GraphQL API.
  * @param query The GraphQL Query to execute.
@@ -42,5 +62,40 @@ export function queryGraphQL(query) {
         }
         const errorText = yield response.text();
         throw new GraphQLError(response.status, errorText);
+    });
+}
+/**
+ * Get "Style" data for a single object.
+ * @param styleModelId the Django "Style" model id to fetch.
+ * @returns Style data for the given object.
+ */
+export function getStyleData(styleModelId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
+        const stylesOnLayerQuery = `
+        query ($id: UUID!) {
+            style(id: $id) {
+                drawStroke
+                strokeColor
+                strokeWeight
+                strokeOpacity
+                strokeLineCap
+                strokeLineJoin
+                strokeDashArray
+                strokeDashOffset
+                drawFill
+                fillColor
+                fillOpacity
+            }
+        }
+    `;
+        const style = yield queryGraphQL(JSON.stringify({
+            query: stylesOnLayerQuery,
+            variables: { id: styleModelId },
+        }));
+        if (((_a = style === null || style === void 0 ? void 0 : style.data) === null || _a === void 0 ? void 0 : _a.style) === null || ((_b = style === null || style === void 0 ? void 0 : style.data) === null || _b === void 0 ? void 0 : _b.style) === undefined) {
+            return new StyleNotFound();
+        }
+        return style.data.style;
     });
 }

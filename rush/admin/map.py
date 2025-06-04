@@ -22,8 +22,8 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
     inlines = [StyleOnLayerInline]
 
-    class Media:
-        js = ["js/compiled/refresh_layer_map_data.ts"]
+    # class Media:
+    #     js = ["js/compiled/refresh_layer_map_data.js"]
 
     def render_change_form(self, request, context, *args, **kwargs):
         # obj = context.get("original")

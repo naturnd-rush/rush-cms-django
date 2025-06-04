@@ -1,0 +1,9 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <!-- Layer map preview JS. -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script type="module" src="{% static 'js/compiled/refresh_layer_map_data.js' %}"></script>
+{% endblock %}
