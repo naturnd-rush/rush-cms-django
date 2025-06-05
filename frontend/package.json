@@ -9,10 +9,13 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.18",
+    "@types/node": "^22.15.29",
     "typescript": "~5.8.3",
     "vite": "^6.3.5"
   },
   "dependencies": {
+    "fast-glob": "^3.3.3",
     "leaflet": "^1.9.4",
     "zod": "^3.25.51"
   }

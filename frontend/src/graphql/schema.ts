@@ -25,4 +25,5 @@ export const StyleSchema = z.object({
     fillColor: z.string(),
     fillOpacity: z.number(),
 
-}); export type Style = z.infer<typeof StyleSchema>;
+});
+export type Style = z.infer<typeof StyleSchema>;

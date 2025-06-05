@@ -1,4 +1,4 @@
-import { StyleSchema, Style } from "./schema.js";
+import { StyleSchema, type Style } from "./schema.js";
 
 
 /**
@@ -18,7 +18,7 @@ export class NotFound {}
 
 
 export function test(): Style {
-  const result = StyleSchema.safeParse({});
+  const result = StyleSchema.safeParse({'drawStroke': true});
   if (!result.success) {
     throw new Error("Invalid style data: " + JSON.stringify(result.error));
   }

@@ -1,13 +1,34 @@
 import { defineConfig } from 'vite'
+import { resolve } from 'path'
+import fg from 'fast-glob'
+
+function getInputEntries() {
+  const entries: Record<string, string> = {}
+
+  const files = fg.sync('src/**/*.{ts,js}', { cwd: __dirname })
+
+  for (const file of files) {
+    // Strip the extension and slashes for the key
+    const name = file.replace(/^src\//, '').replace(/\.[tj]s$/, '')
+    entries[name] = resolve(__dirname, file)
+  }
+
+  return entries
+}
 
 export default defineConfig({
-    root: '../frontend/', // root of vite project (frontend/)
-    base: './', // relative paths in output
+    root: '../frontend/',
+    base: './', // relative path for output files
     build: {
-        outDir: '../static/js/compiled', // or wherever you want the compiled output
+        outDir: '../static/js/compiled',
         emptyOutDir: true,
         rollupOptions: {
-            input: './index.html', // entry point for JS/CSS
-        }
+            input: getInputEntries(),
+            output: {
+                entryFileNames: '[name].js',
+                chunkFileNames: '[name].js',
+                assetFileNames: '[name][extname]',
+            },
+        },
     }
 })
