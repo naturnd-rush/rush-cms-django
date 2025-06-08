@@ -1,4 +1,5 @@
-import { test } from "./graphql/api";
+import { QueryBuilder } from "./graphql/api";
+import {StyleSchema, type Style} from "./graphql/schema"
 import * as L from "leaflet";
 /// <reference types="leaflet" />
 
@@ -10,7 +11,7 @@ import * as L from "leaflet";
 
 
 // async function getLayerStyleData(): Promise<Array<Style>> {
-    
+
 //     const styles: Array<Style> = [];
 //     const stylesOnLayerSelector = "[id^='id_stylesonlayer_set-'][id$='-style']";
 //     const stylesOnLayerEls = document.querySelectorAll(stylesOnLayerSelector);
@@ -32,16 +33,18 @@ import * as L from "leaflet";
 //         }
 //         styles.push(style);
 //     }
-    
+
 //     return styles;
 // }
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    console.log(test());
-
-
-
+    const styleQueryBuilder = new QueryBuilder<typeof StyleSchema>(StyleSchema);
+    styleQueryBuilder.getAll().then(
+        styles => {
+            console.log("Found styles: ", styles);
+        }
+    );
     // const select = document.getElementById('id_map_data');
     // const stylesOnLayersGroup = document.getElementById('stylesonlayer_set-group');
 
@@ -168,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function () {
     //             //         };
     //             //     }
     //             // }).addTo(map);
-                
+
     //         }})
     //     .catch((err) => {
     //         console.error("GraphQL error:", err);

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z, ZodObject } from "zod"
 
 /**
  * Typescript Schema for GraphQL models.
@@ -8,22 +8,34 @@ import { z } from "zod"
  * See their docs: https://zod.dev/.
  */
 
+export const SchemaMetadataSchema = z.object({
+    getByIdName: z.string(),
+    getAllName: z.string(),
+});
+export type SchemaMetadata = z.infer<typeof SchemaMetadataSchema>;
 
 export const StyleSchema = z.object({
+
+    id: z.string(),
+    // TODO: Change opacity and weight to njumnbers and parse numbers correctly before safe-parsing.
+    // NOTE: THERE may be some thing I can use native to Zod that will do this during parsing...
 
     // stroke options
     drawStroke: z.boolean(),
     strokeColor: z.string(),
-    strokeWeight: z.number(),
-    strokeOpacty: z.number(),
+    strokeWeight: z.string(),
+    strokeOpacity: z.string(),
     strokeLineJoin: z.string(),
-    strokeDashArray: z.string(),
-    strokeDashOffset: z.string(),
+    strokeDashArray: z.string().nullable(),
+    strokeDashOffset: z.string().nullable(),
     
     // fill options
     drawFill: z.boolean(),
     fillColor: z.string(),
-    fillOpacity: z.number(),
+    fillOpacity: z.string(),
 
-});
+}).describe(JSON.stringify({
+    getByIdName: "style",
+    getAllName: "allStyles",
+}));
 export type Style = z.infer<typeof StyleSchema>;
