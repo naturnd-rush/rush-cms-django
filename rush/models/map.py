@@ -1,5 +1,6 @@
 import re
 import uuid
+from decimal import Decimal
 
 import django.db.models as models
 from colorfield.fields import ColorField
@@ -61,10 +62,16 @@ class Style(models.Model):
     )
     stroke_color = ColorField(default="#FFFFFF", verbose_name="Color")
     stroke_weight = models.DecimalField(
-        max_digits=10, decimal_places=2, default=1, verbose_name="Thickness"
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal(1),
+        verbose_name="Thickness",
     )
     stroke_opacity = models.DecimalField(
-        max_digits=5, decimal_places=3, default=1.00, verbose_name="Transparency"
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal(1),
+        verbose_name="Transparency",
     )
     stroke_line_cap = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-linecap#usage_notes.
@@ -108,7 +115,7 @@ class Style(models.Model):
     fill_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
-        default=1.00,
+        default=Decimal(1),
         null=True,
         blank=True,
     )
@@ -132,7 +139,7 @@ class Style(models.Model):
     marker_icon_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
-        default=1.00,
+        default=Decimal(1),
         null=True,
         blank=True,
     )
@@ -203,3 +210,8 @@ class StylesOnLayer(models.Model):
 
     style = models.ForeignKey(Style, on_delete=models.CASCADE)
     layer = models.ForeignKey(Layer, on_delete=models.CASCADE)
+
+    # Some expression that will be matched against a GeoJSON feature's properties
+    # to decide whether this style will be applied to any given feature on the map.
+    # The default is True, which means this style will be applied to all Features by default!
+    feature_mapping = models.TextField(default="true")

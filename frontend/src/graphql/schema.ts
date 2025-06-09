@@ -14,25 +14,33 @@ export const SchemaMetadataSchema = z.object({
 });
 export type SchemaMetadata = z.infer<typeof SchemaMetadataSchema>;
 
-export const StyleSchema = z.object({
+const BOOLEAN = z.boolean();
+const STRING = z.string();
+const NUMBER = z.preprocess((v) => Number(v), z.number());
+const NULLABLE_STRING = z.string().nullable();
+const NULLABLE_NUMBER = z.preprocess((v) => Number(v), z.number().nullable());
 
-    id: z.string(),
-    // TODO: Change opacity and weight to njumnbers and parse numbers correctly before safe-parsing.
-    // NOTE: THERE may be some thing I can use native to Zod that will do this during parsing...
+export const StyleSchema = z.object({
+    id: STRING,
 
     // stroke options
-    drawStroke: z.boolean(),
-    strokeColor: z.string(),
-    strokeWeight: z.string(),
-    strokeOpacity: z.string(),
-    strokeLineJoin: z.string(),
-    strokeDashArray: z.string().nullable(),
-    strokeDashOffset: z.string().nullable(),
+    drawStroke: BOOLEAN,
+    strokeColor: STRING,
+    strokeWeight: NUMBER,
+    strokeOpacity: NUMBER,
+    strokeLineJoin: STRING,
+    strokeDashArray: NULLABLE_STRING,
+    strokeDashOffset: NULLABLE_NUMBER,
     
     // fill options
-    drawFill: z.boolean(),
-    fillColor: z.string(),
-    fillOpacity: z.string(),
+    drawFill: BOOLEAN,
+    fillColor: STRING,
+    fillOpacity: NUMBER,
+
+    // marker options
+    drawMarker: BOOLEAN,
+    markerIcon: STRING, // stored as the relative path of the icon
+    markerIconOpacity: NUMBER,
 
 }).describe(JSON.stringify({
     getByIdName: "style",

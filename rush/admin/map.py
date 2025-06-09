@@ -13,17 +13,15 @@ logger = logging.getLogger(__name__)
 
 
 class StyleOnLayerInline(admin.TabularInline):
+    verbose_name_plural = "Styles applied to this Layer"
     model = models.StylesOnLayer
-    extra = 1
+    extra = 0
 
 
 @admin.register(models.Layer)
 class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
     inlines = [StyleOnLayerInline]
-
-    # class Media:
-    #     js = ["js/compiled/refresh_layer_map_data.js"]
 
     def render_change_form(self, request, context, *args, **kwargs):
         # obj = context.get("original")

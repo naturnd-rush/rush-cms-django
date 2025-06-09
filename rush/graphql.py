@@ -56,6 +56,9 @@ class StyleType(DjangoObjectType):
             "draw_fill",
             "fill_color",
             "fill_opacity",
+            "draw_marker",
+            "marker_icon",
+            "marker_icon_opacity",
             "name",
         ]
 
