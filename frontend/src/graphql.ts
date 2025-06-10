@@ -45,16 +45,33 @@ export async function executeQuery(queryString: string): Promise<any> {
     return responseJson;
 }
 
-export interface StyleOnLayer{
-    id: string, 
-    style: {
-        drawStroke: boolean,
-        strokeColor: string,
-        strokeWeight: number,
-    },
+export interface Style{
+    // stroke options
+    drawStroke: boolean,
+    strokeColor: string,
+    strokeWeight: number,
+    strokeOpacity: number,
+    strokeLineJoin: string,
+    strokeDashArray: string | null,
+    strokeDashOffset: number | null,
+
+    // fill options
+    drawFill: boolean,
+    fillColor: string,
+    fillOpacity: number,
+
+    // marker options
+    drawMarker: boolean,
+    markerIcon: string, // relative path
+    markerIconOpacity: number,
 }
 
-export async function getStylesOnLayerById(stylesOnLayerId: string): Promise<StyleOnLayer> {
+export interface StyleOnLayerResponse{
+    id: string, 
+    style: Style,
+}
+
+export async function getStylesOnLayerById(stylesOnLayerId: string): Promise<StyleOnLayerResponse> {
     const query = `
         query ($id: UUID!) {
             stylesOnLayer(id: $id) {
@@ -63,6 +80,16 @@ export async function getStylesOnLayerById(stylesOnLayerId: string): Promise<Sty
                     drawStroke
                     strokeColor
                     strokeWeight
+                    strokeOpacity
+                    strokeLineJoin
+                    strokeDashArray
+                    strokeDashOffset
+                    drawFill
+                    fillColor
+                    fillOpacity
+                    drawMarker
+                    markerIcon
+                    markerIconOpacity
                 }
             }
         }
@@ -75,46 +102,6 @@ export async function getStylesOnLayerById(stylesOnLayerId: string): Promise<Sty
             }
         })
     );
-    const styleOnLayer: StyleOnLayer = response.data.stylesOnLayer;
+    const styleOnLayer: StyleOnLayerResponse = response.data.stylesOnLayer;
     return styleOnLayer;
 }
-
-export const SchemaMetadataSchema = z.object({
-    getByIdName: z.string(),
-    getAllName: z.string(),
-});
-export type SchemaMetadata = z.infer<typeof SchemaMetadataSchema>;
-
-const BOOLEAN = z.boolean();
-const STRING = z.string();
-const NUMBER = z.preprocess((v) => Number(v), z.number());
-const NULLABLE_STRING = z.string().nullable();
-const NULLABLE_NUMBER = z.preprocess((v) => Number(v), z.number().nullable());
-
-export const StyleSchema = z.object({
-    id: STRING,
-
-    // stroke options
-    drawStroke: BOOLEAN,
-    strokeColor: STRING,
-    strokeWeight: NUMBER,
-    strokeOpacity: NUMBER,
-    strokeLineJoin: STRING,
-    strokeDashArray: NULLABLE_STRING,
-    strokeDashOffset: NULLABLE_NUMBER,
-    
-    // fill options
-    drawFill: BOOLEAN,
-    fillColor: STRING,
-    fillOpacity: NUMBER,
-
-    // marker options
-    drawMarker: BOOLEAN,
-    markerIcon: STRING, // stored as the relative path of the icon
-    markerIconOpacity: NUMBER,
-
-}).describe(JSON.stringify({
-    getByIdName: "style",
-    getAllName: "allStyles",
-}));
-export type Style = z.infer<typeof StyleSchema>;

@@ -1,6 +1,4 @@
-import { QueryBuilder } from "./graphql/api";
-import {StyleSchema, type Style, type StyleOnLayer, getStylesOnLayerById} from "./graphql/schema"
-import { executeQuery } from "./graphql/api";
+import {type Style, type StyleOnLayerResponse, getStylesOnLayerById} from "./graphql"
 
 /************
  * This script refreshes map data using the GraphQL API whenever the "map_data" Django
@@ -8,25 +6,79 @@ import { executeQuery } from "./graphql/api";
  * used to render the Layer's map preview.
  ************/
 
-async function getLayerStyleData(): Promise<Array<StyleOnLayer>> {
-
-    const styles: Array<StyleOnLayer> = [];
-    const stylesOnLayerEls = document.querySelectorAll("[id^='style-on-layer-id-hook']");
-
-    for(const stylesOnLayerEl of stylesOnLayerEls){
-        const styleModelId = stylesOnLayerEl.innerHTML;
-        if (styleModelId === ""){
-            // skip empty style dropdowns in the form
-            continue;
-        }
-        const styleOnLayer = await getStylesOnLayerById(styleModelId);
-        styles.push(styleOnLayer);
-        console.log("style on layer: ", styleOnLayer);
-    }
-    return styles;
+interface StyleOnLayer{
+    style: Style,
+    feature_mapping: string,
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+async function getLayerStyleData(): Promise<Array<StyleOnLayer>> {
+    // TODO: This should be querying Style not StyleOnLayerResponse via the graphQL API because relying on the styleonlayerids to fetch data
+    // will fail when a new styleonlayer inline row is created (the styleonlayer model hasn't yet been saved and so there will be nothing to fetch!)
+    const result: Array<StyleOnLayer> = [];
+    for (let inlineRow of document.querySelectorAll("tr[id*='stylesonlayer_set-']")){
+        // for each styleOnLayer inline group
+        const modelId = inlineRow.querySelector("[id*='style-on-layer-id-hook']")?.innerHTML;
+        const featureMapping = (inlineRow.querySelector("textarea[id*='feature_mapping']") as HTMLInputElement | null)?.value;
+        if (!(modelId && featureMapping)){
+            // most likely an empty inline
+            continue;
+        }
+        const response = await getStylesOnLayerById(modelId);
+        result.push({
+            style: response.style,
+            feature_mapping: featureMapping,
+        });
+    }
+    return result;
+}
+
+const inlineElements = {
+    styles: {
+        addEventListener: (callback: (mutation: MutationRecord) => void): void => {
+            const inlineGroup = document.getElementById('stylesonlayer_set-group');
+            if (inlineGroup !== null) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.target instanceof HTMLSelectElement && mutation.type === "childList"){
+                            callback(mutation);
+                        }
+                    });
+                });
+                observer.observe(inlineGroup, {childList: true, subtree: true});
+            }
+        },
+    },
+    featureMappings: {
+        addEventListener: (callback: (event: Event) => void): void => {
+            document.addEventListener('input', (event) => {
+                const target = event.target;
+                const featureChanged = target instanceof HTMLTextAreaElement && target.id.includes('feature_mapping');
+                if (featureChanged) {
+                    callback(event);
+                }
+            });
+        },
+    },
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    let layerStyleData: Array<StyleOnLayer> = [];
+
+    inlineElements.featureMappings.addEventListener((event) => {
+        console.log("Feature changed! ", event);
+    });
+    inlineElements.styles.addEventListener((mutation) => {
+        console.log("Style changed: ", mutation);
+    });
+    
+
+    // if (input) {
+    //     input.addEventListener('input', (event) => {
+    //     const target = event.target as HTMLInputElement;
+    //     console.log('New value:', target.value);
+    //     });
+    // }
 
     getLayerStyleData().then(data => console.log(data));
 
