@@ -2,7 +2,7 @@ import logging
 
 from django import forms
 from django.contrib import admin
-from django.utils.html import format_html
+from django.db import models as django_db_models
 from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin
 from simple_history.admin import SimpleHistoryAdmin
@@ -13,14 +13,23 @@ from rush.admin import utils
 logger = logging.getLogger(__name__)
 
 
-class StyleOnLayerInline(  # type: ignore[misc]
-    utils.make_frontend_id_hook_mixin("styles_on_layers_id_hook"),
-    admin.TabularInline,
-):
+class StyleOnLayerInline(admin.TabularInline):
+    template = "admin/rush/stylesonlayer/edit_inline/tabular.html"
     verbose_name_plural = "Styles applied to this Layer"
     model = models.StylesOnLayer
     extra = 0
     exclude = ["id"]
+    fields = ["style", "feature_mapping"]
+    autocomplete_fields = [
+        # uses the searchable textbox in the admin form to add/remove Styles
+        "style"
+    ]
+    formfield_overrides = {
+        django_db_models.TextField: {
+            # make the feature mapping textarea a smaller size (default is wayyy to large)
+            "widget": forms.Textarea(attrs={"rows": 1, "cols": 40})
+        },
+    }
 
 
 @admin.register(models.Layer)
@@ -133,6 +142,7 @@ class StyleAdmin(SimpleHistoryAdmin):
     form = StyleForm
     readonly_fields = ["style_preview"]
     exclude = ["id"]
+    search_fields = ["name"]
 
     @admin.display(description="Style Preview")
     def style_preview(self, obj):

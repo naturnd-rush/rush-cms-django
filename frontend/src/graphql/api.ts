@@ -1,6 +1,29 @@
 import { SchemaMetadataSchema, type SchemaMetadata } from "./schema.js";
 import { type ZodTypeAny, z, ZodObject } from 'zod';
 
+
+export async function executeQuery(queryString: string): Promise<any> {
+        const response = await fetch("/graphql/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                // TODO Add CSRF token here
+            },
+            body: queryString,
+        });
+        const responseJson = await response.json();
+        if (200 !== response.status){
+            if (responseJson.errors === null || responseJson.errors === undefined){
+                throw new GraphQLRequestFailed("GraphQL response code (" + response.status + ") is not 200 but no errors were sent back in the response!");
+            }
+            // something went wrong during the request
+            throw new GraphQLRequestFailed(JSON.stringify(responseJson.errors));
+        }
+        // return full response json
+        return responseJson;
+    }
+
 /**
  * Something went wrong while making a request to GraphQL.
  */
@@ -79,31 +102,9 @@ export class QueryBuilder<Schema extends ZodTypeAny> {
         return JSON.stringify({query, variables: {}});
     }
 
-    protected async executeQuery(queryString: string): Promise<any> {
-        const response = await fetch("/graphql/", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                // TODO Add CSRF token here
-            },
-            body: queryString,
-        });
-        const responseJson = await response.json();
-        if (200 !== response.status){
-            if (responseJson.errors === null || responseJson.errors === undefined){
-                throw new GraphQLRequestFailed("GraphQL response code (" + response.status + ") is not 200 but no errors were sent back in the response!");
-            }
-            // something went wrong during the request
-            throw new GraphQLRequestFailed(JSON.stringify(responseJson.errors));
-        }
-        // return full response json
-        return responseJson;
-    }
-
     public async getById(id: string): Promise<z.infer<Schema> | null> {
         const queryString = this.buildGetById(id);
-        const responseJson = await this.executeQuery(queryString);
+        const responseJson = await executeQuery(queryString);
         const modelData = responseJson?.data[this.metadata.getByIdName];
         if (modelData === null || modelData === undefined){
             // no model data on query response
@@ -118,7 +119,7 @@ export class QueryBuilder<Schema extends ZodTypeAny> {
 
     public async getAll(): Promise<Array<z.infer<Schema>>>{
         const queryString = this.buildGetAll();
-        const responseJson = await this.executeQuery(queryString);
+        const responseJson = await executeQuery(queryString);
         const modelDataList = responseJson?.data[this.metadata.getAllName];
         if (modelDataList === null || modelDataList === undefined){
             throw new GraphQLRequestFailed("Failed to access " + this.metadata.getAllName + " on " + responseJson + ".");

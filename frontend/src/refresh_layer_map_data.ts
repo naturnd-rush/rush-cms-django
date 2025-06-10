@@ -1,5 +1,6 @@
 import { QueryBuilder } from "./graphql/api";
-import {StyleSchema, type Style} from "./graphql/schema"
+import {StyleSchema, type Style, type StyleOnLayer, getStylesOnLayerById} from "./graphql/schema"
+import { executeQuery } from "./graphql/api";
 
 /************
  * This script refreshes map data using the GraphQL API whenever the "map_data" Django
@@ -7,28 +8,20 @@ import {StyleSchema, type Style} from "./graphql/schema"
  * used to render the Layer's map preview.
  ************/
 
-async function getLayerStyleData(): Promise<Array<Style>> {
+async function getLayerStyleData(): Promise<Array<StyleOnLayer>> {
 
-    const styles: Array<Style> = [];
-    const stylesOnLayerSelector = "[id^='id_stylesonlayer_set-'][id$='-style']";
-    const stylesOnLayerEls = document.querySelectorAll(stylesOnLayerSelector);
+    const styles: Array<StyleOnLayer> = [];
+    const stylesOnLayerEls = document.querySelectorAll("[id^='style-on-layer-id-hook']");
 
     for(const stylesOnLayerEl of stylesOnLayerEls){
-        if (!(stylesOnLayerEl instanceof HTMLSelectElement)) {
-            console.error("Expected element to be an HTMLSelectElement: ", stylesOnLayerEl);
-            continue;
-        }
-        const styleModelId = stylesOnLayerEl.value;
+        const styleModelId = stylesOnLayerEl.innerHTML;
         if (styleModelId === ""){
-            // empty style dropdown
+            // skip empty style dropdowns in the form
             continue;
         }
-        console.log("Style model ID: ", styleModelId);
-        const styleQueryBuilder = new QueryBuilder<typeof StyleSchema>(StyleSchema);
-        const style = await styleQueryBuilder.getById(styleModelId);
-        if (style !== null){
-            styles.push(style);
-        }
+        const styleOnLayer = await getStylesOnLayerById(styleModelId);
+        styles.push(styleOnLayer);
+        console.log("style on layer: ", styleOnLayer);
     }
     return styles;
 }
