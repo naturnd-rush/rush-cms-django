@@ -2,6 +2,7 @@ import logging
 
 from django import forms
 from django.contrib import admin
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin
 from simple_history.admin import SimpleHistoryAdmin
@@ -12,10 +13,14 @@ from rush.admin import utils
 logger = logging.getLogger(__name__)
 
 
-class StyleOnLayerInline(admin.TabularInline):
+class StyleOnLayerInline(  # type: ignore[misc]
+    utils.make_frontend_id_hook_mixin("styles_on_layers_id_hook"),
+    admin.TabularInline,
+):
     verbose_name_plural = "Styles applied to this Layer"
     model = models.StylesOnLayer
     extra = 0
+    exclude = ["id"]
 
 
 @admin.register(models.Layer)

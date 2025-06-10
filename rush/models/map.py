@@ -208,6 +208,8 @@ class StylesOnLayer(models.Model):
     reuse styles on other Layers.
     """
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
+
     style = models.ForeignKey(Style, on_delete=models.CASCADE)
     layer = models.ForeignKey(Layer, on_delete=models.CASCADE)
 

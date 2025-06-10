@@ -1,3 +1,5 @@
+from typing import Type
+
 from django import forms
 from django.conf import settings
 from django.contrib import admin
@@ -146,3 +148,42 @@ def get_map_preview_html(
         },
     )
     return mark_safe(leaflet_html)
+
+
+def make_frontend_id_hook_mixin(
+    method_name: str,
+    field_description: str = "Frontend ID Hook",
+) -> Type[object]:
+    """
+    Factory that returns a Django Admin mixin class which adds:
+    - a @display frontend_id_hook_<suffix> method
+    - auto-injection into `fields` and `readonly_fields` of the host class
+    """
+
+    def frontend_id_hook(self, obj):
+        return format_html(
+            f'<div class="{method_name.replace("_", "-")}" hidden>{str(obj.id)}</div>'
+        )
+
+    frontend_id_hook.__name__ = method_name
+    frontend_id_hook = admin.display(description=field_description)(frontend_id_hook)
+
+    class Mixin:
+        # Injected display method
+        locals()[method_name] = frontend_id_hook
+
+        def __init_subclass__(cls, **kwargs):
+            # Ensure the dynamically added method is in readonly_fields and fields
+            super().__init_subclass__(**kwargs)
+
+            if not hasattr(cls, "readonly_fields") or cls.readonly_fields is None:
+                cls.readonly_fields = []
+            if method_name not in cls.readonly_fields:
+                cls.readonly_fields = list(cls.readonly_fields) + [method_name]
+
+            if not hasattr(cls, "fields") or cls.fields is None:
+                cls.fields = []
+            if method_name not in cls.fields:
+                cls.fields = list(cls.fields) + [method_name]
+
+    return Mixin

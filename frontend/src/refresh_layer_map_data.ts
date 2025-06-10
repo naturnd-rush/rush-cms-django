@@ -1,14 +1,11 @@
 import { QueryBuilder } from "./graphql/api";
 import {StyleSchema, type Style} from "./graphql/schema"
-import * as L from "leaflet";
-/// <reference types="leaflet" />
 
 /************
  * This script refreshes map data using the GraphQL API whenever the "map_data" Django
  * admin field is changed and injects it into the page as a hidden element so it can be
  * used to render the Layer's map preview.
  ************/
-
 
 async function getLayerStyleData(): Promise<Array<Style>> {
 
@@ -26,6 +23,7 @@ async function getLayerStyleData(): Promise<Array<Style>> {
             // empty style dropdown
             continue;
         }
+        console.log("Style model ID: ", styleModelId);
         const styleQueryBuilder = new QueryBuilder<typeof StyleSchema>(StyleSchema);
         const style = await styleQueryBuilder.getById(styleModelId);
         if (style !== null){
@@ -36,6 +34,8 @@ async function getLayerStyleData(): Promise<Array<Style>> {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+
+    getLayerStyleData().then(data => console.log(data));
 
     // const select = document.getElementById('id_map_data');
     // const stylesOnLayersGroup = document.getElementById('stylesonlayer_set-group');
