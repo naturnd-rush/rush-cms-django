@@ -66,31 +66,23 @@ export interface Style{
     markerIconOpacity: number,
 }
 
-export interface StyleOnLayerResponse{
-    id: string, 
-    style: Style,
-}
-
-export async function getStylesOnLayerById(stylesOnLayerId: string): Promise<StyleOnLayerResponse> {
+export async function getStyleById(styleId: string): Promise<Style | null> {
     const query = `
         query ($id: UUID!) {
-            stylesOnLayer(id: $id) {
-                id
-                style {
-                    drawStroke
-                    strokeColor
-                    strokeWeight
-                    strokeOpacity
-                    strokeLineJoin
-                    strokeDashArray
-                    strokeDashOffset
-                    drawFill
-                    fillColor
-                    fillOpacity
-                    drawMarker
-                    markerIcon
-                    markerIconOpacity
-                }
+            style(id: $id) {
+                drawStroke
+                strokeColor
+                strokeWeight
+                strokeOpacity
+                strokeLineJoin
+                strokeDashArray
+                strokeDashOffset
+                drawFill
+                fillColor
+                fillOpacity
+                drawMarker
+                markerIcon
+                markerIconOpacity
             }
         }
     `;
@@ -98,10 +90,34 @@ export async function getStylesOnLayerById(stylesOnLayerId: string): Promise<Sty
         JSON.stringify({
             query,
             variables: {
-                id: stylesOnLayerId
+                id: styleId
             }
         })
     );
-    const styleOnLayer: StyleOnLayerResponse = response.data.stylesOnLayer;
-    return styleOnLayer;
+    const style: Style | null = response.data.style;
+    return style;
+}
+
+export interface MapData{
+    geojson: string,
+}
+
+export async function getMapDataById(mapDataId: string): Promise<MapData | null>{
+    const query = `
+        query ($id: UUID!) {
+            mapData(id: $id) {
+                geojson
+            }
+        }
+    `;
+    const response = await executeQuery(
+        JSON.stringify({
+            query,
+            variables: {
+                id: mapDataId
+            }
+        })
+    );
+    const mapData: MapData | null = response.data.mapData;
+    return mapData;
 }
