@@ -1,4 +1,5 @@
 import {type Style, type MapData, getStyleById, getMapDataById} from "./graphql"
+import type { FeatureCollection, Geometry, GeoJsonObject, BBox } from 'geojson';
 import * as L from 'leaflet';
 
 /************
@@ -7,15 +8,18 @@ import * as L from 'leaflet';
  * used to render the Layer's map preview.
  ************/
 
+type NewData = "None" | "Cleared" | FeatureCollection
+
 interface StyleOnLayer{
     style: Style,
     feature_mapping: string,
 }
 
 interface MapPreviewState {
-    geojson: string,
+    newGeoJsonData: NewData,
     stylesOnLayer: Array<StyleOnLayer>,
-};
+    currentLayer: L.GeoJSON<any, Geometry> | null,
+}
 
 /**
  * Get the currently configured style data for this layer.
@@ -44,16 +48,20 @@ async function getLayerStyleData(): Promise<Array<StyleOnLayer>> {
 /**
  * Fetch GeoJSON using the UUID present in the map-data input field.
  */
-async function getGeojsonData(mapDataSelectEl: HTMLSelectElement): Promise<any>{    
+async function getGeojson(mapDataSelectEl: HTMLSelectElement): Promise<NewData>{    
     let mapDataId = mapDataSelectEl.value;
     if (mapDataId === null || mapDataId === ""){
-        return JSON.parse("\{\}");
+        return "Cleared";
     }
     let mapData = await getMapDataById(mapDataId);
     if (mapData === null){
-        return JSON.parse("\{\}");
+        return "Cleared";
     }
-    return JSON.parse(mapData.geojson);
+    const geojson = JSON.parse(mapData.geojson);
+    if (geojson.features === null || geojson.features === undefined){
+        return "Cleared";
+    }
+    return geojson as FeatureCollection;
 }
 
 /**
@@ -91,6 +99,44 @@ const inlineElements = {
 
 function drawMapPreview(map: L.Map, state: MapPreviewState): void{
     console.log("Drawing map preview with state: ", state);
+
+    // Always remove the previous layer, if there is one, from the map. 
+    // Otherwse, it overlaps with the new layer being drawn.
+    if (state.currentLayer !== null){
+        console.log("removing current layer");
+        map.removeLayer(state.currentLayer);
+    }
+
+    // Clear the current layer when we are passed the "Cleared" signal.
+    if (state.newGeoJsonData === "Cleared"){
+        state.currentLayer = null;
+    }
+    // Update the current layer and fit the map's boundaries when we are passed new data. 
+    else if (state.newGeoJsonData !== "None") {
+        state.currentLayer = L.geoJSON(state.newGeoJsonData);
+        map.fitBounds(state.currentLayer.getBounds());
+    }
+
+    if (state.currentLayer === null){
+        // Exit if there is no layer to draw at this point...
+        return;
+    }
+
+    state.currentLayer.addTo(map)
+
+    // if (rawGeoJson.type === 'FeatureCollection') {
+    //     const featureCollection = rawGeoJson as FeatureCollection<Geometry, any>;
+
+    //     const layer = L.geoJSON(featureCollection, {
+    //         onEachFeature: (feature, layer) => {
+    //             layer.bindPopup('Feature ID: ' + (feature.id ?? 'none'));
+    //         },
+    //     });
+
+    //     layer.addTo(map);
+    // } else {
+    //     console.error('Expected GeoJSON type="FeatureCollection", but was:', state.geojson.type);
+    // }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -104,8 +150,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize object to track map preview state
     let mapPreviewState: MapPreviewState = {
-        geojson: JSON.parse("\{\}"),
+        newGeoJsonData: "Cleared",
         stylesOnLayer: [],
+        currentLayer: null,
     };
 
     // Hook into the map-data selection element
@@ -117,13 +164,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const redrawOnStyleChange = () => {
         getLayerStyleData().then(stylesOnLayer => {
             mapPreviewState.stylesOnLayer = stylesOnLayer;
+            mapPreviewState.newGeoJsonData = "None";
             drawMapPreview(map, mapPreviewState);
         });
     };
 
     const redrawOnGeojsonChange = () => {
-        getGeojsonData(mapDataSelectEl).then(geojson => {
-            mapPreviewState.geojson = geojson;
+        getGeojson(mapDataSelectEl).then(geojson => {
+            mapPreviewState.newGeoJsonData = geojson;
             drawMapPreview(map, mapPreviewState);
         })
     };
@@ -138,10 +186,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Draw the initial map using the current map-data and style info.
     Promise.all([
         getLayerStyleData(), 
-        getGeojsonData(mapDataSelectEl),
+        getGeojson(mapDataSelectEl),
     ]).then(([stylesOnLayer, geojson]: [Array<StyleOnLayer>, any]) => {
         mapPreviewState.stylesOnLayer = stylesOnLayer;
-        mapPreviewState.geojson = geojson;
+        mapPreviewState.newGeoJsonData = geojson;
         drawMapPreview(map, mapPreviewState);
     });
 
