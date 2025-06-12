@@ -52,8 +52,9 @@ export interface Style{
     strokeWeight: number,
     strokeOpacity: number,
     strokeLineJoin: string,
+    strokeLineCap: string,
     strokeDashArray: string | null,
-    strokeDashOffset: number | null,
+    strokeDashOffset: string | null,
 
     // fill options
     drawFill: boolean,
@@ -75,6 +76,7 @@ export async function getStyleById(styleId: string): Promise<Style | null> {
                 strokeWeight
                 strokeOpacity
                 strokeLineJoin
+                strokeLineCap
                 strokeDashArray
                 strokeDashOffset
                 drawFill

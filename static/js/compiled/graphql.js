@@ -6,6 +6,7 @@ class s extends Error{constructor(e){super(e)}}async function a(r){const e=await
                 strokeWeight
                 strokeOpacity
                 strokeLineJoin
+                strokeLineCap
                 strokeDashArray
                 strokeDashOffset
                 drawFill
