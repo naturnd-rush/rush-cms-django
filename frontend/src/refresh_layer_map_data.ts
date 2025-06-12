@@ -13,6 +13,7 @@ import { Parser } from 'expr-eval';
 interface StyleOnLayer{
     style: Style,
     feature_mapping: string,
+    inlineRow: Element,
 }
 
 interface MapPreviewState {
@@ -48,6 +49,7 @@ async function getStyleUpdate(): Promise<StyleUpdate> {
             stylesOnLayers.push({
                 style: style,
                 feature_mapping: featureMapping,
+                inlineRow: inlineRow,
             });
         }
     }
@@ -193,7 +195,6 @@ function coerceNumbersDeep(input: any): any {
 
 
 function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
-    console.log("Drawing map preview with state: ", state);
 
     // Always remove the previous layer, if there is one, from the map. 
     // Otherwse, it overlaps with the new layer being drawn.
@@ -231,15 +232,31 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
 
         // Find which styles should be applied to this feature by testing
         // the feature mapping against the feature's properties.
+        // TODO: Error propagating code is NOT efficient! I should probably make this faster...
         let appliedStyles: Array<Style> = [];
         for (let styleOnLayer of state.stylesOnLayer){
+            const fieldMappingContainer = styleOnLayer.inlineRow.querySelector("td[class*='feature_mapping']");
+            const fieldMappingErrors = fieldMappingContainer?.querySelector("div[id*='errors']");
             try{
                 const expr = parser.parse(styleOnLayer.feature_mapping);
                 if (expr.evaluate(coerceNumbersDeep(feature.properties)) === true){
                     appliedStyles.push(styleOnLayer.style);
+                    if (fieldMappingErrors && fieldMappingContainer){
+                        fieldMappingContainer.removeChild(fieldMappingErrors);
+                    }
                 }
             } catch (error){
-                // Don't apply style if parsing fails
+                // Add an error message above the feature mapping textarea for the user if parsing fails.
+                if (fieldMappingErrors && fieldMappingContainer){
+                    fieldMappingContainer.removeChild(fieldMappingErrors);
+                }
+                if (fieldMappingContainer && !fieldMappingContainer?.querySelector("div[id*='errors']")){
+                    const errorEl = document.createElement("div");
+                    errorEl.textContent = String(error);
+                    errorEl.id = "errors";
+                    errorEl.style = "color:rgb(255, 0, 0);";
+                    fieldMappingContainer.insertBefore(errorEl, fieldMappingContainer.children[0]);
+                }   
             }
         }
 
@@ -376,20 +393,6 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     });
     state.currentLayer = styledGeoJsonData;
     styledGeoJsonData.addTo(map)
-
-    // if (rawGeoJson.type === 'FeatureCollection') {
-    //     const featureCollection = rawGeoJson as FeatureCollection<Geometry, any>;
-
-    //     const layer = L.geoJSON(featureCollection, {
-    //         onEachFeature: (feature, layer) => {
-    //             layer.bindPopup('Feature ID: ' + (feature.id ?? 'none'));
-    //         },
-    //     });
-
-    //     layer.addTo(map);
-    // } else {
-    //     console.error('Expected GeoJSON type="FeatureCollection", but was:', state.geojson.type);
-    // }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
