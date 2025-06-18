@@ -1,11 +1,9 @@
-import { z } from "zod"
-
 /**
  * Typescript Schema for GraphQL models.
  * 
- * This module uses "Zod" to provide runtime type validation over input data (returned by GraphQL)
- * so we can be sure the data passing through our system at runtime conforms to TypeScript's type annotations.
- * See their docs: https://zod.dev/.
+ * Since the universe of (Admin Site --> GraphQL Backend) API calls should remain
+ * relatively small for the foreseeable future, I simply use TypeScript interfaces
+ * to spec API calls and the datatypes they return.
  */
 
 /**
@@ -23,7 +21,7 @@ export class GraphQLRequestFailed extends Error {
  * @returns A promise of Any data type. It is the responsibility of the
  * caller to make sure the typed response is correct.
  */
-export async function executeQuery(queryString: string): Promise<any> {
+async function executeQuery(queryString: string): Promise<any> {
     const response = await fetch("/graphql/", {
         method: "POST",
         headers: {
@@ -121,5 +119,25 @@ export async function getMapDataById(mapDataId: string): Promise<MapData | null>
         })
     );
     const mapData: MapData | null = response.data.mapData;
+    return mapData;
+}
+
+export async function getMapDataByName(name: string): Promise<MapData | null>{
+    const query = `
+        query ($name: String!) {
+            mapDataByName(name: $name) {
+                geojson
+            }
+        }
+    `;
+    const response = await executeQuery(
+        JSON.stringify({
+            query,
+            variables: {
+                name: name
+            }
+        })
+    );
+    const mapData: MapData | null = response.data.mapDataByName;
     return mapData;
 }

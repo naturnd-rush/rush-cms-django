@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class StyleOnLayerInline(admin.TabularInline):
-    template = "admin/rush/stylesonlayer/edit_inline/tabular.html"
     verbose_name_plural = "Styles applied to this Layer"
     model = models.StylesOnLayer
     extra = 0
@@ -36,6 +35,7 @@ class StyleOnLayerInline(admin.TabularInline):
 class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
     inlines = [StyleOnLayerInline]
+    autocomplete_fields = ["map_data"]
 
     def render_change_form(self, request, context, *args, **kwargs):
         # obj = context.get("original")
@@ -79,6 +79,7 @@ class MapDataAdmin(SimpleHistoryAdmin):
         "image_url_template",
     ]
     list_display = ["name", "provider"]
+    search_fields = ["name"]
 
     def render_change_form(self, request, context, *args, **kwargs):
         obj = context.get("original")
@@ -131,9 +132,9 @@ class StyleForm(forms.ModelForm):
 
     class Media:
         js = [
-            "style_preview.js",
-            "slider_textbox_input_sync.js",
-            "live_image_preview_refresh.js",
+            # "style_preview.js",
+            # "slider_textbox_input_sync.js",
+            # "live_image_preview_refresh.js",
         ]
 
 

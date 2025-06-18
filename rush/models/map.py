@@ -162,7 +162,7 @@ class Provider(models.TextChoices):
 class MapData(models.Model):
     # TODO: Add on_create validation
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     provider = models.CharField(max_length=255, choices=Provider.choices)
     geojson = models.JSONField(null=True, blank=True)
 

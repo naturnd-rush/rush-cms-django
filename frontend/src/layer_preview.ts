@@ -1,40 +1,43 @@
-import {type Style, getStyleById, getMapDataById} from "./graphql"
+import {type Style, getStyleById, getMapDataByName} from "./graphql"
 import type { FeatureCollection, Geometry, Feature } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
+import { waitForElementById, coerceNumbersDeep, blendHexColors, interpolateNumbers } from "./utils";
 import { Parser } from 'expr-eval';
 
 /************
- * This script refreshes map data using the GraphQL API whenever the "map_data" Django
- * admin field is changed and injects it into the page as a hidden element so it can be
- * used to render the Layer's map preview.
+ * This script draws a map layer preview based on the currently selected map-data object and
+ * the combination of style on layer objects currently being applied to the map layer.
  ************/
 
-interface StyleOnLayer{
+export interface StyleOnLayer{
     style: Style,
     feature_mapping: string,
     inlineRow: Element,
 }
 
-interface MapPreviewState {
+export interface MapPreviewState {
     stylesOnLayer: Array<StyleOnLayer>,
     currentLayer: L.GeoJSON<any, Geometry> | null,
 }
 
-interface MapPreviewUpdate {
+/**
+ * Represents a change in the map preview state.
+ */
+export interface MapPreviewUpdate {
     type: "Style" | "MapData",
 }
-interface StyleUpdate extends MapPreviewUpdate {
+export interface StyleUpdate extends MapPreviewUpdate {
     newStylesOnLayers: Array<StyleOnLayer>,
 }
-interface MapDataUpdate extends MapPreviewUpdate {
+export interface MapDataUpdate extends MapPreviewUpdate {
     newGeoJsonData: FeatureCollection<Geometry, any> | null,
 }
 
 /**
  * Get the currently configured style data for this layer.
  */
-async function getStyleUpdate(): Promise<StyleUpdate> {
+export async function getStyleUpdate(): Promise<StyleUpdate> {
     const stylesOnLayers: Array<StyleOnLayer> = [];
     for (let inlineRow of document.querySelectorAll("tr[id*='stylesonlayer_set-']")){
         // for each styleOnLayer inline group
@@ -62,13 +65,13 @@ async function getStyleUpdate(): Promise<StyleUpdate> {
 /**
  * Fetch GeoJSON using the UUID present in the map-data input field.
  */
-async function getMapDataUpdate(mapDataSelectEl: HTMLSelectElement): Promise<MapDataUpdate>{    
-    let mapDataId = mapDataSelectEl.value;
+export async function getMapDataUpdate(mapDataSelectSpan: HTMLSpanElement): Promise<MapDataUpdate>{
     const clearMapData = {type: "MapData", newGeoJsonData: null} as MapDataUpdate;
-    if (mapDataId === null || mapDataId === ""){
+    const mapDataName = mapDataSelectSpan.title;
+    if (mapDataName === null || mapDataName === ""){
         return clearMapData;
     }
-    let mapData = await getMapDataById(mapDataId);
+    const mapData = await getMapDataByName(mapDataName);
     if (mapData === null){
         return clearMapData;
     }
@@ -86,7 +89,7 @@ async function getMapDataUpdate(mapDataSelectEl: HTMLSelectElement): Promise<Map
  * Namespaced accessor for adding StyleOnLayer inline element event listeners. 
  * This code isn't the most efficient, but I'm leaving it for now because it works...
  */
-const inlineElements = {
+export const inlineElements = {
     styles: {
         addEventListener: (callback: (mutation: MutationRecord) => void): void => {
             const inlineGroup = document.getElementById('stylesonlayer_set-group');
@@ -115,86 +118,7 @@ const inlineElements = {
     },
 };
 
-function interpolateHexColor(color1: string, color2: string, t: number): string {
-  // Ensure t is between 0 and 1
-  t = Math.max(0, Math.min(1, t));
-
-  // Convert hex to RGB
-  const c1 = hexToRgb(color1);
-  const c2 = hexToRgb(color2);
-
-  if (!c1 || !c2) throw new Error("Invalid color format");
-
-  // Interpolate RGB values
-  const r = Math.round(c1.r + (c2.r - c1.r) * t);
-  const g = Math.round(c1.g + (c2.g - c1.g) * t);
-  const b = Math.round(c1.b + (c2.b - c1.b) * t);
-
-  // Convert back to hex
-  return rgbToHex(r, g, b);
-}
-
-function hexToRgb(hex: string): { r: number, g: number, b: number } | null {
-  const match = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
-  if (!match) return null;
-
-  return {
-    r: parseInt(match[1], 16),
-    g: parseInt(match[2], 16),
-    b: parseInt(match[3], 16),
-  };
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  return `#${[r, g, b]
-    .map((x) => x.toString(16).padStart(2, '0'))
-    .join('')}`;
-}
-
-/**
- * Interpolate evnly between two numbers, take one of the numbers if the other one is undefined, 
- * or return undefined if both numbers are none or undefined.
- */
-function interpolateNumbers(n1: number | undefined | null, n2: number | undefined | null): number | undefined {
-    n1 = isNaN(Number(n1)) ? undefined : Number(n1);
-    n2 = isNaN(Number(n2)) ? undefined : Number(n2);
-    if (n1 === undefined && n2 === undefined){
-        return undefined;
-    }
-    if (n1 === undefined && n2 !== undefined){
-        return n2;
-    }
-    if (n2 === undefined && n1 !== undefined){
-        return n1;
-    }
-    if (n1 !== undefined && n2 !== undefined){
-        return (n1 + n2) / 2;
-    }
-    return undefined;
-}
-
-/**
- * TODO
- */
-function coerceNumbersDeep(input: any): any {
-    if (Array.isArray(input)) {
-        return input.map(coerceNumbersDeep);
-    } else if (input !== null && typeof input === 'object') {
-        const result: Record<string, any> = {};
-        for (const [key, value] of Object.entries(input)) {
-            result[key] = coerceNumbersDeep(value);
-        }
-        return result;
-    } else if (typeof input === 'string' || typeof input === 'boolean') {
-        const num = Number(input);
-        return isNaN(num) ? input : num;
-    } else {
-        return input;
-    }
-}
-
-
-function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
+export function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
 
     // Always remove the previous layer, if there is one, from the map. 
     // Otherwse, it overlaps with the new layer being drawn.
@@ -305,40 +229,26 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
             }
 
             fillOpacity = interpolateNumbers(fillOpacity, style.fillOpacity);
+            strokeOpacity = interpolateNumbers(strokeOpacity, style.strokeOpacity);
 
-            // // When two styles are combined their opacity is averaged
-            // if (fillOpacity === undefined){
-            //     if (!Number.isNaN(style.fillOpacity)){
-            //         fillOpacity = style.fillOpacity;
-            //     }
+            // if (markerIconOpacity === undefined){
+            //     markerIconOpacity = style.markerIconOpacity;
             // } else {
-            //     // interpolate fill opacity
-            //     fillOpacity = (Number.parseFloat(fillOpacity) + style.fillOpacity) / 2);
+            //     // interpolate marker-icon opacity
+            //     markerIconOpacity = (markerIconOpacity + style.markerIconOpacity) / 2;
             // }
-            if (strokeOpacity === undefined){
-                strokeOpacity = style.strokeOpacity;
-            } else {
-                // interpolate stroke opacity
-                strokeOpacity = (strokeOpacity + style.strokeOpacity) / 2;
-            }
-            if (markerIconOpacity === undefined){
-                markerIconOpacity = style.markerIconOpacity;
-            } else {
-                // interpolate marker-icon opacity
-                markerIconOpacity = (markerIconOpacity + style.markerIconOpacity) / 2;
-            }
 
             if (fillColor === undefined){
                 fillColor = style.fillColor;
             } else {
                 // interpolate fill color
-                fillColor = interpolateHexColor(fillColor, style.fillColor, 0.5);
+                fillColor = blendHexColors(fillColor, style.fillColor, 0.5);
             }
             if (strokeColor === undefined){
                 strokeColor = style.strokeColor;
             } else {
                 // interpolate stroke color
-                strokeColor = interpolateHexColor(strokeColor, style.strokeColor, 0.5);
+                strokeColor = blendHexColors(strokeColor, style.strokeColor, 0.5);
             }
 
             strokeWeight = interpolateNumbers(strokeWeight, style.strokeWeight);
@@ -378,7 +288,6 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
 
             // TODO: Handle markers
         };
-        //console.log("FeatureStyle: ", featureStyle);
         return featureStyle;
     };
     
@@ -395,7 +304,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     styledGeoJsonData.addTo(map)
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {(async () => {
 
     // Initialize leaflet map
     let map = L.map('map-preview').setView([0, 0], 2);
@@ -420,7 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendFmUpdateAndPoll = () => {
         if (fmUpdate === true){
             getStyleUpdate().then(styleUpdate => {
-                console.log('Updating map styles based on a feature-mapping change!');
                 drawMapPreview(map, mapPreviewState, styleUpdate);
             });
         }
@@ -437,26 +345,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Hook into the map-data selection element
-    const mapDataSelectEl = (document.getElementById('id_map_data') as HTMLSelectElement);
-    if (mapDataSelectEl === null){
-        throw new Error("Expected to find a DOM element with id='id_map_data'.");
-    }
-    
-    // Listen to redraw the map when the underlying map-data is changed.
-    mapDataSelectEl.addEventListener("change", () => {
-        getMapDataUpdate(mapDataSelectEl).then(mapDataUpdate => {
-            drawMapPreview(map, mapPreviewState, mapDataUpdate);
-        })
-    });
+    const mapDataSelectSpanId = "select2-id_map_data-container";
+    const mapDataSelectSpan = await waitForElementById(mapDataSelectSpanId);
 
     // Draw the initial map using the current map-data and style info.
     Promise.all([
         getStyleUpdate(), 
-        getMapDataUpdate(mapDataSelectEl),
+        getMapDataUpdate(mapDataSelectSpan),
     ]).then(([styleUpdate, mapDataUpdate]: [StyleUpdate, MapDataUpdate]) => {
         // Inefficient, but meh.
         drawMapPreview(map, mapPreviewState, mapDataUpdate);
         drawMapPreview(map, mapPreviewState, styleUpdate);
     });
-    
-});
+
+})();});

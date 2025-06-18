@@ -69,6 +69,7 @@ class Query(graphene.ObjectType):
 
     all_map_datas = graphene.List(MapDataType)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
+    map_data_by_name = graphene.Field(MapDataType, name=graphene.String(required=True))
 
     all_styles_on_layers = graphene.List(StylesOnLayersType)
     styles_on_layer = graphene.Field(
@@ -78,28 +79,31 @@ class Query(graphene.ObjectType):
     all_styles = graphene.List(StyleType)
     style = graphene.Field(StyleType, id=graphene.UUID(required=True))
 
-    def resolve_all_questions(root, info):
+    def resolve_all_questions(self, info):
         return models.Question.objects.all()
 
-    def resolve_question(root, info, id):
+    def resolve_question(self, info, id):
         return models.Question.objects.get(pk=id)
 
-    def resolve_all_map_datas(root, info):
+    def resolve_all_map_datas(self, info):
         return models.MapData.objects.all()
 
-    def resolve_map_data(root, info, id):
+    def resolve_map_data(self, info, id):
         return models.MapData.objects.get(pk=id)
 
-    def resolve_all_styles_on_layers(root, info):
+    def resolve_map_data_by_name(self, info, name: str):
+        return models.MapData.objects.get(name=name)
+
+    def resolve_all_styles_on_layers(self, info):
         return models.StylesOnLayer.objects.all()
 
-    def resolve_styles_on_layer(root, info, id):
+    def resolve_styles_on_layer(self, info, id):
         return models.StylesOnLayer.objects.get(pk=id)
 
-    def resolve_all_styles(root, info):
+    def resolve_all_styles(self, info):
         return models.Style.objects.all()
 
-    def resolve_style(root, info, id):
+    def resolve_style(self, info, id):
         return models.Style.objects.get(pk=id)
 
 

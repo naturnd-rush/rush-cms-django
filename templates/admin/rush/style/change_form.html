@@ -1,0 +1,10 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <!--
+        Style editing / changeform template.
+    -->
+    <script type="module" src="{% static 'js/compiled/slider_textbox_input_sync.js' %}"></script>
+{% endblock %}

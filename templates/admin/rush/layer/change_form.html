@@ -3,7 +3,9 @@
 
 {% block extrahead %}
     {{ block.super }}
-    <!-- Layer map preview JS. -->
+    <!--
+        This template renders the map Layer change form / preview. 
+     -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script type="module" src="{% static 'js/compiled/refresh_layer_map_data.js' %}"></script>
+    <script type="module" src="{% static 'js/compiled/layer_preview.js' %}"></script>
 {% endblock %}

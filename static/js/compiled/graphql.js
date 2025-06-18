@@ -18,9 +18,9 @@ class s extends Error{constructor(e){super(e)}}async function a(r){const e=await
             }
         }
     `,variables:{id:r}}))).data.style}async function i(r){return(await a(JSON.stringify({query:`
-        query ($id: UUID!) {
-            mapData(id: $id) {
+        query ($name: String!) {
+            mapDataByName(name: $name) {
                 geojson
             }
         }
-    `,variables:{id:r}}))).data.mapData}export{i as a,n as g};
+    `,variables:{name:r}}))).data.mapDataByName}export{i as a,n as g};
