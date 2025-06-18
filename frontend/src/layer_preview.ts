@@ -170,6 +170,10 @@ export function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPr
                     }
                 }
             } catch (error){
+                // TODO: If a variable isn't in ANY of the features then we can display it here, othgerwise if it's 
+                // being used at least once I don't think I should display an error since the style is technically 
+                // being applied.
+
                 // Add an error message above the feature mapping textarea for the user if parsing fails.
                 if (fieldMappingErrors && fieldMappingContainer){
                     fieldMappingContainer.removeChild(fieldMappingErrors);
@@ -347,6 +351,16 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     // Hook into the map-data selection element
     const mapDataSelectSpanId = "select2-id_map_data-container";
     const mapDataSelectSpan = await waitForElementById(mapDataSelectSpanId);
+
+    // Listen to redraw the map when the map-data is changed.
+    const mapDataChangeObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === "childList") {
+                getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
+            }
+        });
+    });
+    mapDataChangeObserver.observe(mapDataSelectSpan!, {childList: true});
 
     // Draw the initial map using the current map-data and style info.
     Promise.all([
