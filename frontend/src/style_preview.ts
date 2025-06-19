@@ -13,11 +13,13 @@ function updatePreview(previewContainer: HTMLDivElement, styleOptions: any, mark
 
     if (markerImageData !== null){
         svg += '<defs><marker id="img-marker" ';
-        svg += 'markerWidth="20" markerHeight="20" ';
+        svg += 'markerWidth="100" markerHeight="100" ';
         svg += 'refX="10" refY="10" ';
+        svg += 'opacity="0.2" ';
+        svg += 'orient="0" '; // orient="auto" → rotates the marker to match the path direction (default). orient="auto-start-reverse" → rotates to match start, reversed. orient="0" → fixed angle, no rotation.
         svg += 'markerUnits="userSpaceOnUse" ';
         svg += 'orient="auto">';
-        svg += '<image href="' + markerImageData + '" x="0" y="0" width="20" height="20" />';
+        svg += '<image href="' + markerImageData + '" x="0" y="0" width="100" height="100" />';
         svg += '</marker></defs>';
     }
 
