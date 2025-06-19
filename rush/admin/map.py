@@ -122,7 +122,9 @@ class StyleForm(forms.ModelForm):
             "name",
         ]
         widgets = {
-            "stroke_weight": utils.SliderAndTextboxNumberInput(max=30, step=0.05),
+            "stroke_weight": utils.SliderAndTextboxNumberInput(
+                max=30, step=0.05, attrs={"class": "inline-field"}
+            ),
             "stroke_opacity": utils.SliderAndTextboxNumberInput(),
             "stroke_dash_offset": utils.SliderAndTextboxNumberInput(max=100, step=1),
             "fill_opacity": utils.SliderAndTextboxNumberInput(),
