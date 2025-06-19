@@ -1,5 +1,5 @@
 SAM*.md
-/.dev-*
+/.django_dev*
 node_modules/
 
 
