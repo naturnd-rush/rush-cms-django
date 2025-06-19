@@ -3,7 +3,7 @@
  * a preview widget so people can visualize the style in real time.
  */
 
-function updatePreview(previewContainer: HTMLDivElement, styleOptions: any): void {
+function updatePreview(previewContainer: HTMLDivElement, styleOptions: any, markerImageData: null | string): void {
     let svg = '<svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">'
     if (styleOptions.drawMarker.checked === true) {
         //svg += '<image href="' + iconUr
@@ -11,13 +11,15 @@ function updatePreview(previewContainer: HTMLDivElement, styleOptions: any): voi
         console.log(styleOptions.marker.icon);
     }
 
-    svg += '<defs><marker id="img-marker" ';
-    svg += 'markerWidth="20" markerHeight="20" ';
-    svg += 'refX="10" refY="10" ';
-    svg += 'markerUnits="userSpaceOnUse" ';
-    svg += 'orient="auto">';
-    svg += '<image href="https://upload.wikimedia.org/wikipedia/commons/8/84/Example.svg" x="0" y="0" width="20" height="20" />';
-    svg += '</marker></defs>';
+    if (markerImageData !== null){
+        svg += '<defs><marker id="img-marker" ';
+        svg += 'markerWidth="20" markerHeight="20" ';
+        svg += 'refX="10" refY="10" ';
+        svg += 'markerUnits="userSpaceOnUse" ';
+        svg += 'orient="auto">';
+        svg += '<image href="' + markerImageData + '" x="0" y="0" width="20" height="20" />';
+        svg += '</marker></defs>';
+    }
 
     svg += '<polygon points="20,20 100,40 140,80 60,120 20,80"'
     if (styleOptions.drawStroke.checked === true){
@@ -196,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add event-listeners for redrawing the style preview.
     for (let element of allOptionsAndToggles){
         const input = element as HTMLInputElement;
-        input.addEventListener('input', () => updatePreview(previewContainer, styleOptions));
+        input.addEventListener('input', () => updatePreview(previewContainer, styleOptions, null));
         input.addEventListener('input', () => collapseAndExpandOptionGroups(styleOptions));
     }
 
@@ -205,5 +207,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Draw initial style preview on page-load.
     collapseAndExpandOptionGroups(styleOptions);
-    updatePreview(previewContainer, styleOptions);
+    updatePreview(previewContainer, styleOptions, null);
+
+    if (styleOptions.marker.icon !== null){
+        styleOptions.marker.icon.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    console.log(e.target.result);
+                    // previewEl.src = e.target.result;
+                    // previewEl.style.display = 'block';
+                    //styleOptions.marker.rawData = e.target.result;
+                    updatePreview(previewContainer, styleOptions, e.target.result);
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
 });
