@@ -13,15 +13,18 @@ function updatePreview(previewContainer: HTMLDivElement, styleOptions: any, mark
 
     if (markerImageData !== null){
         svg += '<defs><marker id="img-marker" ';
-        svg += 'markerWidth="100" markerHeight="100" ';
-        svg += 'refX="10" refY="10" ';
-        svg += 'opacity="0.2" ';
+        svg += 'markerWidth="20" markerHeight="20" ';
+        svg += 'refX="10" refY="10" '; // these should be HALF the width & height to center the image on the actual point
+        svg += 'opacity="0.85" ';
         svg += 'orient="0" '; // orient="auto" → rotates the marker to match the path direction (default). orient="auto-start-reverse" → rotates to match start, reversed. orient="0" → fixed angle, no rotation.
         svg += 'markerUnits="userSpaceOnUse" ';
         svg += 'orient="auto">';
-        svg += '<image href="' + markerImageData + '" x="0" y="0" width="100" height="100" />';
+        svg += '<image href="' + markerImageData + '" x="0" y="0" width="20" height="20" />';
         svg += '</marker></defs>';
     }
+
+    // Just draw one marker in the centroid of the preview! TODO!!!
+    // Command line tool called svgo, configurable removal of padding and "standardization" of 
 
     svg += '<polygon points="20,20 100,40 140,80 60,120 20,80"'
     if (styleOptions.drawStroke.checked === true){
@@ -62,25 +65,6 @@ function getFormRow(childEl: HTMLInputElement): HTMLDivElement | null {
     return container as HTMLDivElement;
 }
 
-// function disableFormCheckboxRow(formRowEl: HTMLDivElement, formRowCheckbox: HTMLInputElement, disableColor: string): void {
-//     formRowCheckbox.checked = false;
-//     formRowCheckbox.disabled = true;
-//     formRowEl?.style.setProperty("color", disableColor, "important");
-//     formRowEl.querySelectorAll('*').forEach(child => {
-//         const childHTMLElement = child as HTMLElement;
-//         childHTMLElement.style.setProperty('color', 'inherit', 'important')
-//     });
-// }
-
-// function enableFormCheckboxRow(formRowEl: HTMLDivElement, formRowCheckbox: HTMLInputElement, enableColor: string): void {
-//     formRowCheckbox.disabled = false;
-//     formRowEl?.style.setProperty("color", enableColor, "important");
-//     formRowEl.querySelectorAll('*').forEach(child => {
-//         const childHTMLElement = child as HTMLElement;
-//         childHTMLElement.style.setProperty('color', 'inherit', 'important')
-//     });
-// }
-
 function collapseGroup(optionsGroup: Array<HTMLInputElement>): void {
     for (let element of optionsGroup){
         const row = getFormRow(element);
@@ -113,17 +97,6 @@ function collapseAndExpandOptionGroups(styleOptions: any): void {
     const strokeCheckBoxRow = getFormRow(styleOptions.drawStroke);
     const fillCheckBoxRow = getFormRow(styleOptions.drawFill);
     const markerCheckBoxRow = getFormRow(styleOptions.drawMarker);
-
-    // Special-case: when the marker toggle is selected, the fill and stroke checkboxes shall be unselected.
-    // if (strokeCheckBoxRow !== null && fillCheckBoxRow !== null){
-    //     if (styleOptions.drawMarker.checked === true){
-    //         disableFormCheckboxRow(strokeCheckBoxRow, styleOptions.drawStroke, checkBoxDisabledTextColor);
-    //         disableFormCheckboxRow(fillCheckBoxRow, styleOptions.drawFill, checkBoxDisabledTextColor);
-    //     } else {
-    //         enableFormCheckboxRow(strokeCheckBoxRow, styleOptions.drawStroke, checkBoxEnabledTextColor);
-    //         enableFormCheckboxRow(fillCheckBoxRow, styleOptions.drawFill, checkBoxEnabledTextColor);
-    //     }
-    // }
     
     // Collapse
     if (styleOptions.drawStroke.checked === false){
@@ -176,6 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
         marker: {
             icon: document.querySelector('#live_image_input_marker_icon'),
             opacity: document.querySelector('#id_marker_icon_opacity'),
+            backgroundColor: document.querySelector("#id_marker_background_color")
         },
     };
 

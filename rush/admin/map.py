@@ -114,6 +114,7 @@ class StyleForm(forms.ModelForm):
             "fill_opacity",
             # Icon data
             "draw_marker",
+            "marker_background_color",
             "marker_icon",
             "marker_icon_opacity",
             # "fill_rule", <-- gonna handle this later. Seems like an extreme edge-case for using the admin site.

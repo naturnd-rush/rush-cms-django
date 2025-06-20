@@ -143,6 +143,12 @@ class Style(models.Model):
         null=True,
         blank=True,
     )
+    marker_background_color = ColorField(
+        default="#F2F2F2",
+        null=True,
+        blank=True,
+        verbose_name="Background Color",
+    )
 
     # TODO: Add _hover style and _active style recursive foreign keys.
 
