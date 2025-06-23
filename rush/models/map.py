@@ -163,6 +163,8 @@ class Style(models.Model):
             self.compress_image()
 
     def compress_image(self):
+
+        # open image and resize
         BASE_WIDTH = int(256)  # pixels
         img = Image.open(self.marker_icon)
         original_width, original_height = img.size
