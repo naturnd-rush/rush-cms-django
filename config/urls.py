@@ -38,6 +38,5 @@ urlpatterns = [
 ]
 
 # Serve media files during development
-# TODO: I probably want to do this for deployment too, should be good enough for a small app for now...
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

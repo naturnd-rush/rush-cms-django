@@ -178,6 +178,8 @@ class Style(models.Model):
         img_io = BytesIO()
         img.save(img_io, format="PNG", optimize=True, compress_level=9)
 
+        # TODO: Fix this code, it makes increasingly nested folders with the same file name
+
         # Replace the image file with the compressed version
         img_content = ContentFile(img_io.getvalue(), name=self.marker_icon.name)
         self.marker_icon.save(self.marker_icon.name, img_content, save=False)
@@ -193,7 +195,7 @@ class Style(models.Model):
 
 class Provider(models.TextChoices):
     GEOJSON = "geojson"
-    OPEN_GREEN_MAP = "open_green_map"
+    OPEN_GREEN_MAP = "open_green_map"  # TODO: Implement me!
     ESRI_FEATURE_SERVER = "esri_feature_server"  # TODO: Not sure how this gets implemented with the current MapData model
     GENERIC_REST = "generic_rest"  # TODO: Not sure how this gets implemented with the current MapData model
 

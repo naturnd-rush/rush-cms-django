@@ -3,6 +3,7 @@
  *****************************************************************/
 
 import { getStyleById } from "./graphql";
+import { expectEl } from "./utils";
 
 /**
  * Data used to draw the preview.
@@ -82,7 +83,8 @@ function getPointsAsString(points: Array<Point>): string{
 function getPreviewHTML(state: PreviewState): string {
     const svgWidth = 200;
     const svgHeight = 150;
-    const markerRadius = 20;
+    const markerRadius = 16; // target 32 diameter for the marker icon backround
+    const markerImageWidth = 26;
     const polygonPoints: Array<Point> = [
         {x: 20, y: 20},
         {x: 100, y: 40},
@@ -150,12 +152,12 @@ function getPreviewHTML(state: PreviewState): string {
         <img 
             id="marker-image"
             src="${state.markerOptions.data}"
-            width="${markerRadius}"
-            height="${markerRadius}"
+            width="${markerImageWidth}"
+            height="${markerImageWidth}"
             style='
                 position: absolute;
-                left: ${centroid.x - markerRadius/2}px;
-                top: ${centroid.y - markerRadius/2}px;
+                left: ${centroid.x - markerImageWidth/2}px;
+                top: ${centroid.y - markerImageWidth/2}px;
                 opacity: ${state.markerOptions.opacity}
             '
         />'
@@ -228,7 +230,7 @@ function getGroup(groupName: UpdateSource["groupName"], sources: Array<UpdateSou
  * @param file the file to read.
  * @returns a string / blob of the file contents.
  */
-function readFile(file: File | Blob): Promise<string> {
+export function readFile(file: File | Blob): Promise<string> {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
@@ -237,18 +239,14 @@ function readFile(file: File | Blob): Promise<string> {
     });
 }
 
-/**
- * Find the expected element by ID in the DOM, or throw an Error if it could not be found.
- */
-function expectEl(id: string): HTMLElement{
-    const el = document.getElementById(id);
-    if (el === null){
-        throw new Error("Expected DOM element with id '" + id + "' to exist!");
-    }
-    return el;
-}
-
 document.addEventListener('DOMContentLoaded', () => {(async () => {
+
+    const adminForm = document.querySelector('form');
+    if (adminForm) {
+        adminForm.addEventListener('submit', function () {
+            console.log('Form is being submitted!');  // You can also trigger a spinner, custom callback, etc.
+        });
+    }
 
     // Hooks into a preview box provided by the style admin class.
     const previewContainer = expectEl('style_preview') as HTMLDivElement;
@@ -419,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
         source?.el?.addEventListener(source.eventName, updateFn);
         await updateFn(); // Update from the source to draw the initial preview
     }
-
+    
 })();});
 
 

@@ -30,6 +30,18 @@ export function waitForElementById(id: string): Promise<HTMLElement> {
 }
 
 /**
+ * Find the expected element by ID in the DOM, or throw an Error if it could not be found.
+ */
+export function expectEl(id: string): HTMLElement{
+    const el = document.getElementById(id);
+    if (el === null){
+        throw new Error("Expected DOM element with id '" + id + "' to exist!");
+    }
+    return el;
+}
+
+
+/**
  * Blend two hexidecimal colors together.
  * @param color1 the first color to interpolate (starting point).
  * @param color2 the second color to interpolate (destination).

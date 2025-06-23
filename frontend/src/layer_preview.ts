@@ -2,7 +2,7 @@ import {type Style, getStyleById, getMapDataByName} from "./graphql"
 import type { FeatureCollection, Geometry, Feature } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
-import { waitForElementById, coerceNumbersDeep, blendHexColors, interpolateNumbers } from "./utils";
+import { waitForElementById, coerceNumbersDeep, blendHexColors, interpolateNumbers, expectEl } from "./utils";
 import { Parser } from 'expr-eval';
 
 /************
@@ -118,7 +118,50 @@ export const inlineElements = {
     },
 };
 
-export function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
+/**
+ * Find which styles apply to a given GeoJSON feature.
+ * @param feature the feature to get applied styles for.
+ * @param stylesOnLayer the styles present on the current map layer.
+ * @returns an array of styles that should be applied to the given feature.
+ */
+function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<StyleOnLayer>): Array<Style>{
+    const parser = new Parser();
+    let applied: Array<Style> = [];
+    for (let styleOnLayer of stylesOnLayer){
+        const fieldMappingContainer = styleOnLayer.inlineRow.querySelector("td[class*='feature_mapping']");
+        const fieldMappingErrors = fieldMappingContainer?.querySelector("div[id*='errors']");
+        try{
+            const expr = parser.parse(styleOnLayer.feature_mapping);
+            if (expr.evaluate(coerceNumbersDeep(feature.properties)) === true){
+                applied.push(styleOnLayer.style);
+                if (fieldMappingErrors && fieldMappingContainer){
+                    fieldMappingContainer.removeChild(fieldMappingErrors);
+                }
+            }
+        } catch (error){
+            // TODO: If a variable isn't in ANY of the features then we can display it here, otherwise if it's 
+            // being used at least once I don't think I should display an error since the style is technically 
+            // being applied.
+
+            // TODO: Error propagating code is NOT efficient! I should probably make this faster...
+
+            // Add an error message above the feature mapping textarea for the user if parsing fails.
+            if (fieldMappingErrors && fieldMappingContainer){
+                fieldMappingContainer.removeChild(fieldMappingErrors);
+            }
+            if (fieldMappingContainer && !fieldMappingContainer?.querySelector("div[id*='errors']")){
+                const errorEl = document.createElement("div");
+                errorEl.textContent = String(error);
+                errorEl.id = "errors";
+                errorEl.style = "color:rgb(255, 0, 0);";
+                fieldMappingContainer.insertBefore(errorEl, fieldMappingContainer.children[0]);
+            }   
+        }
+    }
+    return applied;
+}
+
+function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
 
     // Always remove the previous layer, if there is one, from the map. 
     // Otherwse, it overlaps with the new layer being drawn.
@@ -151,42 +194,12 @@ export function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPr
         return;
     }
 
-    const parser = new Parser();
     const styleFunc = (feature: Feature<Geometry, any>): PathOptions => {
 
         // Find which styles should be applied to this feature by testing
         // the feature mapping against the feature's properties.
-        // TODO: Error propagating code is NOT efficient! I should probably make this faster...
-        let appliedStyles: Array<Style> = [];
-        for (let styleOnLayer of state.stylesOnLayer){
-            const fieldMappingContainer = styleOnLayer.inlineRow.querySelector("td[class*='feature_mapping']");
-            const fieldMappingErrors = fieldMappingContainer?.querySelector("div[id*='errors']");
-            try{
-                const expr = parser.parse(styleOnLayer.feature_mapping);
-                if (expr.evaluate(coerceNumbersDeep(feature.properties)) === true){
-                    appliedStyles.push(styleOnLayer.style);
-                    if (fieldMappingErrors && fieldMappingContainer){
-                        fieldMappingContainer.removeChild(fieldMappingErrors);
-                    }
-                }
-            } catch (error){
-                // TODO: If a variable isn't in ANY of the features then we can display it here, othgerwise if it's 
-                // being used at least once I don't think I should display an error since the style is technically 
-                // being applied.
-
-                // Add an error message above the feature mapping textarea for the user if parsing fails.
-                if (fieldMappingErrors && fieldMappingContainer){
-                    fieldMappingContainer.removeChild(fieldMappingErrors);
-                }
-                if (fieldMappingContainer && !fieldMappingContainer?.querySelector("div[id*='errors']")){
-                    const errorEl = document.createElement("div");
-                    errorEl.textContent = String(error);
-                    errorEl.id = "errors";
-                    errorEl.style = "color:rgb(255, 0, 0);";
-                    fieldMappingContainer.insertBefore(errorEl, fieldMappingContainer.children[0]);
-                }   
-            }
-        }
+        
+        let appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
 
         // Build path options from the styles. If there are multiple
         // styles being applied to the same feature, we just give our
@@ -218,7 +231,6 @@ export function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPr
         let strokeLineCap = "round";
         let strokeLineJoin = "round";
 
-
         for (let style of appliedStyles){
 
             // If one style draws something then the combined style will also draw that thing
@@ -234,13 +246,7 @@ export function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPr
 
             fillOpacity = interpolateNumbers(fillOpacity, style.fillOpacity);
             strokeOpacity = interpolateNumbers(strokeOpacity, style.strokeOpacity);
-
-            // if (markerIconOpacity === undefined){
-            //     markerIconOpacity = style.markerIconOpacity;
-            // } else {
-            //     // interpolate marker-icon opacity
-            //     markerIconOpacity = (markerIconOpacity + style.markerIconOpacity) / 2;
-            // }
+            strokeWeight = interpolateNumbers(strokeWeight, style.strokeWeight);
 
             if (fillColor === undefined){
                 fillColor = style.fillColor;
@@ -254,14 +260,6 @@ export function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPr
                 // interpolate stroke color
                 strokeColor = blendHexColors(strokeColor, style.strokeColor, 0.5);
             }
-
-            strokeWeight = interpolateNumbers(strokeWeight, style.strokeWeight);
-            // if (strokeWeight === undefined){
-            //     strokeWeight = style.strokeWeight;
-            // } else {
-            //     // interpolate stroke weight
-            //     strokeWeight = (strokeWeight + style.strokeWeight) / 2;
-            // }
 
             // just set / override the rest of the attributes
             if (style.markerIcon !== ""){
@@ -295,6 +293,9 @@ export function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPr
         return featureStyle;
     };
     
+    const markerBackgroundSize = 32;
+    const markerImageWidth = 26;
+    const baseMediaUrl = expectEl('injected-media-url').innerHTML;
     const styledGeoJsonData = L.geoJSON(state.currentLayer.toGeoJSON(), {
         style: styleFunc as StyleFunction,
         onEachFeature: (feature, layer) => {
@@ -302,7 +303,54 @@ export function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPr
             // if (feature.properties && feature.properties.name) {
             //     layer.bindPopup(`Name: ${feature.properties.name}`);
             // }
-        }
+        },
+        pointToLayer: function (feature, latlng) {
+            
+            // Grab the first applied style that has a non-empty marker icon configured to be drawn
+            let markerStyle: Style | null = null;
+            const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
+            for (let style of appliedStyles){
+                if (style.drawMarker && style.markerIcon.trimStart().trimEnd() !== ""){
+                    markerStyle = style;
+                    break;
+                }
+            }
+            if (markerStyle === null){
+                // Return default leaflet marker style if no style is applied
+                return L.marker(latlng);
+            }
+
+            // Otherwise return the styled marker
+            return L.marker(latlng, {
+                icon: L.divIcon({
+                    html: `
+                        <div 
+                            style="
+                                width: ${markerBackgroundSize}px;
+                                height: ${markerBackgroundSize}px;
+                                background-color: ${markerStyle.markerBackgroundColor};
+                                opacity: ${markerStyle.markerIconOpacity};
+                                border-radius: 50%;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            "
+                        >
+                            <img 
+                                src="${baseMediaUrl + markerStyle.markerIcon}"
+                                style="
+                                    width: ${markerImageWidth}px; 
+                                    height: ${markerImageWidth}px;
+                                "
+                            />
+                        <div/>
+                    `,
+                    className: '', // Disable default Leaflet styles
+                    iconSize: [markerBackgroundSize, markerBackgroundSize],
+                    iconAnchor: [markerBackgroundSize/2, markerBackgroundSize/2], // Center the icon around the latlng
+                }),
+            });
+        },
     });
     state.currentLayer = styledGeoJsonData;
     styledGeoJsonData.addTo(map)
@@ -346,6 +394,16 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         getStyleUpdate().then(styleUpdate => {
             drawMapPreview(map, mapPreviewState, styleUpdate);
         });
+    });
+    
+    // Listen to redraw the map when the tab is refocused (the user leaves and then comes back).
+    // This can happen after a user edits one of the inline styles and then clicks on the layer edit tab.
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+            getStyleUpdate().then(styleUpdate => {
+                drawMapPreview(map, mapPreviewState, styleUpdate);
+            });
+        }
     });
 
     // Hook into the map-data selection element
