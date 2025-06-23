@@ -1,10 +1,13 @@
 import re
 import uuid
 from decimal import Decimal
+from io import BytesIO
 
 import django.db.models as models
 from colorfield.fields import ColorField
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from PIL import Image
 from simple_history.models import HistoricalRecords
 
 """
@@ -151,6 +154,34 @@ class Style(models.Model):
     )
 
     # TODO: Add _hover style and _active style recursive foreign keys.
+
+    def save(self, *args, **kwargs):
+        # Save the instance first to get access to the file
+        super().save(*args, **kwargs)
+
+        if self.marker_icon:
+            self.compress_image()
+
+    def compress_image(self):
+        BASE_WIDTH = int(256)  # pixels
+        img = Image.open(self.marker_icon)
+        original_width, original_height = img.size
+        w_ratio = BASE_WIDTH / original_width
+        img = img.resize(
+            (BASE_WIDTH, int(original_height * w_ratio)),
+            Image.Resampling.LANCZOS,
+        )
+
+        # save compressed version image using buffer
+        img_io = BytesIO()
+        img.save(img_io, format="PNG", optimize=True, compress_level=9)
+
+        # Replace the image file with the compressed version
+        img_content = ContentFile(img_io.getvalue(), name=self.marker_icon.name)
+        self.marker_icon.save(self.marker_icon.name, img_content, save=False)
+
+        # Save the model again to store the compressed image
+        super().save()
 
     history = HistoricalRecords()
 
