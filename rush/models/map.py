@@ -10,6 +10,8 @@ from django.core.files.base import ContentFile
 from PIL import Image
 from simple_history.models import HistoricalRecords
 
+from rush.models.validators import validate_image, validate_image_or_svg
+
 """
 Django models related to geographical data and styling.
 """
@@ -133,10 +135,11 @@ class Style(models.Model):
         help_text="Check this box if you want to draw the marker icon on each point this style is applied to.",
         default=True,
     )
-    marker_icon = models.ImageField(
+    marker_icon = models.FileField(
         upload_to="marker_icons/",
         null=True,
         blank=True,
+        validators=[validate_image_or_svg],
         help_text="The image that will appear at each point this style is applied to.",
     )
     marker_icon_opacity = models.DecimalField(
@@ -163,6 +166,13 @@ class Style(models.Model):
             self.compress_image()
 
     def compress_image(self):
+
+        try:
+            # Make sure the uploaded file is an image type PNG or JPEG,
+            # so we don't attempt to compress SVG files!
+            validate_image(self.marker_icon)
+        except ValidationError:
+            return
 
         # open image and resize
         BASE_WIDTH = int(256)  # pixels
