@@ -50,12 +50,39 @@ type UpdateSource = {
 type Point = {x: number, y: number};
 
 /**
- * Get a style-preview SVG image as a string.
- * @param state the style-preview state used to generate the SVG image.
+ * Get the "centroid" i.e., average point, in an array of points.
+ * @param points the array of points to fund the centroid of.
  */
-function getPreviewSvg(state: PreviewState): string {
-    
-    // Declare preview polygon points
+function getCentroid(points: Array<Point>): Point{
+    let centerX = 0;
+    let centerY = 0;
+    for (let point of points){
+        centerX += point.x;
+        centerY += point.y;
+    }
+    return {x: centerX /= points.length, y: centerY /= points.length};
+}
+
+/**
+ * Build "points string" to use in SVG <polygon> element.
+ * @param points the array of points to return in string-representation.
+ */
+function getPointsAsString(points: Array<Point>): string{
+    let result = "";
+    for (let point of points){
+        result += point.x + "," + point.y + " ";
+    }
+    return result;
+}
+
+/**
+ * Get a style-preview HTML code as a string.
+ * @param state the style-preview state used to generate the HTML code.
+ */
+function getPreviewHTML(state: PreviewState): string {
+    const svgWidth = 200;
+    const svgHeight = 150;
+    const markerRadius = 20;
     const polygonPoints: Array<Point> = [
         {x: 20, y: 20},
         {x: 100, y: 40},
@@ -64,26 +91,20 @@ function getPreviewSvg(state: PreviewState): string {
         {x: 20, y: 80},
     ];
 
-    // Build "points string" to use in SVG <polygon> element.
-    let polygonPointsStr = "";
-    for (let point of polygonPoints){
-        polygonPointsStr += point.x + "," + point.y + " ";
-    }
-
     // Declare SVG header and polygon with points
-    let svg = `
+    let html = `
     <svg 
-        width="200" 
-        height="150" 
+        width="${svgWidth}px"
+        height="${svgHeight}px"
         xmlns="http://www.w3.org/2000/svg"
     >
     <polygon 
-        points="${polygonPointsStr}"
+        points="${getPointsAsString(polygonPoints)}"
     `
 
     // Add stroke styling
     if (state.drawStroke){
-        svg += `
+        html += `
             stroke="${state.strokeOptions.color}"
             stroke-width="${state.strokeOptions.weight}"
             stroke-opacity="${state.strokeOptions.opacity}"
@@ -96,61 +117,52 @@ function getPreviewSvg(state: PreviewState): string {
 
     // Add fill styling
     if (state.drawFill){
-        svg += `
+        html += `
             fill="${state.fillOptions.color}"
             fill-opacity="${state.fillOptions.opacity}"
         `
     } else {
-        svg += 'fill="none"'
+        html += 'fill="none"'
     }
-    svg += '/>'; // End of polygon
+    html += '/>'; // End of polygon
 
-    // Add marker styling
+    // Add marker circle / background
+    const centroid = getCentroid(polygonPoints);
     if (state.drawMarker && state.markerOptions.data !== null){
-        const MARKER_RADIUS = 20;
-
-        // Calculate centroid position
-        let centerX = 0;
-        let centerY = 0;
-        for (let point of polygonPoints){
-            centerX += point.x;
-            centerY += point.y;
-        }
-        const centroid = {x: centerX /= polygonPoints.length, y: centerY /= polygonPoints.length};
-
         // refX and Y should be HALF the width & height to center the image on the actual point
         // orient="auto" → rotates the marker to match the path direction (default). orient="auto-start-reverse" → rotates to match start, reversed. orient="0" → fixed angle, no rotation.
-        svg += `
+        html += `
         <circle 
             id="marker-centroid"
-            r="${MARKER_RADIUS}px"
+            r="${markerRadius}px"
             fill=${state.markerOptions.bgColor}
             opacity=${state.markerOptions.opacity}
             cx=${centroid.x}
             cy=${centroid.y}
         />
         `
-        
     }
-    svg += '</svg>'
-    console.log("Marker icon data: ", state.markerOptions.data);
+    html += '</svg>' // End of SVG
+
+    // Add marker icon inside circle / background
     if (state.drawMarker && state.markerOptions.data !== null){
-        svg += `
+        html += `
         <img 
             id="marker-image"
             src="${state.markerOptions.data}"
-            x="0" 
-            y="0" 
-            width="20" 
-            height="20"
-        />
+            width="${markerRadius}"
+            height="${markerRadius}"
+            style='
+                position: absolute;
+                left: ${centroid.x - markerRadius/2}px;
+                top: ${centroid.y - markerRadius/2}px;
+                opacity: ${state.markerOptions.opacity}
+            '
+        />'
         `
     }
-    // if (state.markerOptions.data !== null){
-    //     window.open(state.markerOptions.data, "_blank");
-    // }
     // console.log("Drawing svg from preview state: ", svg, state);
-    return svg
+    return html
 
 //     <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg" id="mysvg">
 //   <!-- The polygon -->
@@ -277,13 +289,23 @@ function readFile(file: File | Blob): Promise<string> {
     });
 }
 
+/**
+ * Find the expected element by ID in the DOM, or throw an Error if it could not be found.
+ */
+function expectEl(id: string): HTMLElement{
+    const el = document.getElementById(id);
+    if (el === null){
+        throw new Error("Expected DOM element with id '" + id + "' to exist!");
+    }
+    return el;
+}
+
 document.addEventListener('DOMContentLoaded', () => {(async () => {
 
     // Hooks into a preview box provided by the style admin class.
-    const previewContainer = document.getElementById('style_preview') as HTMLDivElement | null;
-    if (previewContainer === null){
-        throw new Error("Expected DOM element with id 'style_preview' to exist!");
-    }
+    const previewContainer = expectEl('style_preview') as HTMLDivElement;
+    const styleId = expectEl("injected-style-id").innerHTML;
+    const baseMediaUrl = expectEl("injected-media-url").innerHTML;
 
     // Define a default preview state (this is temporary because we will update the preview 
     // based on the admin form's currently selected style attributes on page load).
@@ -411,16 +433,14 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
                     // I wanted something that didn't rely on Django's file input's "Currently" section 
                     // link (see the field row in the admin site), which doesn't appear with an ID in the
                     // DOM. This way, I can be sure that the image data (if it exists) is being accessed.
-                    const styleId = document.getElementById("injected-style-id")?.innerHTML;
-                    if (styleId !== undefined){
-                        const style = await getStyleById(styleId);
-                        if (style !== null){
-                            const url = style.markerIcon;
-                            const response = await fetch(url);
-                            const blob = await response.blob();
-                            const markerData = await readFile(blob);
-                            previewState.markerOptions.data = markerData;
-                        }
+                    const style = await getStyleById(styleId);
+                    if (style !== null){
+                        const url = baseMediaUrl + style.markerIcon;
+                        const response = await fetch(url);
+                        console.log(response, url);
+                        const blob = await response.blob();
+                        const markerData = await readFile(blob);
+                        previewState.markerOptions.data = markerData;
                     }
                 }
             },
@@ -445,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
         const updateFn = async () => {
             if (source.el !== null){
                 await source.update(source.el);
-                previewContainer.innerHTML = getPreviewSvg(previewState);
+                previewContainer.innerHTML = getPreviewHTML(previewState);
             }
         };
         source?.el?.addEventListener(source.eventName, updateFn);

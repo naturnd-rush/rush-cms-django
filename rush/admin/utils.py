@@ -99,8 +99,7 @@ class LiveImagePreviewInput(forms.ClearableFileInput):
         return mark_safe(
             f"""
             {image_upload_html}
-            <div style="margin-right: 15px;"></div>
-            <img id="live_image_preview_{name}" src="{src}" style="max-width: 200px; display: block;" />
+            <img id="live_image_preview_{name}" src="{src}" style="max-width: 200px; display: none;" />
             """
         )
 

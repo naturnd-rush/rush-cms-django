@@ -6,7 +6,8 @@
     <!--
         Style editing / changeform template.
     -->
-    <div id="injected-style-id">{{ original.pk }}</div>
+    <div id="injected-style-id" style="display:none;">{{ original.pk }}</div>
+    <span id="injected-media-url" style="display:none;">{{ BASE_MEDIA_URL }}</span>
     <script type="module" src="{% static 'js/compiled/slider_textbox_input_sync.js' %}"></script>
     <script type="module" src="{% static 'js/compiled/style_preview.js' %}"></script>
 {% endblock %}
