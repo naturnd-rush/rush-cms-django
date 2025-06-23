@@ -83,6 +83,8 @@ class LiveImagePreviewInput(forms.ClearableFileInput):
 
     NOTE: For this widget to work the corresponding `live_image_preview_refresh.js`
           script must be included in the Django form Media subclass.
+
+          TODO: This is not used anymore and could be improved / deprecated depending on how the code progresses.
     """
 
     def __init__(self, attrs=None):

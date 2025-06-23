@@ -130,8 +130,7 @@ class StyleForm(forms.ModelForm):
             "stroke_dash_offset": utils.SliderAndTextboxNumberInput(max=100, step=1),
             "fill_opacity": utils.SliderAndTextboxNumberInput(),
             "marker_icon_opacity": utils.SliderAndTextboxNumberInput(),
-            # "marker_icon": forms.FileInput(),
-            "marker_icon": utils.LiveImagePreviewInput(),
+            "marker_icon": forms.FileInput(),
         }
 
     class Media:

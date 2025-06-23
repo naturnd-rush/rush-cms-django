@@ -161,60 +161,8 @@ function getPreviewHTML(state: PreviewState): string {
         />'
         `
     }
-    // console.log("Drawing svg from preview state: ", svg, state);
+    //console.log("Drawing svg from preview state: ", html, state);
     return html
-
-//     <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg" id="mysvg">
-//   <!-- The polygon -->
-//   <polygon id="mypolygon"
-//            points="50,50 250,50 200,150 100,150"
-//            fill="lightblue" stroke="black" stroke-width="2" />
-
-//   <!-- Placeholder for centroid -->
-//   <circle id="centroid" r="5" fill="red" />
-// </svg>
-
-// <script>
-//   const polygon = document.getElementById("mypolygon");
-//   const centroid g= document.getElementById("centroid");
-
-//   // Get the points as an array of [x, y]
-//   const points = polygon.points;
-//   let sumX = 0, sumY = 0;
-//   for (let i = 0; i < points.numberOfItems; i++) {
-//     sumX += points.getItem(i).x;
-//     sumY += points.etItem(i).y;
-//   }
-
-//   const centerX = sumX / points.numberOfItems;
-//   const centerY = sumY / points.numberOfItems;
-
-//   // Move the centroid marker
-//   centroid.setAttribute("cx", centerX);
-//   centroid.setAttribute("cy", centerY);
-// </script>
-
-
-
-
-    // svg += '<polygon points="20,20 100,40 140,80 60,120 20,80"'
-    // if (styleOptions.drawStroke.checked === true){
-        
-    // }
-    // if (styleOptions.drawFill.checked === true) {
-    //     svg += 'fill="' + styleOptions.fill.color.value + '"'
-    //     svg += 'fill-opacity="' + styleOptions.fill.opacity.value + '"'
-    // } else {
-    //     svg += 'fill="none"'
-    // }
-    // if (styleOptions.drawMarker.checked === true){
-    //     svg += 'marker-start="url(#img-marker)"';
-    //     svg += 'marker-mid="url(#img-marker)"';
-    //     svg += 'marker-end="url(#img-marker)"';
-    // }
-    // svg += '/></svg>'
-
-    // previewContainer.innerHTML = svg;
 }
 
 /**
@@ -410,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
         // Marker fields
         {
             groupName: "Marker",
-            el: document.querySelector('#live_image_input_marker_icon'),
+            el: document.querySelector('#id_marker_icon'),
             update: async (el) => {
 
                 // Updating the marker icon image is a little more complicated, because the
