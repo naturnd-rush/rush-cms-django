@@ -12,7 +12,7 @@ is allowed to query and communicate to the frontend.
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
-        fields = ["id", "title", "content"]
+        fields = ["id", "title"]
 
 
 class MapDataType(DjangoObjectType):
