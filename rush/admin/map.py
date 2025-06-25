@@ -41,7 +41,7 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
         # obj = context.get("original")
         # geojson = obj.map_data.geojson if obj and obj.map_data.geojson else {}
         map_preview_html = mark_safe(
-            '<div id="map-preview" style="height: 400px; margin-bottom: 1em;"></div>'
+            '<div id="map-preview" style="height: 600px; margin-bottom: 1em;"></div>'
             '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />'
             '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>'
         )
