@@ -358,12 +358,24 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
 
 document.addEventListener("DOMContentLoaded", () => {(async () => {
 
+    
+    const TILE_LAYER_OPTS = {
+        minZoom: 0,
+        maxZoom: 22,
+        updateWhenIdle: true,
+        zIndex: 0,
+        attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>',
+    }
+    const MAPBOX_USER = 'rushadmin'
+    const MAPBOX_STYLEID = 'clw2m6f9b018001obfxcc747g'
+    const MAPBOX_TOKEN = 'pk.eyJ1IjoicnVzaGFkbWluIiwiYSI6ImNsdzJtYmRydzBuNDIyam5yZ2pwMG16cnUifQ.SkSSdHcrPq4u8HSitBvJcg'
+    const API_URL = `https://api.mapbox.com/styles/v1/`
+    const API_TILE_PATH = `${MAPBOX_USER}/${MAPBOX_STYLEID}/tiles/256/{z}/{x}/{y}@2x`
+    const API_PARAMS = `?access_token=${MAPBOX_TOKEN}`
+
     // Initialize leaflet map
     let map = L.map('map-preview').setView([0, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        attribution: '© OpenStreetMap contributors',
-    }).addTo(map);
+    L.tileLayer(API_URL + API_TILE_PATH + API_PARAMS, TILE_LAYER_OPTS).addTo(map);
 
     // Initialize object to track map preview state
     let mapPreviewState: MapPreviewState = {
