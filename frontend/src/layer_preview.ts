@@ -231,6 +231,24 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         let strokeLineCap = "round";
         let strokeLineJoin = "round";
 
+        // Return a default style for polygones is no styleOnLayers exist
+        if (appliedStyles.length == 0){
+            return {
+                fill: true,
+                fillColor: "#4B3EFF",
+                fillOpacity: 0.3,
+
+                stroke: true,
+                weight: 1,
+                opacity: 1,
+                color: "#4B3EFF",
+                dashArray: "1 10",
+                dashOffset: "0",
+                lineCap: "round",
+                lineJoin: "round",
+            };
+        }
+
         for (let style of appliedStyles){
 
             // If one style draws something then the combined style will also draw that thing
