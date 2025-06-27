@@ -130,7 +130,7 @@ function getPreviewHTML(state: PreviewState): string {
 
     // Add marker circle / background
     const centroid = getCentroid(polygonPoints);
-    if (state.drawMarker && state.markerOptions.data !== null){
+    if (state.drawMarker){
         // refX and Y should be HALF the width & height to center the image on the actual point
         // orient="auto" → rotates the marker to match the path direction (default). orient="auto-start-reverse" → rotates to match start, reversed. orient="0" → fixed angle, no rotation.
         html += `
@@ -366,6 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
 
                 // Check to see if a new file has been selected
                 let file = null;
+                console.log(el.files);
                 if (el.files){
                     file = el.files[0];
                 }
@@ -379,14 +380,22 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
                     // I wanted something that didn't rely on Django's file input's "Currently" section 
                     // link (see the field row in the admin site), which doesn't appear with an ID in the
                     // DOM. This way, I can be sure that the image data (if it exists) is being accessed.
-                    const style = await getStyleById(styleId);
-                    if (style !== null){
-                        const url = baseMediaUrl + style.markerIcon;
-                        const response = await fetch(url);
-                        console.log(response, url);
-                        const blob = await response.blob();
-                        const markerData = await readFile(blob);
-                        previewState.markerOptions.data = markerData;
+                    console.log("Getting old marker icon data from injected style id: ", styleId);
+                    if (styleId !== ""){ 
+                        const style = await getStyleById(styleId);
+                        if (style !== null){
+                            const url = baseMediaUrl + style.markerIcon;
+                            const response = await fetch(url);
+                            console.log(response, url);
+                            const blob = await response.blob();
+                            const markerData = await readFile(blob);
+                            previewState.markerOptions.data = markerData;
+                        }
+                    } else {
+                        // Style ID is empty when we are rendering an Add form (new style), as opposed to
+                        // an Edit form (existing style). If we are adding a new style don't attempt to fetch
+                        // the style object from the database and simply set the marker-icon data to null.
+                        previewState.markerOptions.data = null;
                     }
                 }
             },
