@@ -1,8 +1,8 @@
 import {type Style, getStyleById, getMapDataByName} from "./graphql"
-import type { FeatureCollection, Geometry, Feature } from 'geojson';
+import type { FeatureCollection, Geometry, Feature, Polygon } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
-import { waitForElementById, coerceNumbersDeep, blendHexColors, interpolateNumbers, expectEl } from "./utils";
+import { waitForElementById, coerceNumbersDeep, blendHexColors, interpolateNumbers, expectEl, getCentroid } from "./utils";
 import { Parser } from 'expr-eval';
 
 /************
@@ -282,6 +282,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
 
             stroke: drawStroke,
             weight: strokeWeight,
+            opacity: strokeOpacity,
             color: strokeColor,
             dashArray: strokeDashArray,
             dashOffset: strokeDashOffset,
@@ -296,13 +297,28 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     const markerBackgroundSize = 32;
     const markerImageWidth = 26;
     const baseMediaUrl = expectEl('injected-media-url').innerHTML;
+    const anyMarkerStyles = state.stylesOnLayer.filter(styleOnLayer => styleOnLayer.style.drawMarker == true).length > 0;
     const styledGeoJsonData = L.geoJSON(state.currentLayer.toGeoJSON(), {
         style: styleFunc as StyleFunction,
         onEachFeature: (feature, layer) => {
-            // // Optionally bind popups or other handlers
+            // Optionally bind popups or other handlers
             // if (feature.properties && feature.properties.name) {
             //     layer.bindPopup(`Name: ${feature.properties.name}`);
             // }
+            const isPolygon = feature.geometry.type.toUpperCase().includes("POLYGON");
+            if (isPolygon && anyMarkerStyles){
+                const multiPolygonFeature = feature as Feature<Polygon, any>;
+                const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
+                const markerStyles = appliedStyles.filter(style => style.drawMarker == true);
+                if (markerStyles.length > 0){
+                    const markerStyle = markerStyles[0]; // Just take the first marker style if multiple applied.
+                    for (let polygonCoords of multiPolygonFeature.geometry.coordinates){
+                        
+                        const centroid = getCentroid(polygonCoords);
+                        console.log(centroid);
+                    }
+                }
+            }
         },
         pointToLayer: function (feature, latlng) {
             

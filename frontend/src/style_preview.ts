@@ -2,8 +2,9 @@
  * This script generates a map style preview for a single style. *
  *****************************************************************/
 
+import { Point } from "leaflet";
 import { getStyleById } from "./graphql";
-import { expectEl } from "./utils";
+import { expectEl, getCentroid } from "./utils";
 
 /**
  * Data used to draw the preview.
@@ -46,25 +47,6 @@ type UpdateSource = {
 };
 
 /**
- * A simple 2D point.
- */
-type Point = {x: number, y: number};
-
-/**
- * Get the "centroid" i.e., average point, in an array of points.
- * @param points the array of points to fund the centroid of.
- */
-function getCentroid(points: Array<Point>): Point{
-    let centerX = 0;
-    let centerY = 0;
-    for (let point of points){
-        centerX += point.x;
-        centerY += point.y;
-    }
-    return {x: centerX /= points.length, y: centerY /= points.length};
-}
-
-/**
  * Build "points string" to use in SVG <polygon> element.
  * @param points the array of points to return in string-representation.
  */
@@ -86,11 +68,11 @@ function getPreviewHTML(state: PreviewState): string {
     const markerRadius = 16; // target 32 diameter for the marker icon backround
     const markerImageWidth = 26;
     const polygonPoints: Array<Point> = [
-        {x: 20, y: 20},
-        {x: 100, y: 40},
-        {x: 140, y: 80},
-        {x: 60, y: 120},
-        {x: 20, y: 80},
+        new Point(20, 20),
+        new Point(100, 40),
+        new Point(140, 80),
+        new Point(60, 120),
+        new Point(20, 80),
     ];
 
     // Declare SVG header and polygon with points

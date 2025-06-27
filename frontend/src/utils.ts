@@ -2,6 +2,8 @@
  * General utility module. Contains things like RGB -> HEX color conversions, 
  * general DOM utility functions, and parsing / interpolating functions.
  */
+import { Point } from "leaflet";
+import type { Position } from "geojson";
 
 /**
  * A promise that resolves immediately if the given HTMLElement exists in the DOM 
@@ -137,4 +139,20 @@ export function coerceNumbersDeep(input: any): any {
     } else {
         return input;
     }
+}
+
+
+/**
+ * Get the "centroid" i.e., average point, in an array of points.
+ * @param points the array of points to fund the centroid of.
+ */
+export function getCentroid(points: Array<Point> | Array<Position[]>): Point{
+    let centerX = 0;
+    let centerY = 0;
+    console.log(typeof(points));
+    for (let point of points){    
+        centerX += point.x;
+        centerY += point.y;
+    }
+    return new Point(centerX /= points.length, centerY /= points.length);
 }
