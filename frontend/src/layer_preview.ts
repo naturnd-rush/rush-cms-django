@@ -182,37 +182,27 @@ function getDefaultPolygonStyle(): PathOptions{
 function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
     const func = (feature: Feature<Geometry, any>) => {
 
+        // If no stylesOnLayers are in the map preview state, just return a default polygon styling.
         if (state.stylesOnLayer.length == 0){
             return getDefaultPolygonStyle();
         }
 
-        let appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
-
-        // Build path options from the styles. If there are multiple
+        // Otherwise, build path options from the styles. If there are multiple
         // styles being applied to the same feature, we just give our
-        // best guess at how the user wants their map to look by using
-        // linear interpolation on what we can and overriding the rest...
-        // TODO: Talked with Doug today and decided to send serialized JSON leaflet
-        //       map layer object back to the frontend, so that we can resolve multiple styled
-        //       applied to the same feature in a single location, and simplify the frontend code.
-        //       Mark this TODO as done when an endpoint is exposed via GraphQL to get serialized leaflet
-        //       layer data, which is serialized on layer model save.
+        // best guess at how the user wants their map to look by interpolating them
+        // or overriding if they can't be interpolated.
+        let appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
         
         let drawFill = false;
-        let drawStroke = false;
-        let drawMarker = false;
-
         let fillOpacity = undefined;
-        let strokeOpacity = undefined;
-        let markerIconOpacity = undefined;
-
         let fillColor = undefined;
-        let strokeColor = undefined;
         
+        let drawStroke = false;
+        let strokeOpacity = undefined;
+        let strokeColor = undefined;
         let strokeWeight = undefined;
 
         // Style attributes that can't be interpolated (just take the most recent one from the applied styles)
-        let markerIcon = undefined;
         let strokeDashArray = "";
         let strokeDashOffset = undefined; // technically can be interpolated but I don't think it would be intuitive for a user
         let strokeLineCap = "round";
@@ -226,9 +216,6 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
             }
             if (style.drawStroke === true){
                 drawStroke = true;
-            }
-            if (style.drawMarker === true){
-                drawMarker = true;
             }
 
             fillOpacity = interpolateNumbers(fillOpacity, style.fillOpacity);
@@ -248,10 +235,7 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
                 strokeColor = blendHexColors(strokeColor, style.strokeColor, 0.5);
             }
 
-            // just set / override the rest of the attributes
-            if (style.markerIcon !== ""){
-                markerIcon === style.markerIcon;
-            }
+            // Just override the rest without interpolation...
             if (style.strokeDashArray !== null){
                 strokeDashArray = style.strokeDashArray;
             }
