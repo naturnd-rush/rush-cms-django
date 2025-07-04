@@ -146,10 +146,9 @@ export function coerceNumbersDeep(input: any): any {
  * Get the "centroid" i.e., average point, in an array of points.
  * @param points the array of points to fund the centroid of.
  */
-export function getCentroid(points: Array<Point> | Array<Position[]>): Point{
+export function getCentroid(points: Array<Point>): Point{
     let centerX = 0;
     let centerY = 0;
-    console.log(typeof(points));
     for (let point of points){    
         centerX += point.x;
         centerY += point.y;

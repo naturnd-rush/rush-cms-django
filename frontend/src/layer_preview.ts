@@ -335,8 +335,6 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
 
 function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
 
-    console.log("Drawing map preview!");
-
     // Always remove the previous layer, if there is one, from the map. 
     // Otherwse, it overlaps with the new layer being drawn.
     if (state.currentLayer !== null){
@@ -375,10 +373,8 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         style: getPolygonStyleFunc(state),
         pointToLayer: getPointStyleFunc(baseMediaUrl, state),
         onEachFeature: (feature, layer) => {
-            console.log("On each feature!!!");
             // Draw centroid icon markers when a marker icon style is applied to a polygon feature
             const isPolygon = feature.geometry.type.toUpperCase().includes("POLYGON");
-            console.log(isPolygon);
             if (isPolygon && anyMarkerStyles){
                 const multiPolygonFeature = feature as Feature<Polygon, any>;
                 const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
