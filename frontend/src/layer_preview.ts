@@ -161,44 +161,31 @@ function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<
     return applied;
 }
 
-function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
+function getDefaultPolygonStyle(): PathOptions{
+    return {
+        // Path fill options.
+        fill: true,
+        fillColor: "#4B3EFF",
+        fillOpacity: 0.3,
+        // Path stroke options.
+        stroke: true,
+        weight: 1,
+        opacity: 1,
+        color: "#4B3EFF",
+        dashArray: "1 10",
+        dashOffset: "0",
+        lineCap: "round",
+        lineJoin: "round",
+    };
+}
 
-    // Always remove the previous layer, if there is one, from the map. 
-    // Otherwse, it overlaps with the new layer being drawn.
-    if (state.currentLayer !== null){
-        map.removeLayer(state.currentLayer);
-    }
+function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
+    const func = (feature: Feature<Geometry, any>) => {
 
-    // Update currentLayer if we are receiving new map data.
-    if ("MapData" === update.type){
-        const newGeoJson = (update as MapDataUpdate).newGeoJsonData;
-        if (newGeoJson === null){
-            state.currentLayer = null;
-        } else {
-            state.currentLayer = L.geoJSON(newGeoJson);
-            map.fitBounds(state.currentLayer.getBounds());
+        if (state.stylesOnLayer.length == 0){
+            return getDefaultPolygonStyle();
         }
-    }
 
-    // Update stylesOnLayer if we are receiving new style data
-    else if ("Style" === update.type) {
-        state.stylesOnLayer = (update as StyleUpdate).newStylesOnLayers;
-    }
-
-    /**
-     * Begin drawing the map.
-     */
-
-    if (state.currentLayer === null){
-        // Exit if there is no layer to draw at this point...
-        return;
-    }
-
-    const styleFunc = (feature: Feature<Geometry, any>): PathOptions => {
-
-        // Find which styles should be applied to this feature by testing
-        // the feature mapping against the feature's properties.
-        
         let appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
 
         // Build path options from the styles. If there are multiple
@@ -230,24 +217,6 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         let strokeDashOffset = undefined; // technically can be interpolated but I don't think it would be intuitive for a user
         let strokeLineCap = "round";
         let strokeLineJoin = "round";
-
-        // Return a default style for polygones is no styleOnLayers exist
-        if (appliedStyles.length == 0){
-            return {
-                fill: true,
-                fillColor: "#4B3EFF",
-                fillOpacity: 0.3,
-
-                stroke: true,
-                weight: 1,
-                opacity: 1,
-                color: "#4B3EFF",
-                dashArray: "1 10",
-                dashOffset: "0",
-                lineCap: "round",
-                lineJoin: "round",
-            };
-        }
 
         for (let style of appliedStyles){
 
@@ -292,12 +261,12 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
             strokeLineJoin = style.strokeLineJoin;
             strokeLineCap = style.strokeLineCap;
         }
-        const featureStyle = {
-            
+        return {
+            // Path fill options.
             fill: drawFill,
             fillColor: fillColor,
             fillOpacity: fillOpacity,
-
+            // Path stroke options
             stroke: drawStroke,
             weight: strokeWeight,
             opacity: strokeOpacity,
@@ -306,18 +275,50 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
             dashOffset: strokeDashOffset,
             lineCap: strokeLineCap as L.LineCapShape,
             lineJoin: strokeLineJoin as L.LineJoinShape,
-
-            // TODO: Handle markers
         };
-        return featureStyle;
     };
+    return func as StyleFunction;
+}
+
+function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
+
+    // Always remove the previous layer, if there is one, from the map. 
+    // Otherwse, it overlaps with the new layer being drawn.
+    if (state.currentLayer !== null){
+        map.removeLayer(state.currentLayer);
+    }
+
+    // Update currentLayer if we are receiving new map data.
+    if ("MapData" === update.type){
+        const newGeoJson = (update as MapDataUpdate).newGeoJsonData;
+        if (newGeoJson === null){
+            state.currentLayer = null;
+        } else {
+            state.currentLayer = L.geoJSON(newGeoJson);
+            map.fitBounds(state.currentLayer.getBounds());
+        }
+    }
+
+    // Update stylesOnLayer if we are receiving new style data
+    else if ("Style" === update.type) {
+        state.stylesOnLayer = (update as StyleUpdate).newStylesOnLayers;
+    }
+
+    /**
+     * Begin drawing the map.
+     */
+
+    if (state.currentLayer === null){
+        // Exit if there is no layer to draw at this point...
+        return;
+    }
     
     const markerBackgroundSize = 32;
     const markerImageWidth = 26;
     const baseMediaUrl = expectEl('injected-media-url').innerHTML;
     const anyMarkerStyles = state.stylesOnLayer.filter(styleOnLayer => styleOnLayer.style.drawMarker == true).length > 0;
     const styledGeoJsonData = L.geoJSON(state.currentLayer.toGeoJSON(), {
-        style: styleFunc as StyleFunction,
+        style: getPolygonStyleFunc(state),
         onEachFeature: (feature, layer) => {
             // Optionally bind popups or other handlers
             // if (feature.properties && feature.properties.name) {
