@@ -1,5 +1,5 @@
 import {type Style, getStyleById, getMapDataByName} from "./graphql"
-import type { FeatureCollection, Geometry, Feature, Polygon } from 'geojson';
+import type { FeatureCollection, Geometry, Feature, Point, Position, Polygon } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
 import { waitForElementById, coerceNumbersDeep, blendHexColors, interpolateNumbers, expectEl, getCentroid } from "./utils";
@@ -179,6 +179,11 @@ function getDefaultPolygonStyle(): PathOptions{
     };
 }
 
+/**
+ * Get a function used to style polygon GeoJSON features on a leaflet map.
+ * @param state the MapPreviewState.
+ * @returns a leaflet StyleFunction.
+ */
 function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
     const func = (feature: Feature<Geometry, any>) => {
 
@@ -264,7 +269,73 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
     return func as StyleFunction;
 }
 
+function getMarkerDivIcon(baseMediaUrl: string, markerStyle: Style): L.DivIcon {
+    const markerBackgroundSize = 32;
+    const markerImageWidth = 26;
+    return L.divIcon({
+        html: `
+            <div 
+                style="
+                    width: ${markerBackgroundSize}px;
+                    height: ${markerBackgroundSize}px;
+                    background-color: ${markerStyle.markerBackgroundColor};
+                    opacity: ${markerStyle.markerIconOpacity};
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                "
+            >
+                <img 
+                    src="${baseMediaUrl + markerStyle.markerIcon}"
+                    style="
+                        width: ${markerImageWidth}px; 
+                        height: ${markerImageWidth}px;
+                    "
+                />
+            <div/>
+        `,
+        className: '', // Disable default Leaflet styles
+        iconSize: [markerBackgroundSize, markerBackgroundSize],
+        iconAnchor: [markerBackgroundSize/2, markerBackgroundSize/2], // Center the icon around the latlng
+    });
+}
+
+/**
+ * Get a function used to style Point GeoJSON features on a leaflet map.
+ * @param baseMediaUrl the base URL for fetching media files from the server.
+ * @param state the current map preview state.
+ * @returns a function that returns a leaflet marker object.
+ */
+function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (feature: Feature<Point, any>, latlng: L.LatLng) => L.Marker {
+    const func = (feature: Feature<Point, any>, latlng: L.LatLng) => {
+
+        // Grab the first applied style that has a non-empty marker icon configured to be drawn
+        let markerStyle: Style | null = null;
+        const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
+        for (let style of appliedStyles){
+            if (style.drawMarker && style.markerIcon.trimStart().trimEnd() !== ""){
+                markerStyle = style;
+                break;
+            }
+        }
+
+        if (markerStyle === null){
+            // Return default leaflet marker style if no style is applied
+            return L.marker(latlng);
+        }
+
+        // Otherwise return the styled marker
+        return L.marker(latlng, {
+            icon: getMarkerDivIcon(baseMediaUrl, markerStyle),
+        });
+    };
+    return func;
+}
+
 function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
+
+    console.log("Drawing map preview!");
 
     // Always remove the previous layer, if there is one, from the map. 
     // Otherwse, it overlaps with the new layer being drawn.
@@ -297,18 +368,17 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         return;
     }
     
-    const markerBackgroundSize = 32;
-    const markerImageWidth = 26;
+    
     const baseMediaUrl = expectEl('injected-media-url').innerHTML;
     const anyMarkerStyles = state.stylesOnLayer.filter(styleOnLayer => styleOnLayer.style.drawMarker == true).length > 0;
     const styledGeoJsonData = L.geoJSON(state.currentLayer.toGeoJSON(), {
         style: getPolygonStyleFunc(state),
+        pointToLayer: getPointStyleFunc(baseMediaUrl, state),
         onEachFeature: (feature, layer) => {
-            // Optionally bind popups or other handlers
-            // if (feature.properties && feature.properties.name) {
-            //     layer.bindPopup(`Name: ${feature.properties.name}`);
-            // }
+            console.log("On each feature!!!");
+            // Draw centroid icon markers when a marker icon style is applied to a polygon feature
             const isPolygon = feature.geometry.type.toUpperCase().includes("POLYGON");
+            console.log(isPolygon);
             if (isPolygon && anyMarkerStyles){
                 const multiPolygonFeature = feature as Feature<Polygon, any>;
                 const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
@@ -316,59 +386,20 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                 if (markerStyles.length > 0){
                     const markerStyle = markerStyles[0]; // Just take the first marker style if multiple applied.
                     for (let polygonCoords of multiPolygonFeature.geometry.coordinates){
-                        
-                        const centroid = getCentroid(polygonCoords);
-                        console.log(centroid);
+                        const coords = (polygonCoords[0] as unknown) as Position[]; // For some reason there is another nested array in here at runtime, idk why...
+                        const points: Array<L.Point> = [];
+                        for (let coord of coords){
+                            points.push(new L.Point(coord[0], coord[1]))
+                        }
+                        const centroid = getCentroid(points);
+
+                        const marker = L.marker(new L.LatLng(centroid.y, centroid.x), {
+                            icon: getMarkerDivIcon(baseMediaUrl, markerStyle),
+                        });
+                        marker.addTo(map);
                     }
                 }
             }
-        },
-        pointToLayer: function (feature, latlng) {
-            
-            // Grab the first applied style that has a non-empty marker icon configured to be drawn
-            let markerStyle: Style | null = null;
-            const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
-            for (let style of appliedStyles){
-                if (style.drawMarker && style.markerIcon.trimStart().trimEnd() !== ""){
-                    markerStyle = style;
-                    break;
-                }
-            }
-            if (markerStyle === null){
-                // Return default leaflet marker style if no style is applied
-                return L.marker(latlng);
-            }
-
-            // Otherwise return the styled marker
-            return L.marker(latlng, {
-                icon: L.divIcon({
-                    html: `
-                        <div 
-                            style="
-                                width: ${markerBackgroundSize}px;
-                                height: ${markerBackgroundSize}px;
-                                background-color: ${markerStyle.markerBackgroundColor};
-                                opacity: ${markerStyle.markerIconOpacity};
-                                border-radius: 50%;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                            "
-                        >
-                            <img 
-                                src="${baseMediaUrl + markerStyle.markerIcon}"
-                                style="
-                                    width: ${markerImageWidth}px; 
-                                    height: ${markerImageWidth}px;
-                                "
-                            />
-                        <div/>
-                    `,
-                    className: '', // Disable default Leaflet styles
-                    iconSize: [markerBackgroundSize, markerBackgroundSize],
-                    iconAnchor: [markerBackgroundSize/2, markerBackgroundSize/2], // Center the icon around the latlng
-                }),
-            });
         },
     });
     state.currentLayer = styledGeoJsonData;
