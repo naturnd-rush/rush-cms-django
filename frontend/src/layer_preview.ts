@@ -1,5 +1,5 @@
 import {type Style, getStyleById, getMapDataByName} from "./graphql"
-import type { FeatureCollection, Geometry, Feature, Point, Position, Polygon } from 'geojson';
+import type { FeatureCollection, Geometry, Feature, Point, Position, Polygon, MultiPolygon } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
 import { waitForElementById, coerceNumbersDeep, blendHexColors, interpolateNumbers, expectEl, getCentroid } from "./utils";
@@ -19,6 +19,7 @@ export interface StyleOnLayer{
 export interface MapPreviewState {
     stylesOnLayer: Array<StyleOnLayer>,
     currentLayer: L.GeoJSON<any, Geometry> | null,
+    centroidMarkers: L.LayerGroup,
 }
 
 /**
@@ -333,6 +334,49 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
     return func;
 }
 
+/**
+ * Get a centroid Point from a group 
+ * @param polygonCoords 
+ * @returns 
+ */
+function getPolygonCentroid(polygonCoords: Position[]): L.Point{
+    const points: Array<L.Point> = [];
+    for (let coord of polygonCoords){
+        points.push(new L.Point(coord[0], coord[1]))
+    }
+    return getCentroid(points);
+}
+
+/**
+ * Extract latitude / longitude positions from a set of geometry coordinates. This function is used to normalize
+ * the feature geometry across Polygons and MultiPolygons because I have found that the array nesting is not consistent 
+ * depending on the GeoJSON data being pushed into the system at runtime...
+ * @param coordinates any leaflet "feature.geometry.coordinates" object.
+ * @returns an array of "polygons", which are defined here as a list of lists of numbers, where the innermost list only ever 
+ * has 2 elements (lat and long).
+ */
+function extractLatLngGroups(coordinates: any): Position[][] {
+    const result: Position[][] = [];
+    function traverse(node: any): void {
+        if (Array.isArray(node) && node.length > 0) {
+            if (typeof node[0] === 'number' && typeof node[1] === 'number') {
+                // Base case: This is a Position, add as a group
+                result.push([node as Position]);
+            } else if (typeof node[0][0] === 'number') {
+                // This is a flat array of Positions
+                result.push(node as Position[]);
+            } else {
+                // Still nested, keep traversing
+                for (const child of node) {
+                    traverse(child);
+                }
+            }
+        }
+    }
+    traverse(coordinates);
+    return result;
+}
+
 function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
 
     // Always remove the previous layer, if there is one, from the map. 
@@ -340,6 +384,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     if (state.currentLayer !== null){
         map.removeLayer(state.currentLayer);
     }
+    state.centroidMarkers.clearLayers();
 
     // Update currentLayer if we are receiving new map data.
     if ("MapData" === update.type){
@@ -373,10 +418,21 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         style: getPolygonStyleFunc(state),
         pointToLayer: getPointStyleFunc(baseMediaUrl, state),
         onEachFeature: (feature, layer) => {
+
+            type Position = [number, number]; // [lat, lng]
+
+            
+
+            if (feature.geometry.type === "Polygon"){
+                console.log("Polygon Extraction result: ", extractLatLngGroups(feature.geometry.coordinates));
+            } else if (feature.geometry.type === "MultiPolygon"){
+                console.log("MultiPolygon Extraction result: ", extractLatLngGroups(feature.geometry.coordinates));
+            }
+
             // Draw centroid icon markers when a marker icon style is applied to a polygon feature
-            const isPolygon = feature.geometry.type.toUpperCase().includes("POLYGON");
+            const isPolygon = feature.geometry.type === "MultiPolygon";
             if (isPolygon && anyMarkerStyles){
-                const multiPolygonFeature = feature as Feature<Polygon, any>;
+                const multiPolygonFeature = feature as Feature<MultiPolygon, any>;
                 const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
                 const markerStyles = appliedStyles.filter(style => style.drawMarker == true);
                 if (markerStyles.length > 0){
@@ -392,7 +448,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                         const marker = L.marker(new L.LatLng(centroid.y, centroid.x), {
                             icon: getMarkerDivIcon(baseMediaUrl, markerStyle),
                         });
-                        marker.addTo(map);
+                        marker.addTo(state.centroidMarkers);
                     }
                 }
             }
@@ -427,7 +483,9 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     let mapPreviewState: MapPreviewState = {
         stylesOnLayer: [],
         currentLayer: null,
+        centroidMarkers: new L.LayerGroup(),
     };
+    mapPreviewState.centroidMarkers.addTo(map);
     
     // Listen to redraw the map when a feature-mapping is changed. Because I want to update the
     // map live while the user is typing in the feature mapping text areas, I use the HTML "input"
