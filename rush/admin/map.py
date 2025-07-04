@@ -4,7 +4,7 @@ from django import forms
 from django.contrib import admin
 from django.db import models as django_db_models
 from django.utils.safestring import mark_safe
-from django_summernote.admin import SummernoteModelAdmin
+from django_summernote.admin import SummernoteInlineModelAdmin, SummernoteModelAdmin
 from simple_history.admin import SimpleHistoryAdmin
 
 from rush import models
@@ -13,12 +13,12 @@ from rush.admin import utils
 logger = logging.getLogger(__name__)
 
 
-class StyleOnLayerInline(admin.TabularInline):
+class StyleOnLayerInline(SummernoteInlineModelAdmin, admin.TabularInline):
     verbose_name_plural = "Styles applied to this Layer"
     model = models.StylesOnLayer
     extra = 0
     exclude = ["id"]
-    fields = ["style", "feature_mapping"]
+    fields = ["style", "feature_mapping", "popup"]
     autocomplete_fields = [
         # uses the searchable textbox in the admin form to add/remove Styles
         "style"
@@ -29,6 +29,7 @@ class StyleOnLayerInline(admin.TabularInline):
             "widget": forms.Textarea(attrs={"rows": 1, "cols": 40})
         },
     }
+    summernote_fields = ["popup"]
 
 
 @admin.register(models.Layer)
