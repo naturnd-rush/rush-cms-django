@@ -30,7 +30,7 @@ class SummernoteWidget(SummernoteWidgetBase):
                 "toolbar": [
                     ["style", ["bold", "italic", "underline"]],
                     ["para", ["ul", "ol"]],
-                    ["insert", ["link"]],
+                    ["insert", ["link", "picture"]],
                 ],
                 "disableDragAndDrop": True,
             }

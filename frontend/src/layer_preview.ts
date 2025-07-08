@@ -486,10 +486,15 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                 if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== ""){
                     popupTemplate = appliedStyle.popupTemplate;
                 }
-                console.log("Popup template: ", popupTemplate);
             }
             if (popupTemplate !== null){
-                layer.bindPopup(popupTemplate);
+
+                // Hack for resizing popup images to always fit inside the popup container. There might be a better way to do this.
+                popupTemplate = popupTemplate.replace(/<img(.*?)>/g, (match) => {
+                    return match.replace('<img', '<img style="max-width:175px; height:auto;"');
+                });
+
+                layer.bindPopup(Mustache.render(popupTemplate, feature.properties));
             }
             
             // if (feature.geometry.type === "Polygon"){

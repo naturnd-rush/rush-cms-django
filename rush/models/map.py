@@ -240,7 +240,9 @@ class Layer(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     name = models.CharField(max_length=255)
-    description = models.TextField()
+    description = models.TextField(
+        help_text="The layer description that will appear in the map legend to help people understand what the layer data represents."
+    )
     map_data = models.ForeignKey(
         to=MapData,
         # MapData deletion should fail if a Layer references it.
