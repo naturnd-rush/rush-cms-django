@@ -11,6 +11,7 @@
   "devDependencies": {
     "@types/geojson": "^7946.0.16",
     "@types/leaflet": "^1.9.18",
+    "@types/mustache": "^4.2.6",
     "@types/node": "^22.15.29",
     "typescript": "~5.8.3",
     "vite": "^6.3.5"
@@ -19,6 +20,6 @@
     "expr-eval": "^2.0.2",
     "fast-glob": "^3.3.3",
     "leaflet": "^1.9.4",
-    "zod": "^3.25.51"
+    "mustache": "^4.2.0"
   }
 }

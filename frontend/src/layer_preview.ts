@@ -4,6 +4,7 @@ import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
 import { waitForElementById, coerceNumbersDeep, blendHexColors, interpolateNumbers, expectEl, getCentroid } from "./utils";
 import { Parser } from 'expr-eval';
+import Mustache from "mustache";
 
 /************
  * This script draws a map layer preview based on the currently selected map-data object and
@@ -13,6 +14,7 @@ import { Parser } from 'expr-eval';
 export interface StyleOnLayer{
     style: Style,
     feature_mapping: string,
+    popupTemplate: string | null,
     inlineRow: Element,
 }
 
@@ -35,6 +37,11 @@ export interface MapDataUpdate extends MapPreviewUpdate {
     newGeoJsonData: FeatureCollection<Geometry, any> | null,
 }
 
+interface AppliedStyle{
+    style: Style,
+    popupTemplate: string | null,
+}
+
 /**
  * Get the currently configured style data for this layer.
  */
@@ -44,6 +51,7 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
         // for each styleOnLayer inline group
         const styleId = (inlineRow.querySelector("select[id*='-style']") as HTMLSelectElement)?.value;
         const featureMapping = (inlineRow.querySelector("textarea[id*='feature_mapping']") as HTMLInputElement | null)?.value;
+        const popupTemplate = (inlineRow.querySelector("textarea[id*='popup']") as HTMLInputElement | null)?.value;
         if (!(styleId && featureMapping)){
             // most likely an empty inline
             continue;
@@ -53,6 +61,7 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
             stylesOnLayers.push({
                 style: style,
                 feature_mapping: featureMapping,
+                popupTemplate: popupTemplate !== undefined ? popupTemplate : null,
                 inlineRow: inlineRow,
             });
         }
@@ -117,6 +126,23 @@ export const inlineElements = {
             });
         },
     },
+    popups: {
+         addEventListener: (callback: (event: Event) => void): void => {
+            document.addEventListener('input', (event) => {
+                const target = event.target;
+                const popupChanged = target instanceof HTMLDivElement ;
+                console.log("POPUP CHANGED");
+                if (popupChanged) {
+                    callback(event);
+                }
+            });
+        },
+        // const inlinePopupEls = document.querySelectorAll("div[class='note-editable']");
+        // console.log("Inline popup els: ", inlinePopupEls);
+        // inlinePopupEls.forEach((summernoteTextboxEl) => {
+        // summernoteTextboxEl.addEventListener("input", () => fmUpdate = true); 
+        // })
+    },
 };
 
 /**
@@ -125,16 +151,16 @@ export const inlineElements = {
  * @param stylesOnLayer the styles present on the current map layer.
  * @returns an array of styles that should be applied to the given feature.
  */
-function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<StyleOnLayer>): Array<Style>{
+function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<StyleOnLayer>): Array<AppliedStyle>{
     const parser = new Parser();
-    let applied: Array<Style> = [];
+    let applied: Array<AppliedStyle> = [];
     for (let styleOnLayer of stylesOnLayer){
         const fieldMappingContainer = styleOnLayer.inlineRow.querySelector("td[class*='feature_mapping']");
         const fieldMappingErrors = fieldMappingContainer?.querySelector("div[id*='errors']");
         try{
             const expr = parser.parse(styleOnLayer.feature_mapping);
             if (expr.evaluate(coerceNumbersDeep(feature.properties)) === true){
-                applied.push(styleOnLayer.style);
+                applied.push({style: styleOnLayer.style, popupTemplate: styleOnLayer.popupTemplate});
                 if (fieldMappingErrors && fieldMappingContainer){
                     fieldMappingContainer.removeChild(fieldMappingErrors);
                 }
@@ -214,7 +240,8 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
         let strokeLineCap = "round";
         let strokeLineJoin = "round";
 
-        for (let style of appliedStyles){
+        for (let appliedStyle of appliedStyles){
+            const style = appliedStyle.style;
 
             // If one style draws something then the combined style will also draw that thing
             if (style.drawFill === true){
@@ -314,7 +341,8 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
         // Grab the first applied style that has a non-empty marker icon configured to be drawn
         let markerStyle: Style | null = null;
         const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
-        for (let style of appliedStyles){
+        for (let appliedStyle of appliedStyles){
+            const style = appliedStyle.style;
             if (style.drawMarker && style.markerIcon.trimStart().trimEnd() !== ""){
                 markerStyle = style;
                 break;
@@ -419,24 +447,33 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         pointToLayer: getPointStyleFunc(baseMediaUrl, state),
         onEachFeature: (feature, layer) => {
 
-            type Position = [number, number]; // [lat, lng]
+            const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
 
-            
-
-            if (feature.geometry.type === "Polygon"){
-                console.log("Polygon Extraction result: ", extractLatLngGroups(feature.geometry.coordinates));
-            } else if (feature.geometry.type === "MultiPolygon"){
-                console.log("MultiPolygon Extraction result: ", extractLatLngGroups(feature.geometry.coordinates));
+            // Bind popups -- First find the popup template that is applied, if any. And then bind it to the current layer.
+            let popupTemplate = null;
+            for (let appliedStyle of appliedStyles){
+                if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== ""){
+                    popupTemplate = appliedStyle.popupTemplate;
+                }
+                console.log("Popup template: ", popupTemplate);
             }
+            if (popupTemplate !== null){
+                layer.bindPopup(popupTemplate);
+            }
+            
+            // if (feature.geometry.type === "Polygon"){
+            //     console.log("Polygon Extraction result: ", extractLatLngGroups(feature.geometry.coordinates));
+            // } else if (feature.geometry.type === "MultiPolygon"){
+            //     console.log("MultiPolygon Extraction result: ", extractLatLngGroups(feature.geometry.coordinates));
+            // }
 
             // Draw centroid icon markers when a marker icon style is applied to a polygon feature
             const isPolygon = feature.geometry.type === "MultiPolygon";
             if (isPolygon && anyMarkerStyles){
                 const multiPolygonFeature = feature as Feature<MultiPolygon, any>;
-                const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
-                const markerStyles = appliedStyles.filter(style => style.drawMarker == true);
+                const markerStyles = appliedStyles.filter(appliedStyle => appliedStyle.style.drawMarker == true);
                 if (markerStyles.length > 0){
-                    const markerStyle = markerStyles[0]; // Just take the first marker style if multiple applied.
+                    const markerStyle = markerStyles[0].style; // Just take the first marker style if multiple applied.
                     for (let polygonCoords of multiPolygonFeature.geometry.coordinates){
                         const coords = (polygonCoords[0] as unknown) as Position[]; // For some reason there is another nested array in here at runtime, idk why...
                         const points: Array<L.Point> = [];
@@ -494,6 +531,7 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     // the style data using this even listener, and check to dispatch this update every second or so.
     let fmUpdate = false;
     inlineElements.featureMappings.addEventListener(() => fmUpdate = true);
+    inlineElements.popups.addEventListener(() => fmUpdate = true);
     const sendFmUpdateAndPoll = () => {
         if (fmUpdate === true){
             getStyleUpdate().then(styleUpdate => {
