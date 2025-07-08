@@ -1,10 +1,15 @@
+import json
 import logging
 
 from django import forms
 from django.contrib import admin
 from django.db import models as django_db_models
+from django.forms.utils import flatatt
+from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django_summernote.admin import SummernoteInlineModelAdmin, SummernoteModelAdmin
+from django_summernote.admin import SummernoteModelAdmin
+from django_summernote.widgets import SummernoteWidgetBase
 from simple_history.admin import SimpleHistoryAdmin
 
 from rush import models
@@ -13,23 +18,60 @@ from rush.admin import utils
 logger = logging.getLogger(__name__)
 
 
-class StyleOnLayerInline(SummernoteInlineModelAdmin, admin.TabularInline):
+class SummernoteWidget(SummernoteWidgetBase):
+    def render(self, name, value, attrs=None, **kwargs):
+        if attrs is None:
+            attrs = {}
+        summernote_settings = self.summernote_settings()
+        summernote_settings.update(
+            {
+                "height": "300px",
+                "width": "500px",
+                "toolbar": [
+                    ["style", ["bold", "italic", "underline"]],
+                    ["para", ["ul", "ol"]],
+                    ["insert", ["link"]],
+                ],
+                "disableDragAndDrop": True,
+            }
+        )
+
+        html = super().render(name, value, attrs=attrs, **kwargs)
+        context = {
+            "id": attrs["id"],
+            "id_safe": attrs["id"].replace("-", "_"),
+            "flat_attrs": flatatt(self.final_attr(attrs)),
+            "settings": json.dumps(summernote_settings),
+            "src": reverse("django_summernote-editor", kwargs={"id": attrs["id"]}),
+            # Width and height have to be pulled out to create an iframe with correct size
+            "width": summernote_settings["width"],
+            "height": summernote_settings["height"],
+        }
+
+        html += render_to_string("django_summernote/widget_iframe.html", context)
+        return mark_safe(html)
+
+
+class StylesOnLayerInlineForm(forms.ModelForm):
+    class Meta:
+        model = models.StylesOnLayer
+        fields = ["style", "feature_mapping", "popup"]
+        widgets = {
+            "popup": SummernoteWidget(),
+            "feature_mapping": forms.Textarea(attrs={"rows": 1, "cols": 50}),
+        }
+
+
+class StyleOnLayerInline(admin.TabularInline):
+    form = StylesOnLayerInlineForm
     verbose_name_plural = "Styles applied to this Layer"
     model = models.StylesOnLayer
     extra = 0
     exclude = ["id"]
-    fields = ["style", "feature_mapping", "popup"]
     autocomplete_fields = [
         # uses the searchable textbox in the admin form to add/remove Styles
         "style"
     ]
-    formfield_overrides = {
-        django_db_models.TextField: {
-            # make the feature mapping textarea a smaller size (default is wayyy to large)
-            "widget": forms.Textarea(attrs={"rows": 1, "cols": 40})
-        },
-    }
-    summernote_fields = ["popup"]
 
 
 @admin.register(models.Layer)
