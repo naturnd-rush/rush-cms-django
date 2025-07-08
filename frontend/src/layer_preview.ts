@@ -19,6 +19,7 @@ export interface StyleOnLayer{
 }
 
 export interface MapPreviewState {
+    isUpdating: boolean,
     stylesOnLayer: Array<StyleOnLayer>,
     currentLayer: L.GeoJSON<any, Geometry> | null,
     centroidMarkers: L.LayerGroup,
@@ -375,6 +376,36 @@ function getPolygonCentroid(polygonCoords: Position[]): L.Point{
     return getCentroid(points);
 }
 
+function showSpinner(){
+    const mapPreviewEl = document.getElementById("map-preview");
+    const spinnerEl = document.getElementById("map-spinner");
+    if (mapPreviewEl !== null && spinnerEl !== null){
+        mapPreviewEl.classList.add('blur');
+        spinnerEl.classList.remove('hidden');
+    } else {
+        console.error("Couldn't find map-preview and map-spinner in the DOM!");
+    }
+}
+
+function hideSpinner(){
+    const mapPreviewEl = document.getElementById("map-preview");
+    const spinnerEl = document.getElementById("map-spinner");
+    if (mapPreviewEl !== null && spinnerEl !== null){
+        mapPreviewEl.classList.remove('blur');
+        spinnerEl.classList.add('hidden');
+    } else {
+        console.error("Couldn't find map-preview and map-spinner in the DOM!");
+    }
+}
+
+function showSpinnerAfter(numSeconds: number, state: MapPreviewState): void {
+    setTimeout(() => {
+        if (state.isUpdating){
+            showSpinner();
+        }
+    }, numSeconds * 1000)
+}
+
 /**
  * Extract latitude / longitude positions from a set of geometry coordinates. This function is used to normalize
  * the feature geometry across Polygons and MultiPolygons because I have found that the array nesting is not consistent 
@@ -493,6 +524,8 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     });
     state.currentLayer = styledGeoJsonData;
     styledGeoJsonData.addTo(map)
+    hideSpinner();
+    state.isUpdating = false;
 }
 
 document.addEventListener("DOMContentLoaded", () => {(async () => {
@@ -518,11 +551,16 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
 
     // Initialize object to track map preview state
     let mapPreviewState: MapPreviewState = {
+        isUpdating: true,
         stylesOnLayer: [],
         currentLayer: null,
         centroidMarkers: new L.LayerGroup(),
     };
     mapPreviewState.centroidMarkers.addTo(map);
+
+    // Move spinner from top of page to inside the map preview box and show the spinner initially as the map preview is drawn
+    (await waitForElementById('id_map_data_helptext')).appendChild(await waitForElementById("map-spinner"));
+    showSpinner();
     
     // Listen to redraw the map when a feature-mapping is changed. Because I want to update the
     // map live while the user is typing in the feature mapping text areas, I use the HTML "input"
@@ -534,6 +572,8 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     inlineElements.popups.addEventListener(() => fmUpdate = true);
     const sendFmUpdateAndPoll = () => {
         if (fmUpdate === true){
+            mapPreviewState.isUpdating = true;
+            showSpinnerAfter(1, mapPreviewState);
             getStyleUpdate().then(styleUpdate => {
                 drawMapPreview(map, mapPreviewState, styleUpdate);
             });
@@ -545,6 +585,8 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
 
     // Listen to redraw the map when a style is changed.
     inlineElements.styles.addEventListener(() => {
+        mapPreviewState.isUpdating = true;
+        showSpinnerAfter(1, mapPreviewState);
         getStyleUpdate().then(styleUpdate => {
             drawMapPreview(map, mapPreviewState, styleUpdate);
         });
@@ -554,6 +596,8 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     // This can happen after a user edits one of the inline styles and then clicks on the layer edit tab.
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'visible') {
+            mapPreviewState.isUpdating = true;
+            showSpinnerAfter(1, mapPreviewState);
             getStyleUpdate().then(styleUpdate => {
                 drawMapPreview(map, mapPreviewState, styleUpdate);
             });
@@ -568,6 +612,8 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     const mapDataChangeObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.type === "childList") {
+                mapPreviewState.isUpdating = true;
+                showSpinnerAfter(1, mapPreviewState);
                 getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
             }
         });
