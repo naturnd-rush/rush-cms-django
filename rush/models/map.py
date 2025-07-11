@@ -140,7 +140,7 @@ class Style(models.Model):
         null=True,
         blank=True,
         validators=[validate_image_or_svg],
-        help_text="The image that will appear at each point this style is applied to.",
+        help_text="The image that will appear at each point this style is applied to. Accepts PNG, JPEG, and SVG files.",
     )
     marker_icon_opacity = models.DecimalField(
         max_digits=5,
