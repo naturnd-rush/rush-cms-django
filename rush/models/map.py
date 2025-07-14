@@ -1,3 +1,4 @@
+import json
 import re
 import uuid
 from decimal import Decimal
@@ -249,6 +250,7 @@ class Layer(models.Model):
         on_delete=models.PROTECT,
     )
     styles = models.ManyToManyField(Style, through="StylesOnLayer")
+    serialized_leaflet_json = models.JSONField(default=dict)
     history = HistoricalRecords()
 
     def __str__(self):

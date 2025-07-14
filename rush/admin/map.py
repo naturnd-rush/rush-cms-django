@@ -74,9 +74,17 @@ class StyleOnLayerInline(admin.TabularInline):
     ]
 
 
+class LayerForm(forms.ModelForm):
+    serialized_leaflet_json = forms.CharField(widget=forms.HiddenInput())
+
+    class Meta:
+        model = models.Layer
+        exclude = ["id"]
+
+
 @admin.register(models.Layer)
 class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
-    exclude = ["id"]
+    form = LayerForm
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]
 
