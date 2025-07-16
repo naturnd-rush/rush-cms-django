@@ -113,8 +113,11 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
         data = form.cleaned_data.get(fieldname)
         if not data:
             raise forms.ValidationError(f"Error saving {fieldname} data!")
-        print(data)
-        setattr(obj, fieldname, data)
+
+        # Avoid double-serialization
+        parsed = json.loads(data)
+
+        setattr(obj, fieldname, parsed)
 
     def save_model(self, request, obj, form, change):
         self._inject_serialized_leaflet_json(obj, form)
