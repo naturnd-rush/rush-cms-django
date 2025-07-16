@@ -16,6 +16,7 @@ class QuestionType(DjangoObjectType):
 
 
 class MapDataType(DjangoObjectType):
+    # TODO: This may not be needed for the user -facing API. Potentially remove.
     class Meta:
         model = models.MapData
         fields = [
@@ -31,6 +32,7 @@ class MapDataType(DjangoObjectType):
 
 
 class StylesOnLayersType(DjangoObjectType):
+    # TODO: This may not be needed for the user -facing API. Potentially remove.
     class Meta:
         model = models.StylesOnLayer
         fields = [
@@ -41,6 +43,7 @@ class StylesOnLayersType(DjangoObjectType):
 
 
 class StyleType(DjangoObjectType):
+    # TODO: This may not be needed for the user -facing API. Potentially remove.
     class Meta:
         model = models.Style
         fields = [
@@ -64,7 +67,17 @@ class StyleType(DjangoObjectType):
         ]
 
 
+class LayerType(DjangoObjectType):
+    class Meta:
+        model = models.Layer
+        fields = ["id", "name", "description", "serialized_leaflet_json"]
+
+
 class Query(graphene.ObjectType):
+
+    all_layers = graphene.List(LayerType)
+    layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
+
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
 
@@ -79,6 +92,12 @@ class Query(graphene.ObjectType):
 
     all_styles = graphene.List(StyleType)
     style = graphene.Field(StyleType, id=graphene.UUID(required=True))
+
+    def resolve_all_layers(self, info):
+        return models.Layer.objects.all()
+
+    def resolve_layer(self, info, id):
+        return models.Layer.objects.get(pk=id)
 
     def resolve_all_questions(self, info):
         return models.Question.objects.all()

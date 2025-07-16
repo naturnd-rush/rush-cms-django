@@ -104,6 +104,22 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
         finally:
             return super().render_change_form(request, context, *args, **kwargs)
 
+    def _inject_serialized_leaflet_json(self, obj, form) -> None:
+        """
+        Takes the serialized leaflet json data from a hidden field on the form and injects it into
+        the model at model save time.
+        """
+        fieldname = "serialized_leaflet_json"
+        data = form.cleaned_data.get(fieldname)
+        if not data:
+            raise forms.ValidationError(f"Error saving {fieldname} data!")
+        print(data)
+        setattr(obj, fieldname, data)
+
+    def save_model(self, request, obj, form, change):
+        self._inject_serialized_leaflet_json(obj, form)
+        super().save_model(request, obj, form, change)
+
 
 class MapDataAdminForm(forms.ModelForm):
 

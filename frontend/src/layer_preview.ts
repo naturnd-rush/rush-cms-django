@@ -279,7 +279,7 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
             strokeLineJoin = style.strokeLineJoin;
             strokeLineCap = style.strokeLineCap;
         }
-        return {
+        const polygonStyleProps = {
             // Path fill options.
             fill: drawFill,
             fillColor: fillColor,
@@ -293,15 +293,25 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
             dashOffset: strokeDashOffset,
             lineCap: strokeLineCap as L.LineCapShape,
             lineJoin: strokeLineJoin as L.LineJoinShape,
-        };
+        }
+
+        // Inject style props into properties for layer serialization
+        feature.properties.__polygonStyleProps = polygonStyleProps;
+
+        return polygonStyleProps;
     };
     return func as StyleFunction;
 }
 
-function getMarkerDivIcon(baseMediaUrl: string, markerStyle: Style): L.DivIcon {
+/**
+ * Get styled properties for a marker div icon.
+ * @param baseMediaUrl the base media url for the RUSH admin server.
+ * @param markerStyle the marker style.
+ */
+function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
     const markerBackgroundSize = 32;
     const markerImageWidth = 26;
-    return L.divIcon({
+    return {
         html: `
             <div 
                 style="
@@ -327,7 +337,7 @@ function getMarkerDivIcon(baseMediaUrl: string, markerStyle: Style): L.DivIcon {
         className: '', // Disable default Leaflet styles
         iconSize: [markerBackgroundSize, markerBackgroundSize],
         iconAnchor: [markerBackgroundSize/2, markerBackgroundSize/2], // Center the icon around the latlng
-    });
+    };
 }
 
 /**
@@ -355,9 +365,13 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
             return L.marker(latlng);
         }
 
+        // Inject marker div icon props into point feature properties for serialization
+        const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
+        feature.properties.__pointDivIconStyleProps = markerDivIconProps;
+
         // Otherwise return the styled marker
         return L.marker(latlng, {
-            icon: getMarkerDivIcon(baseMediaUrl, markerStyle),
+            icon: new L.DivIcon(markerDivIconProps),
         });
     };
     return func;
@@ -491,17 +505,23 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
 
                 // Hack for resizing popup images to always fit inside the popup container. There might be a better way to do this.
                 popupTemplate = popupTemplate.replace(/<img(.*?)>/g, (match) => {
-                    return match.replace('<img', '<img style="max-width:175px; height:auto;"');
+                    return match.replace('<img', '<img style="max-width:250px; height:auto;"');
                 });
+                const renderedPopup = Mustache.render(popupTemplate, feature.properties);
+                const popupOptions = {
+                    maxWidth: 250,
+                    minWidth: 250,
+                };
 
-                layer.bindPopup(Mustache.render(popupTemplate, feature.properties));
+                feature.properties.__hasPopup = true;
+                feature.properties.__popupHTML = renderedPopup;
+                feature.properties.__popupOptions = popupOptions;
+
+                // TODO: Serialization of popup
+                layer.bindPopup(renderedPopup, popupOptions);
+            } else {
+                feature.properties.__hasPopup = false;
             }
-            
-            // if (feature.geometry.type === "Polygon"){
-            //     console.log("Polygon Extraction result: ", extractLatLngGroups(feature.geometry.coordinates));
-            // } else if (feature.geometry.type === "MultiPolygon"){
-            //     console.log("MultiPolygon Extraction result: ", extractLatLngGroups(feature.geometry.coordinates));
-            // }
 
             // Draw centroid icon markers when a marker icon style is applied to a polygon feature
             const isPolygon = feature.geometry.type === "MultiPolygon";
@@ -518,12 +538,23 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                         }
                         const centroid = getCentroid(points);
 
+                        // Inject centroid marker div icon props into feature properties for serialization
+                        const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
+                        feature.properties.__hasCentroidMarkerIcon = true;
+                        feature.properties.__centroidDivIconStyleProps = markerDivIconProps;
+                        feature.properties.__centroidDivIconLat = centroid.x;
+                        feature.properties.__centroidDivIconLong = centroid.y;
+
                         const marker = L.marker(new L.LatLng(centroid.y, centroid.x), {
-                            icon: getMarkerDivIcon(baseMediaUrl, markerStyle),
+                            icon: new L.DivIcon(markerDivIconProps),
                         });
                         marker.addTo(state.centroidMarkers);
                     }
+                } else {
+                    feature.properties.__hasCentroidMarkerIcon = false;
                 }
+            } else {
+                feature.properties.__hasCentroidMarkerIcon = false;
             }
         },
     });
@@ -531,10 +562,28 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     styledGeoJsonData.addTo(map)
     hideSpinner();
     state.isUpdating = false;
+
+    // Save serialized leaflet json to a hidden field so it can be saved on the Layer model
+    const hiddenField = expectEl("id_serialized_leaflet_json") as HTMLInputElement;
+    hiddenField.value = serializeLayer(state);
+
+}
+
+/**
+ * Serialize the layer preview information as a Leaflet LayerGroup object.
+ * @param state the current map preview state.
+ * @returns a string of serialized JSON data with a LayerGroup containing the styled
+ * data in the layer preview. 
+ */
+function serializeLayer(state: MapPreviewState): string {
+    let allLayers = new L.LayerGroup(state.centroidMarkers.getLayers());
+    state.currentLayer?.addTo(allLayers);
+    return JSON.stringify({
+        featureCollection: allLayers.toGeoJSON(),
+    });
 }
 
 document.addEventListener("DOMContentLoaded", () => {(async () => {
-
     
     const TILE_LAYER_OPTS = {
         minZoom: 0,
