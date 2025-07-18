@@ -513,12 +513,13 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                     minWidth: 250,
                 };
 
+                // Inject popup metadata into feature.properties for serialization
                 feature.properties.__hasPopup = true;
                 feature.properties.__popupHTML = renderedPopup;
                 feature.properties.__popupOptions = popupOptions;
 
-                // TODO: Serialization of popup
                 layer.bindPopup(renderedPopup, popupOptions);
+
             } else {
                 feature.properties.__hasPopup = false;
             }
@@ -537,24 +538,16 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                             points.push(new L.Point(coord[0], coord[1]))
                         }
                         const centroid = getCentroid(points);
-
-                        // Inject centroid marker div icon props into feature properties for serialization
                         const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
-                        feature.properties.__hasCentroidMarkerIcon = true;
-                        feature.properties.__centroidDivIconStyleProps = markerDivIconProps;
-                        feature.properties.__centroidDivIconLat = centroid.x;
-                        feature.properties.__centroidDivIconLong = centroid.y;
-
                         const marker = L.marker(new L.LatLng(centroid.y, centroid.x), {
                             icon: new L.DivIcon(markerDivIconProps),
                         });
+                        if (marker.feature !== undefined){
+                            marker.feature.properties.__pointDivIconStyleProps = markerDivIconProps;
+                        }
                         marker.addTo(state.centroidMarkers);
                     }
-                } else {
-                    feature.properties.__hasCentroidMarkerIcon = false;
                 }
-            } else {
-                feature.properties.__hasCentroidMarkerIcon = false;
             }
         },
     });
