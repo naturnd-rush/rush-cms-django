@@ -43,6 +43,12 @@ interface AppliedStyle{
     popupTemplate: string | null,
 }
 
+interface PopupMetadata {
+    __hasPopup: boolean;
+    __popupHTML: string | null;
+    __popupOptions: object | null;
+}
+
 /**
  * Get the currently configured style data for this layer.
  */
@@ -450,6 +456,53 @@ function extractLatLngGroups(coordinates: any): Position[][] {
     return result;
 }
 
+/**
+ * Get the popup metadata from the given popup template.
+ * @param popupTemplate a string, or null, if no template exists.
+ * @returns some popup metadata that can be used to tell leaflet how, and whether,
+ * to render a popup.
+ */
+function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string | null): PopupMetadata {
+    if (popupTemplate === null){
+        return {
+            __hasPopup: false,
+            __popupHTML: null,
+            __popupOptions: null,
+        };
+    }
+
+    // Hack for resizing popup images to always fit inside the popup container. There might be a better way to do this.
+    popupTemplate = popupTemplate.replace(/<img(.*?)>/g, (match) => {
+        return match.replace('<img', '<img style="max-width:250px; height:auto;"');
+    });
+    const renderedPopup = Mustache.render(popupTemplate, feature.properties);
+    const popupOptions = {
+        maxWidth: 250,
+        minWidth: 250,
+    };
+
+    return {
+        __hasPopup: true,
+        __popupHTML: renderedPopup,
+        __popupOptions: popupOptions,
+    };
+}
+
+/**
+ * Get an optionally defined popup template from a list of applied styles.
+ * @param appliedStyles a list of styles applied to some feature.
+ * @returns a string template, or null if no popup template is defined in any of the applied styles.
+ */
+function getPopupTemplate(appliedStyles: Array<AppliedStyle>): string | null {
+    let popupTemplate = null;
+    for (let appliedStyle of appliedStyles){
+        if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== ""){
+            popupTemplate = appliedStyle.popupTemplate;
+        }
+    }
+    return popupTemplate;
+}
+
 function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
 
     // Always remove the previous layer, if there is one, from the map. 
@@ -493,35 +546,11 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         onEachFeature: (feature, layer) => {
 
             const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
-
-            // Bind popups -- First find the popup template that is applied, if any. And then bind it to the current layer.
-            let popupTemplate = null;
-            for (let appliedStyle of appliedStyles){
-                if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== ""){
-                    popupTemplate = appliedStyle.popupTemplate;
-                }
-            }
-            if (popupTemplate !== null){
-
-                // Hack for resizing popup images to always fit inside the popup container. There might be a better way to do this.
-                popupTemplate = popupTemplate.replace(/<img(.*?)>/g, (match) => {
-                    return match.replace('<img', '<img style="max-width:250px; height:auto;"');
-                });
-                const renderedPopup = Mustache.render(popupTemplate, feature.properties);
-                const popupOptions = {
-                    maxWidth: 250,
-                    minWidth: 250,
-                };
-
-                // Inject popup metadata into feature.properties for serialization
-                feature.properties.__hasPopup = true;
-                feature.properties.__popupHTML = renderedPopup;
-                feature.properties.__popupOptions = popupOptions;
-
-                layer.bindPopup(renderedPopup, popupOptions);
-
-            } else {
-                feature.properties.__hasPopup = false;
+            const popupTemplate = getPopupTemplate(appliedStyles);
+            const popupMetadata = getPopupMetadata(feature, popupTemplate);
+            if (popupMetadata.__hasPopup === true && popupMetadata.__popupHTML !== null && popupMetadata.__popupOptions !== null){
+                layer.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
+                feature.properties = {...feature.properties, ...popupMetadata};
             }
 
             // Draw centroid icon markers when a marker icon style is applied to a polygon feature
@@ -539,11 +568,31 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                         }
                         const centroid = getCentroid(points);
                         const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
-                        const marker = L.marker(new L.LatLng(centroid.y, centroid.x), {
-                            icon: new L.DivIcon(markerDivIconProps),
-                        });
-                        if (marker.feature !== undefined){
-                            marker.feature.properties.__pointDivIconStyleProps = markerDivIconProps;
+
+                        // Build the centroid marker icon feature with serializable divIcon and popup metadata
+                        const centroidMarkerIconFeature = {
+                            type: "Feature",
+                            geometry: { type: "Point", coordinates: [centroid.x, centroid.y] },
+                            properties: {
+                                // Serialize leaflet markerDivIcon properties
+                                __pointDivIconStyleProps: markerDivIconProps,
+
+                                // Serialize leaflet popup metadata so it can be re-created later
+                                ...popupMetadata,
+                            },
+                        } as Feature<Point, any>;
+
+                        // Extract a leaflet marker from the feature.
+                        const marker = L.geoJSON(centroidMarkerIconFeature, {
+                            pointToLayer: (geoJsonPoint, latlng) => L.marker(latlng, {
+                                icon: new L.DivIcon(markerDivIconProps),
+                            }),
+                        }).getLayers()[0];
+
+                        // Bind a leaflet popup to the marker if necessary
+                        if (popupMetadata.__hasPopup === true && popupMetadata.__popupHTML !== null && popupMetadata.__popupOptions !== null){
+                            console.log("Hello world!");
+                            marker.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
                         }
                         marker.addTo(state.centroidMarkers);
                     }
