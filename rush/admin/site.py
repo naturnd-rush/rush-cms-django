@@ -10,6 +10,14 @@ from rush import models
 from rush.admin import utils
 
 
+class LayerOnQuestionStackedInline(admin.StackedInline):
+    verbose_name_plural = "Layers on this Question"
+    model = models.LayerOnQuestion
+    extra = 0
+    exclude = ["id"]
+    autocomplete_fields = ["layer", "layer_group"]
+
+
 class InitiativeForm(forms.ModelForm):
     """
     Override the default add/change page for the Initiative model admin.
@@ -159,7 +167,7 @@ class QuestionAdmin(SimpleHistoryAdmin):
         "get_initiatives",
     ]
     autocomplete_fields = ["initiatives"]
-    inlines = [QuestionTabInline]
+    inlines = [QuestionTabInline, LayerOnQuestionStackedInline]
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
 
     def image_preview(self, obj):
@@ -175,3 +183,23 @@ class QuestionAdmin(SimpleHistoryAdmin):
         if obj.initiatives.count() > 0:
             return ", ".join([initiative.title for initiative in obj.initiatives.all()])
         return "No Initiatives"
+
+
+@admin.register(models.LayerGroup)
+class LayerGroupTitleAdmin(admin.ModelAdmin):
+    """
+    Admin page for the Layer group titles.
+    """
+
+    exclude = ["id"]
+    search_fields = ["group_name"]
+
+
+@admin.register(models.Page)
+class PageAdmin(SummernoteModelAdmin, admin.ModelAdmin):
+    """
+    Admin page for editing other, non-map-related, Pages on the website.
+    """
+
+    summernote_fields = ["content"]
+    exclude = ["id"]

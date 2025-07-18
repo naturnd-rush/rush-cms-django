@@ -23,7 +23,7 @@ class Question(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     title = models.CharField(max_length=255)
     image = models.ImageField(upload_to="question_images/", null=True, blank=True)
-    initiatives = models.ManyToManyField(to="Initiative")
+    initiatives = models.ManyToManyField(to="Initiative", blank=True)
     questions = models.ManyToManyField(to="Layer", related_name="questions")
     history = HistoricalRecords()
 
@@ -75,3 +75,49 @@ class InitiativeTag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class LayerGroup(models.Model):
+    """
+    The title of a group of layers in the legend.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
+    group_name = models.CharField(max_length=255)
+    group_description = models.TextField(blank=True, help_text="Optional description.")
+
+    def __str__(self):
+        return self.group_name
+
+
+class LayerOnQuestion(models.Model):
+    """
+    Connect each question card to multiple Layers.
+    """
+
+    layer = models.ForeignKey(to="Layer", on_delete=models.CASCADE)
+    question = models.ForeignKey(to="Question", on_delete=models.CASCADE)
+
+    active_by_default = models.BooleanField(
+        default=False,
+        help_text="Whether the layer is active by default when a new question is loaded.",
+    )
+    layer_group = models.ForeignKey(
+        to=LayerGroup,
+        on_delete=models.CASCADE,
+        help_text="The title of the layer group.",
+    )
+
+
+class Page(models.Model):
+    """
+    A static webpage on the website.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
+    url_route = models.CharField(
+        max_length=255,
+        help_text="The url route to use when navigating to this page.",
+    )
+    title = models.CharField(max_length=255, help_text="The title of the webpage.")
+    content = models.TextField(help_text="The content that will appear on the webpage.")

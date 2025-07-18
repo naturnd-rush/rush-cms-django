@@ -87,6 +87,7 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     form = LayerForm
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]
+    search_fields = ["name"]
 
     def render_change_form(self, request, context, *args, **kwargs):
         # obj = context.get("original")
