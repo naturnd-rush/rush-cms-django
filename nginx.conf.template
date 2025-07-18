@@ -1,5 +1,6 @@
 server {
     server_name {{ domain }} www.{{ domain }};
+    client_max_body_size 100M;
 
     location ^~ /.well-known/acme-challenge/ {
         allow all;
