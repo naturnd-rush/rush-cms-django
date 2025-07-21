@@ -9,14 +9,7 @@ is allowed to query and communicate to the frontend.
 """
 
 
-class QuestionType(DjangoObjectType):
-    class Meta:
-        model = models.Question
-        fields = ["id", "title"]
-
-
 class MapDataType(DjangoObjectType):
-    # TODO: This may not be needed for the user -facing API. Potentially remove.
     class Meta:
         model = models.MapData
         fields = [
@@ -32,7 +25,6 @@ class MapDataType(DjangoObjectType):
 
 
 class StylesOnLayersType(DjangoObjectType):
-    # TODO: This may not be needed for the user -facing API. Potentially remove.
     class Meta:
         model = models.StylesOnLayer
         fields = [
@@ -43,7 +35,6 @@ class StylesOnLayersType(DjangoObjectType):
 
 
 class StyleType(DjangoObjectType):
-    # TODO: This may not be needed for the user -facing API. Potentially remove.
     class Meta:
         model = models.Style
         fields = [
@@ -71,6 +62,30 @@ class LayerType(DjangoObjectType):
     class Meta:
         model = models.Layer
         fields = ["id", "name", "description", "serialized_leaflet_json"]
+
+
+class LayerGroupType(DjangoObjectType):
+    class Meta:
+        model = models.LayerGroup
+        fields = ["id", "group_name", "group_description"]
+
+
+class LayerOnQuestionType(DjangoObjectType):
+    class Meta:
+        model = models.LayerOnQuestion
+        fields = ["layer", "question", "active_by_default", "layer_group"]
+
+
+class QuestionType(DjangoObjectType):
+    class Meta:
+        model = models.Question
+        fields = ["id", "title"]
+
+    # Link one half of the many-to-many through table in the graphql schema
+    layers_on_question = graphene.List(LayerOnQuestionType)
+
+    def resolve_layers_on_question(self, info):
+        return models.LayerOnQuestion.objects.filter(question=self)
 
 
 class Query(graphene.ObjectType):
