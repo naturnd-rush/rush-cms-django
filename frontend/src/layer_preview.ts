@@ -1,5 +1,5 @@
 import {type Style, getStyleById, getMapDataByName} from "./graphql"
-import type { FeatureCollection, Geometry, Feature, Point, Position, Polygon, MultiPolygon } from 'geojson';
+import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygon } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
 import { waitForElementById, coerceNumbersDeep, blendHexColors, interpolateNumbers, expectEl, getCentroid } from "./utils";
@@ -219,7 +219,7 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
     const func = (feature: Feature<Geometry, any>) => {
 
         // If no stylesOnLayers are in the map preview state, just return a default polygon styling.
-        if (state.stylesOnLayer.length == 0){
+        if (state.stylesOnLayer.length == 0 && !state.isUpdating){
             return getDefaultPolygonStyle();
         }
 
@@ -468,7 +468,7 @@ function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string
         };
     }
 
-    // Hack for resizing popup images to always fit inside the popup container. There might be a better way to do this.
+    // Hack for resizing popup images to always fit inside the popup container. There is probably a better way to do this.
     let hasImage = false;
     popupTemplate = popupTemplate.replace(/<img(.*?)>/g, (match) => {
         hasImage = true;
@@ -724,6 +724,7 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     ]).then(([styleUpdate, mapDataUpdate]: [StyleUpdate, MapDataUpdate]) => {
         // Inefficient, but meh.
         drawMapPreview(map, mapPreviewState, mapDataUpdate);
+        mapPreviewState.isUpdating = true; // Still doing the initial update...
         drawMapPreview(map, mapPreviewState, styleUpdate);
     });
 
