@@ -115,9 +115,8 @@ class Page(models.Model):
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
-    url_route = models.CharField(
-        max_length=255,
-        help_text="The url route to use when navigating to this page.",
-    )
     title = models.CharField(max_length=255, help_text="The title of the webpage.")
     content = models.TextField(help_text="The content that will appear on the webpage.")
+
+    def __str__(self):
+        return f"{self.title} - Page"

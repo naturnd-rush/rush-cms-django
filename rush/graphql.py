@@ -88,6 +88,12 @@ class QuestionType(DjangoObjectType):
         return models.LayerOnQuestion.objects.filter(question=self)
 
 
+class PageType(DjangoObjectType):
+    class Meta:
+        model = models.Page
+        fields = ["id", "title", "content"]
+
+
 class Query(graphene.ObjectType):
 
     all_layers = graphene.List(LayerType)
@@ -107,6 +113,9 @@ class Query(graphene.ObjectType):
 
     all_styles = graphene.List(StyleType)
     style = graphene.Field(StyleType, id=graphene.UUID(required=True))
+
+    all_pages = graphene.List(PageType)
+    page = graphene.Field(PageType, id=graphene.UUID(required=True))
 
     def resolve_all_layers(self, info):
         return models.Layer.objects.all()
@@ -140,6 +149,12 @@ class Query(graphene.ObjectType):
 
     def resolve_style(self, info, id):
         return models.Style.objects.get(pk=id)
+
+    def resolve_all_pages(self, info):
+        return models.Page.objects.all()
+
+    def resolve_page(self, info, id):
+        return models.Page.objects.get(pk=id)
 
 
 def get_schema() -> graphene.Schema:
