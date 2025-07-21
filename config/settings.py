@@ -90,6 +90,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 # Custom context processors (inject context variables into every template by default).
                 "rush.context_processors.base_media_url",
+                "rush.context_processors.base_static_url",
             ],
         },
     },
