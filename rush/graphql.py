@@ -76,10 +76,16 @@ class LayerOnQuestionType(DjangoObjectType):
         fields = ["layer", "question", "active_by_default", "layer_group"]
 
 
+class QuestionTabType(DjangoObjectType):
+    class Meta:
+        model = models.QuestionTab
+        fields = ["id", "title", "content"]
+
+
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
-        fields = ["id", "title"]
+        fields = ["id", "title", "tabs"]
 
     # Link one half of the many-to-many through table in the graphql schema
     layers_on_question = graphene.List(LayerOnQuestionType)
