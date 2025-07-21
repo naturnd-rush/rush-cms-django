@@ -128,6 +128,7 @@ export const inlineElements = {
                 const target = event.target;
                 const featureChanged = target instanceof HTMLTextAreaElement && target.id.includes('feature_mapping');
                 if (featureChanged) {
+                    console.log("Feature mapping changed!!!");
                     callback(event);
                 }
             });
@@ -135,20 +136,16 @@ export const inlineElements = {
     },
     popups: {
          addEventListener: (callback: (event: Event) => void): void => {
-            document.addEventListener('input', (event) => {
+            document.addEventListener('summernote.change', (event) => {
+                console.log("Popups event listener code called");
                 const target = event.target;
                 const popupChanged = target instanceof HTMLDivElement ;
-                console.log("POPUP CHANGED");
                 if (popupChanged) {
+                    console.log("POPUP CHANGED!")
                     callback(event);
                 }
             });
         },
-        // const inlinePopupEls = document.querySelectorAll("div[class='note-editable']");
-        // console.log("Inline popup els: ", inlinePopupEls);
-        // inlinePopupEls.forEach((summernoteTextboxEl) => {
-        // summernoteTextboxEl.addEventListener("input", () => fmUpdate = true); 
-        // })
     },
 };
 
@@ -472,13 +469,18 @@ function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string
     }
 
     // Hack for resizing popup images to always fit inside the popup container. There might be a better way to do this.
+    let hasImage = false;
     popupTemplate = popupTemplate.replace(/<img(.*?)>/g, (match) => {
+        hasImage = true;
         return match.replace('<img', '<img style="max-width:250px; height:auto;"');
     });
     const renderedPopup = Mustache.render(popupTemplate, feature.properties);
     const popupOptions = {
         maxWidth: 250,
-        minWidth: 250,
+        // Shrink the popup container to the size of the text if no image is present in the popup.
+        // Otherwise, resize the image width to be 250 pixels and set the minimum popup container 
+        // to be the same size as well.
+        minWidth: hasImage ? 250 : 0,
     };
 
     return {
@@ -591,7 +593,6 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
 
                         // Bind a leaflet popup to the marker if necessary
                         if (popupMetadata.__hasPopup === true && popupMetadata.__popupHTML !== null && popupMetadata.__popupOptions !== null){
-                            console.log("Hello world!");
                             marker.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
                         }
                         marker.addTo(state.centroidMarkers);
