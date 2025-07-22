@@ -136,8 +136,9 @@ class Style(models.Model):
         help_text="Check this box if you want to draw the marker icon on each point this style is applied to.",
         default=True,
     )
+    MARKER_ICON_UPLOAD_TO = "marker_icons/"
     marker_icon = models.FileField(
-        upload_to="marker_icons/",
+        upload_to=MARKER_ICON_UPLOAD_TO,
         null=True,
         blank=True,
         validators=[validate_image_or_svg],
@@ -178,6 +179,7 @@ class Style(models.Model):
         # open image and resize
         BASE_WIDTH = int(256)  # pixels
         img = Image.open(self.marker_icon)
+        print(f"Image: {img.__dict__}")
         original_width, original_height = img.size
         w_ratio = BASE_WIDTH / original_width
         img = img.resize(
@@ -188,15 +190,16 @@ class Style(models.Model):
         # save compressed version image using buffer
         img_io = BytesIO()
         img.save(img_io, format="PNG", optimize=True, compress_level=9)
-
-        # TODO: Fix this code, it makes increasingly nested folders with the same file name
+        # TODO: Fix this code, it doesnt nest the folders anymore but it saves the high resversion alongside
+        # the optimized version which is unecessary...
 
         # Replace the image file with the compressed version
         img_content = ContentFile(img_io.getvalue(), name=self.marker_icon.name)
-        self.marker_icon.save(self.marker_icon.name, img_content, save=False)
+        name_without_path = self.marker_icon.name.split(self.MARKER_ICON_UPLOAD_TO)[1]
+        self.marker_icon.save(name_without_path, img_content, save=False)
 
         # Save the model again to store the compressed image
-        super().save()
+        # super().save()
 
     history = HistoricalRecords()
 
