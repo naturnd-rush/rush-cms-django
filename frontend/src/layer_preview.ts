@@ -2,7 +2,7 @@ import {type Style, getStyleById, getMapDataByName} from "./graphql"
 import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygon } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
-import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid } from "./utils/math";
+import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid, cyrb53 } from "./utils/math";
 import { waitForElementById, expectEl, ThrottledSignalReceiver } from "./utils/timing";
 import { Parser } from 'expr-eval';
 import Mustache from "mustache";
@@ -142,7 +142,6 @@ export const inlineElements = {
             if (inlineGroup !== null) {
                 const observer = new MutationObserver((mutations) => {
                     mutations.forEach((mutation) => {
-                        console.log("Mutation!");
                         if (mutation.target instanceof HTMLSelectElement && mutation.type === "childList"){
                             callback(mutation);
                         }
@@ -689,11 +688,33 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         throttledStyleUpdate.trigger();
     });
 
-    // Popup editors
-    subscriberManager.subscribeEventListener("input", ".note-editable", (_) => {
-        console.log('POPUP CHANGED: ', _);
-        throttledStyleUpdate.trigger();
-    });
+    // // Popup editors
+    // subscriberManager.subscribeMutationObserver({childList: true, subtree: true, characterData: true}, "textarea[id*='popup']", (_) => {
+    //     console.log('POPUP CHANGED: ', _);
+    //     throttledStyleUpdate.trigger();
+    // });
+    // ^^^ not sure why this doesnt work but the below code does...
+
+    // HACK FOR DFG PRESENTATION TODAY
+    // I just want to get popup editing to refresh the map preview!
+    // This is ineffecient!!! TODO: Fix me...
+    let previousHash = 0;
+    const pollPopupChanges = () => {
+        const popupTemplates = [];
+        for (let inlineRow of document.querySelectorAll("tr[id*='stylesonlayer_set-']")){
+            const popupTemplate = (inlineRow.querySelector("textarea[id*='popup']") as HTMLInputElement | null)?.value;
+            popupTemplates.push(popupTemplate);
+        }
+        const hash = cyrb53(JSON.stringify(popupTemplates));
+        if (hash !== previousHash){
+            previousHash = hash;
+            console.log("Changed: ", hash);
+            doStyleUpdate();
+        }
+        setTimeout(pollPopupChanges, 1000);
+    };
+    pollPopupChanges();
+
 
     // // Listen to redraw the map when a style is changed.
     // inlineElements.styles.addEventListener(() => {

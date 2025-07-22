@@ -34,7 +34,6 @@ abstract class SubscriberBase {
     public subscribeIfNeeded(element: HTMLElement): void {
         const elementsToSubscribe = this.selectAllIncludingSelf(element);
         for (let element of elementsToSubscribe){
-            console.log("Elements matches query selector: ", element, this.selector);
             this.subscribe(element);
         }
     }
