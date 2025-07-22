@@ -1,4 +1,4 @@
-from typing import Type
+import json
 
 from django import forms
 from django.conf import settings
@@ -143,7 +143,7 @@ def get_map_preview_html(
     leaflet_html = render_to_string(
         template_name="admin/geojson_map_preview.html",
         context={
-            "geojson_data": geojson,
+            "geojson_data": mark_safe(json.dumps(geojson)),
             "height": height,
             "change_element_id": change_element_id,
         },

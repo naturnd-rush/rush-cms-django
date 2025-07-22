@@ -1,4 +1,5 @@
 {% load static %}
+
 <div id="map-preview" style="height: {{height}}; margin-bottom: 1em;"></div>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -13,7 +14,8 @@
         }).addTo(map);
 
         // Load initial GeoJSON
-        let geojsonData = {{ geojson_data|safe }};
+        const geojsonString = '{{ geojson_data }}';
+        let geojsonData = JSON.parse(geojsonString);
         let geoJsonLayer;
         if (geojsonData && geojsonData.type === "FeatureCollection") {
             geoJsonLayer = L.geoJSON(geojsonData).addTo(map);
