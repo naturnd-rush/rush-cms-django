@@ -4,7 +4,8 @@
 
 import { Point } from "leaflet";
 import { getStyleById } from "./graphql";
-import { expectEl, getCentroid } from "./utils";
+import { getCentroid } from "./utils/math";
+import { expectEl } from "./utils/timing";
 
 /**
  * Data used to draw the preview.

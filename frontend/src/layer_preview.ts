@@ -2,9 +2,11 @@ import {type Style, getStyleById, getMapDataByName} from "./graphql"
 import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygon } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
-import { waitForElementById, coerceNumbersDeep, blendHexColors, interpolateNumbers, expectEl, getCentroid } from "./utils";
+import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid } from "./utils/math";
+import { waitForElementById, expectEl, ThrottledSignalReceiver } from "./utils/timing";
 import { Parser } from 'expr-eval';
 import Mustache from "mustache";
+import { DynamicSubscriberManager } from './utils/events'
 
 /************
  * This script draws a map layer preview based on the currently selected map-data object and
@@ -102,6 +104,7 @@ export async function getMapDataUpdate(mapDataSelectSpan: HTMLSpanElement): Prom
     }
 }
 
+
 /**
  * Namespaced accessor for adding StyleOnLayer inline element event listeners. 
  * This code isn't the most efficient, but I'm leaving it for now because it works...
@@ -128,23 +131,25 @@ export const inlineElements = {
                 const target = event.target;
                 const featureChanged = target instanceof HTMLTextAreaElement && target.id.includes('feature_mapping');
                 if (featureChanged) {
-                    console.log("Feature mapping changed!!!");
                     callback(event);
                 }
             });
         },
     },
     popups: {
-         addEventListener: (callback: (event: Event) => void): void => {
-            document.addEventListener('summernote.change', (event) => {
-                console.log("Popups event listener code called");
-                const target = event.target;
-                const popupChanged = target instanceof HTMLDivElement ;
-                if (popupChanged) {
-                    console.log("POPUP CHANGED!")
-                    callback(event);
-                }
-            });
+         addEventListener: (callback: (mutation: MutationRecord) => void): void => {
+            const inlineGroup = document.getElementById('stylesonlayer_set-group');
+            if (inlineGroup !== null) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        console.log("Mutation!");
+                        if (mutation.target instanceof HTMLSelectElement && mutation.type === "childList"){
+                            callback(mutation);
+                        }
+                    });
+                });
+                observer.observe(inlineGroup, {childList: true, subtree: true});
+            }
         },
     },
 };
@@ -659,35 +664,45 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     (await waitForElementById('id_map_data_helptext')).appendChild(await waitForElementById("map-spinner"));
     showSpinner();
     
-    // Listen to redraw the map when a feature-mapping is changed. Because I want to update the
-    // map live while the user is typing in the feature mapping text areas, I use the HTML "input"
-    // event. However, it is likely that this will create too many updates, and subsequent API calls
-    // to the GraphQL API for style data. To fix this, I simply keep track of whether we should update
-    // the style data using this even listener, and check to dispatch this update every second or so.
-    let fmUpdate = false;
-    inlineElements.featureMappings.addEventListener(() => fmUpdate = true);
-    inlineElements.popups.addEventListener(() => fmUpdate = true);
-    const sendFmUpdateAndPoll = () => {
-        if (fmUpdate === true){
-            mapPreviewState.isUpdating = true;
-            showSpinnerAfter(1, mapPreviewState);
-            getStyleUpdate().then(styleUpdate => {
-                drawMapPreview(map, mapPreviewState, styleUpdate);
-            });
-        }
-        fmUpdate = false;
-        setTimeout(sendFmUpdateAndPoll, 1000);
-    };
-    setTimeout(sendFmUpdateAndPoll, 1000);
-
-    // Listen to redraw the map when a style is changed.
-    inlineElements.styles.addEventListener(() => {
+    // Shorthand for redrawing the map by fetching new styles / popup info
+    const doStyleUpdate = () => {
         mapPreviewState.isUpdating = true;
         showSpinnerAfter(1, mapPreviewState);
         getStyleUpdate().then(styleUpdate => {
             drawMapPreview(map, mapPreviewState, styleUpdate);
         });
+    };
+
+    // Some update events need to be throttled for performance
+    const throttledStyleUpdate = new ThrottledSignalReceiver(1000, doStyleUpdate);
+
+    // Manage events declaratively, since new inline rows can be added 
+    const subscriberManager = new DynamicSubscriberManager(document.body);
+
+    // Style select dropdowns
+    subscriberManager.subscribeMutationObserver({childList: true, subtree: true}, "span[id*='select2-id_stylesonlayer_set']", (_) => {
+        doStyleUpdate();
     });
+
+    // Feature mapping textareas
+    subscriberManager.subscribeEventListener("input", "textarea[id*='-feature_mapping']", (_) => {
+        throttledStyleUpdate.trigger();
+    });
+
+    // Popup editors
+    subscriberManager.subscribeEventListener("input", ".note-editable", (_) => {
+        console.log('POPUP CHANGED: ', _);
+        throttledStyleUpdate.trigger();
+    });
+
+    // // Listen to redraw the map when a style is changed.
+    // inlineElements.styles.addEventListener(() => {
+    //     mapPreviewState.isUpdating = true;
+    //     showSpinnerAfter(1, mapPreviewState);
+    //     getStyleUpdate().then(styleUpdate => {
+    //         drawMapPreview(map, mapPreviewState, styleUpdate);
+    //     });
+    // });
     
     // Listen to redraw the map when the tab is refocused (the user leaves and then comes back).
     // This can happen after a user edits one of the inline styles and then clicks on the layer edit tab.

@@ -48,7 +48,7 @@ class SummernoteWidget(SummernoteWidgetBase):
             "height": summernote_settings["height"],
         }
 
-        html += render_to_string("django_summernote/widget_iframe.html", context)
+        html += render_to_string("admin/django_summernote/widget_iframe.html", context)
         return mark_safe(html)
 
 
