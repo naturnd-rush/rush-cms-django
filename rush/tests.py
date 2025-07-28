@@ -1,3 +1,11 @@
 from django.test import TestCase
 
-# Create your tests here.
+
+class TestHelloWorld(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.foo = "bar"
+
+    def test_hello_world(self):
+        print("Hello world!")
