@@ -1,4 +1,3 @@
-import json
 import re
 import uuid
 from decimal import Decimal
@@ -51,7 +50,7 @@ class LineJoin(models.TextChoices):
 
 class FillRule(models.TextChoices):
     """
-    TODO: I'm not really sure what this does.
+    TODO: I'm not really sure what this does. It's currently omitted from the style form.
     https://developer.mozilla.org/en-US/docs/Web/CSS/fill-rule
     """
 
@@ -161,6 +160,7 @@ class Style(models.Model):
     # TODO: Add _hover style and _active style recursive foreign keys.
 
     def save(self, *args, **kwargs):
+
         # Save the instance first to get access to the file
         super().save(*args, **kwargs)
 
