@@ -303,7 +303,7 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
         }
 
         // Inject style props into properties for layer serialization
-        feature.properties.__polygonStyleProps = polygonStyleProps;
+        feature.properties.__style = polygonStyleProps;
 
         return polygonStyleProps;
     };
