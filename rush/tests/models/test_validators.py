@@ -68,3 +68,31 @@ def test_validate_image(file: FakeFile, raises: bool, err_msg: str):
             validators.validate_image(file)
     else:
         validators.validate_image(file)
+
+
+@pytest.mark.parametrize(
+    "value, raises",
+    [
+        ("123", False),
+        ("  123", False),
+        ("123  ", False),
+        (" 1 2   3 ", False),
+        ("123\n", False),  # newline is whitespace
+        ("123\r", False),  # carriage return is whitespace
+        ("123298312931   273234234234234", False),
+        ("123.", True),
+        ("a123", True),
+        ("0a8ue98qy3r", True),
+    ],
+)
+def test_validate_only_integers_and_whitespace(value: str, raises: bool):
+    """
+    Raise validation error when value contains any non-integer or whitespace characters.
+    """
+    if raises:
+        with pytest.raises(
+            ValidationError, match="This field must contain only digits and whitespace."
+        ):
+            validators.validate_only_integers_and_whitespace(value)
+    else:
+        validators.validate_only_integers_and_whitespace(value)

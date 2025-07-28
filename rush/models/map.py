@@ -10,20 +10,15 @@ from django.core.files.base import ContentFile
 from PIL import Image
 from simple_history.models import HistoricalRecords
 
-from rush.models.validators import validate_image, validate_image_or_svg
+from rush.models.validators import (
+    validate_image,
+    validate_image_or_svg,
+    validate_only_integers_and_whitespace,
+)
 
 """
 Django models related to geographical data and styling.
 """
-
-
-def validate_only_integers_and_whitespace(value):
-    """
-    Validates that the value contains only integers and whitespace.
-    Examples of valid values: "1", "123", "12 34 56", " 7  8 9 "
-    """
-    if not re.fullmatch(r"[0-9\s]*", value):
-        raise ValidationError("This field must contain only digits and whitespace.")
 
 
 class LineCap(models.TextChoices):
