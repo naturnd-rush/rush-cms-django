@@ -4,7 +4,6 @@ from typing import Any
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import override_settings
 from PIL import Image
 
 from rush.models.map import *

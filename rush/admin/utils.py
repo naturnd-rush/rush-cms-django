@@ -1,4 +1,7 @@
 import json
+from decimal import Decimal, InvalidOperation
+from enum import Enum
+from typing import Any
 
 from django import forms
 from django.conf import settings
@@ -6,7 +9,12 @@ from django.contrib import admin
 from django.db import models
 from django.template.loader import render_to_string
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, SafeText, mark_safe
+
+
+class InputType(Enum):
+    SLIDER = "range"  # reserved string keyword "range" in django-land
+    NUMBER = "number"
 
 
 class SliderAndTextboxNumberInput(forms.Widget):
@@ -26,54 +34,48 @@ class SliderAndTextboxNumberInput(forms.Widget):
         self.textbox_input = None
         super().__init__(attrs)
 
-    def _lazy_create_input_widgets(self, fieldname: str) -> None:
-        """
-        Lazily create the slider and textbox input form widgets once we know the input fieldname.
-        """
-        if self.slider_input and self.number_input:
-            # prevent from re-creating every render
-            return
-        self.slider_input = forms.NumberInput(
+    def _create_input(self, type: InputType) -> forms.NumberInput:
+        return forms.NumberInput(
             attrs={
-                "type": "range",
-                "min": str(self.min),
-                "max": str(self.max),
-                "step": str(self.step),
-            }
-        )
-        self.number_input = forms.NumberInput(
-            attrs={
-                "type": "number",
+                "type": type.value,
                 "min": str(self.min),
                 "max": str(self.max),
                 "step": str(self.step),
             }
         )
 
-    def render(self, name, value, attrs=None, renderer=None) -> str:
-        self._lazy_create_input_widgets(fieldname=name)
-        value = float(value) if value is not None else 0
-        slider_id = f"slider_{name}"
-        textbox_id = f"id_{name}"
-        slider_html = self.slider_input.render(
-            name,
-            value,
-            attrs={**self.attrs, "id": slider_id},
-            renderer=renderer,
-        )
-        number_html = self.number_input.render(
-            name,
-            value,
-            attrs={**self.attrs, "id": textbox_id},
-            renderer=renderer,
-        )
+    def _get_decimal(self, value: Any) -> Decimal:
+        try:
+            return Decimal(str(value))
+        except (InvalidOperation, ValueError, TypeError):
+            return Decimal("0")
+
+    def render(self, name, value, attrs=None, renderer=None) -> SafeString:
+
+        # lazily create the slider and number inputs
+        if not self.slider_input:
+            self.slider_input = self._create_input(InputType.SLIDER)
+        if not self.textbox_input:
+            self.textbox_input = self._create_input(InputType.NUMBER)
+
+        print(f"Value: {value}, value type: {type(value)}")
+
+        def render(input: forms.NumberInput, id: str) -> SafeText:
+            return input.render(
+                name,
+                self._get_decimal(value),
+                attrs={**self.attrs, "id": id},
+                renderer=renderer,
+            )
 
         return mark_safe(
             f"""
             <div class="dual-slider-textbox" data-fieldname="{name}">
-                {slider_html}<div style="margin-right: 15px; display: inline;"></div>{number_html}
+                {render(self.slider_input, f"slider_{name}")}
+                <div style="margin-right: 15px; display: inline;"></div>
+                {render(self.textbox_input, f'id_{name}')}
             </div>
-        """
+            """
         )
 
 
