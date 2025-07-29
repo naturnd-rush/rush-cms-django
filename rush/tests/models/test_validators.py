@@ -1,73 +1,77 @@
+from unittest.mock import Mock
+
 import pytest
 from django.core.exceptions import ValidationError
 
-import rush.models.validators as validators
+from rush.models.validators import *
 
 
-class FakeFile:
-    """
-    A fake file for testing purposes.
-    """
+class MockFile(Mock):
 
     def __init__(self, name: str):
+        super().__init__()
         self.name = name
 
-    def __repr__(self):
-        return f'<FakeFile: "{self.name}">'
+    def __repr__(self) -> str:
+        return f'<MockFile: "{self.name}">'
+
+
+def valid_file(name: str) -> tuple[Mock, bool, str]:
+    return (MockFile(name), False, "")
+
+
+def invalid_file(name: str, err_msg: str) -> tuple[Mock, bool, str]:
+    return (MockFile(name), True, err_msg)
+
+
+def image_test_params():
+    return [
+        # Test lower-case file types
+        valid_file("test.png"),
+        valid_file("test.jpg"),
+        valid_file("test.jpeg"),
+        # Test upper-case file types
+        valid_file("test.PNG"),
+        valid_file("test.JPG"),
+        valid_file("test.JPEG"),
+        # Test recognizable, but unsupported file types
+        invalid_file("test.html", 'Unsupported file type "text/html"'),
+        invalid_file("test.css", 'Unsupported file type "text/css"'),
+        # Test unknown file type
+        invalid_file("test.html5", 'Unknown file type in file name: "test.html5".'),
+    ]
 
 
 @pytest.mark.parametrize(
     "file, raises, err_msg",
-    [
-        (FakeFile("test.png"), False, ""),
-        (FakeFile("test.jpg"), False, ""),
-        (FakeFile("test.jpeg"), False, ""),
-        (FakeFile("test.PNG"), False, ""),
-        (FakeFile("test.JPG"), False, ""),
-        (FakeFile("test.JPEG"), False, ""),
-        (FakeFile("test.html"), True, "Unsupported file type 'text/html'"),
-        (FakeFile("test.css"), True, "Unsupported file type 'text/css'"),
-        # SVGs allowed
-        (FakeFile("test.svg"), False, ""),
-        (FakeFile("test.SVG"), False, ""),
-    ],
+    [*image_test_params(), valid_file("test.svg"), valid_file("test.SVG")],
 )
-def test_validate_image_or_svg(file: FakeFile, raises: bool, err_msg: str):
-    """
-    Should raise validation error when mimetype is not PNG, JPEG, or SVG.
-    """
+def test_validate_image_or_svg(file: Mock, raises: bool, err_msg: str):
+    """PNG, JPEG, and SVG all allowed."""
     if raises:
-        with pytest.raises(ValidationError, match=err_msg):
-            validators.validate_image_or_svg(file)
+        with pytest.raises(InvalidFileType, match=err_msg):
+            validate_image_or_svg(file)
     else:
-        validators.validate_image_or_svg(file)
+        validate_image_or_svg(file)
 
 
 @pytest.mark.parametrize(
     "file, raises, err_msg",
     [
-        (FakeFile("test.png"), False, ""),
-        (FakeFile("test.jpg"), False, ""),
-        (FakeFile("test.jpeg"), False, ""),
-        (FakeFile("test.PNG"), False, ""),
-        (FakeFile("test.JPG"), False, ""),
-        (FakeFile("test.JPEG"), False, ""),
-        (FakeFile("test.html"), True, "Unsupported file type 'text/html'"),
-        (FakeFile("test.css"), True, "Unsupported file type 'text/css'"),
-        # SVGs not allowed
-        (FakeFile("test.svg"), True, "Unsupported file type 'image/svg"),
-        (FakeFile("test.SVG"), True, "Unsupported file type 'image/svg"),
+        *image_test_params(),
+        invalid_file("test.svg", 'Unsupported file type "image/svg\\+xml"'),
+        invalid_file("test.SVG", 'Unsupported file type "image/svg\\+xml"'),
     ],
 )
-def test_validate_image(file: FakeFile, raises: bool, err_msg: str):
+def test_validate_image(file: Mock, raises: bool, err_msg: str):
     """
     Should raise validation error when mimetype is not PNG, JPEG.
     """
     if raises:
-        with pytest.raises(ValidationError, match=err_msg):
-            validators.validate_image(file)
+        with pytest.raises(InvalidFileType, match=err_msg):
+            validate_image(file)
     else:
-        validators.validate_image(file)
+        validate_image(file)
 
 
 @pytest.mark.parametrize(
@@ -86,13 +90,10 @@ def test_validate_image(file: FakeFile, raises: bool, err_msg: str):
     ],
 )
 def test_validate_only_integers_and_whitespace(value: str, raises: bool):
-    """
-    Raise validation error when value contains any non-integer or whitespace characters.
-    """
+    """Only digits and whitespace allowed."""
     if raises:
-        with pytest.raises(
-            ValidationError, match="This field must contain only digits and whitespace."
-        ):
-            validators.validate_only_integers_and_whitespace(value)
+        msg = "This field must contain only digits and whitespace."
+        with pytest.raises(ValidationError, match=msg):
+            validate_only_integers_and_whitespace(value)
     else:
-        validators.validate_only_integers_and_whitespace(value)
+        validate_only_integers_and_whitespace(value)

@@ -2,28 +2,68 @@ import mimetypes
 import re
 
 from django.core.exceptions import ValidationError
+from django.db.models.fields.files import FieldFile
 
 
-def validate_image_or_svg(file):
+class InvalidFileType(ValidationError):
+    """
+    The file type is invalid and cannot be used.
+    """
+
+    ...
+
+
+class UnsupportedFileType(InvalidFileType):
+    """
+    The file type is known, but not supported.
+    """
+
+    def __init__(
+        self,
+        offending_type: str,
+        supported_types: list[str],
+        *args,
+        **kwargs,
+    ):
+        self.offending_type = offending_type
+        self.supported_types = supported_types
+        msg = f'Unsupported file type "{offending_type}". Please upload one of: {", ".join(supported_types)}.'
+        super().__init__(message=msg, *args, **kwargs)
+
+
+class UnknownFileType(InvalidFileType):
+    """
+    The file type is unknown, and therefore invalid.
+    """
+
+    def __init__(self, file_name: str, *args, **kwargs):
+        self.file_name = file_name
+        msg = f'Unknown file type in file name: "{file_name}".'
+        super().__init__(message=msg, *args, **kwargs)
+
+
+def validate_image_or_svg(file: FieldFile):
     """
     Raise a validation-error if then file isn't a PNG, JPEG, or SVG.
     """
+    allowed = ["image/png", "image/jpeg", "image/svg+xml"]
     mime_type, _ = mimetypes.guess_type(file.name)
-    if mime_type not in ["image/png", "image/jpeg", "image/svg+xml"]:
-        raise ValidationError(
-            f"Unsupported file type '{mime_type}'. Please upload PNG, JPEG, or SVG."
-        )
+    if not mime_type:
+        raise UnknownFileType(file.name)
+    if mime_type not in allowed:
+        raise UnsupportedFileType(mime_type, allowed)
 
 
-def validate_image(file):
+def validate_image(file: FieldFile):
     """
     Raise a validation-error if then file isn't a PNG or JPEG.
     """
+    allowed = ["image/png", "image/jpeg"]
     mime_type, _ = mimetypes.guess_type(file.name)
-    if mime_type not in ["image/png", "image/jpeg"]:
-        raise ValidationError(
-            f"Unsupported file type '{mime_type}'. Please upload PNG or JPEG."
-        )
+    if not mime_type:
+        raise UnknownFileType(file.name)
+    if mime_type not in allowed:
+        raise UnsupportedFileType(mime_type, allowed)
 
 
 def validate_only_integers_and_whitespace(value):
