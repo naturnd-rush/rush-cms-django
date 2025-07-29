@@ -4,6 +4,8 @@ from decimal import Decimal
 import django.db.models as models
 from colorfield.fields import ColorField
 from django.core.exceptions import ValidationError
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 from simple_history.models import HistoricalRecords
 
 from rush.models import utils
@@ -127,9 +129,8 @@ class Style(models.Model):
         help_text="Check this box if you want to draw the marker icon on each point this style is applied to.",
         default=True,
     )
-    MARKER_ICON_UPLOAD_TO = "marker_icons/"
     marker_icon = models.FileField(
-        upload_to=MARKER_ICON_UPLOAD_TO,
+        upload_to="marker_icons/",
         null=True,
         blank=True,
         validators=[validate_image_or_svg],
@@ -151,22 +152,19 @@ class Style(models.Model):
 
     # TODO: Add _hover style and _active style recursive foreign keys.
 
-    def save(self, *args, **kwargs):
-
-        # Save the instance first to get access to the file
-        super().save(*args, **kwargs)
-
-        if self.marker_icon:
-            try:
-                # try to compress the marker icon if it's a PNG or JPEG file
-                self.marker_icon = utils.compress_image(self.marker_icon)
-            except utils.CompressionFailed:
-                pass
-
     history = HistoricalRecords()
 
     def __str__(self):
         return self.name
+
+
+@receiver(pre_save, sender=Style)
+def compress_marker_icon(sender, instance: Style, **kwargs):
+    if image := instance.marker_icon:
+        compressed = utils.compress_image(image)
+        # save = False avoids double-saving for efficiency and just
+        # assigns the compressed image value to the marker_icon field
+        image.save(compressed.name, compressed, save=False)
 
 
 class Provider(models.TextChoices):

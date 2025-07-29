@@ -1,0 +1,35 @@
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from rush.models.utils import *
+from rush.tests.models.helpers import MockFile
+
+
+@pytest.mark.parametrize(
+    "file, raises, err_msg",
+    [
+        (MockFile("not_an_image.zyx"), True, 'Unknown file type: ".zyx".'),
+        (MockFile("not_an_image.svg"), True, 'Unsupported file type "image/svg'),
+        (MockFile("image.png"), False, ""),
+        (MockFile("image.jpg"), False, ""),
+        (MockFile("image.jpeg"), False, ""),
+    ],
+)
+def test_compress_image(file, raises, err_msg):
+
+    with patch("rush.models.utils.Image.open") as mock_open:
+
+        # Mock a PIL Image instance
+        mock_image = MagicMock()
+        mock_image.size = (1024, 768)
+        mock_open.return_value = mock_image
+
+        if raises:
+            with pytest.raises(CompressionFailed, match=err_msg):
+                compress_image(file)
+        else:
+            output = compress_image(file)
+            assert isinstance(output, ContentFile)
+            assert output.name.startswith("compressed_")
+            assert output.name.endswith(".png")  # always gets compressed as PNG

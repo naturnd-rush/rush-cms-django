@@ -4,16 +4,7 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from rush.models.validators import *
-
-
-class MockFile(Mock):
-
-    def __init__(self, name: str):
-        super().__init__()
-        self.name = name
-
-    def __repr__(self) -> str:
-        return f'<MockFile: "{self.name}">'
+from rush.tests.models.helpers import MockFile
 
 
 def valid_file(name: str) -> tuple[Mock, bool, str]:
@@ -38,7 +29,7 @@ def image_test_params():
         invalid_file("test.html", 'Unsupported file type "text/html"'),
         invalid_file("test.css", 'Unsupported file type "text/css"'),
         # Test unknown file type
-        invalid_file("test.html5", 'Unknown file type in file name: "test.html5".'),
+        invalid_file("test.html5", 'Unknown file type: ".html5".'),
     ]
 
 

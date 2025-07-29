@@ -12,37 +12,37 @@ class CompressionFailed(Exception):
     Compressing the image failed.
     """
 
-    ...
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
 
 
-def compress_image(image: FieldFile) -> FieldFile:
+def compress_image(image: FieldFile, pixel_width=128) -> ContentFile:
+    """
+    Compress and resize the given image and return it as a ContentFile.
+    The returned ContentFile can be manually assigned to a model's FieldFile.
+    """
 
     try:
         validate_image(image)
-    except UnsupportedFileType as e:
-        raise CompressionFailed from e
+    except InvalidFileType as e:
+        raise CompressionFailed(reason=e.message_str) from e
 
-    # open image and resize
-    BASE_WIDTH = int(256)  # pixels
-    img = Image.open(self.marker_icon)
-    print(f"Image: {img.__dict__}")
+    # Resize image
+    img = Image.open(image)
     original_width, original_height = img.size
-    w_ratio = BASE_WIDTH / original_width
-    img = img.resize(
-        (BASE_WIDTH, int(original_height * w_ratio)),
-        Image.Resampling.LANCZOS,
-    )
+    pixel_width = min(original_width, pixel_width)
+    w_ratio = pixel_width / original_width
+    new_height = int(original_height * w_ratio)
+    img = img.resize((pixel_width, new_height), Image.Resampling.LANCZOS)
 
-    # save compressed version image using buffer
+    # Save to in-memory buffer
     img_io = BytesIO()
     img.save(img_io, format="PNG", optimize=True, compress_level=9)
-    # TODO: Fix this code, it doesnt nest the folders anymore but it saves the high resversion alongside
-    # the optimized version which is unecessary...
 
-    # Replace the image file with the compressed version
-    img_content = ContentFile(img_io.getvalue(), name=self.marker_icon.name)
-    name_without_path = self.marker_icon.name.split(self.MARKER_ICON_UPLOAD_TO)[1]
-    self.marker_icon.save(name_without_path, img_content, save=False)
+    # Generate a new name (optional – could be based on original)
+    original_name = image.name
+    compressed_name = f"compressed_{original_name.split('/')[-1].rsplit('.', 1)[0]}.png"
 
-    # Save the model again to store the compressed image
-    # super().save()
+    # Return a ContentFile with name
+    return ContentFile(img_io.getvalue(), name=compressed_name)

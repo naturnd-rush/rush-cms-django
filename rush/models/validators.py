@@ -10,7 +10,14 @@ class InvalidFileType(ValidationError):
     The file type is invalid and cannot be used.
     """
 
-    ...
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+    @property
+    def message_str(self) -> str:
+        # to fix typing issue while subclassing ValidationError
+        return str(self.message)
 
 
 class UnsupportedFileType(InvalidFileType):
@@ -27,7 +34,7 @@ class UnsupportedFileType(InvalidFileType):
     ):
         self.offending_type = offending_type
         self.supported_types = supported_types
-        msg = f'Unsupported file type "{offending_type}". Please upload one of: {", ".join(supported_types)}.'
+        msg = f'Unsupported file type "{offending_type}". Please upload one of: {", ".join([f'"{x}"' for x in supported_types])}.'
         super().__init__(message=msg, *args, **kwargs)
 
 
@@ -38,7 +45,7 @@ class UnknownFileType(InvalidFileType):
 
     def __init__(self, file_name: str, *args, **kwargs):
         self.file_name = file_name
-        msg = f'Unknown file type in file name: "{file_name}".'
+        msg = f'Unknown file type: ".{file_name.split(".")[-1]}".'
         super().__init__(message=msg, *args, **kwargs)
 
 
