@@ -4,15 +4,15 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from rush.models.validators import *
-from rush.tests.models.helpers import MockFile
+from rush.tests.models.helpers import FakeFile
 
 
 def valid_file(name: str) -> tuple[Mock, bool, str]:
-    return (MockFile(name), False, "")
+    return (FakeFile(name), False, "")
 
 
 def invalid_file(name: str, err_msg: str) -> tuple[Mock, bool, str]:
-    return (MockFile(name), True, err_msg)
+    return (FakeFile(name), True, err_msg)
 
 
 def image_test_params():

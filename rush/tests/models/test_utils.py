@@ -3,17 +3,17 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from rush.models.utils import *
-from rush.tests.models.helpers import MockFile
+from rush.tests.models.helpers import FakeFile
 
 
 @pytest.mark.parametrize(
     "file, raises, err_msg",
     [
-        (MockFile("not_an_image.zyx"), True, 'Unknown file type: ".zyx".'),
-        (MockFile("not_an_image.svg"), True, 'Unsupported file type "image/svg'),
-        (MockFile("image.png"), False, ""),
-        (MockFile("image.jpg"), False, ""),
-        (MockFile("image.jpeg"), False, ""),
+        (FakeFile("not_an_image.zyx"), True, 'Unknown file type: ".zyx".'),
+        (FakeFile("not_an_image.svg"), True, 'Unsupported file type "image/svg'),
+        (FakeFile("image.png"), False, ""),
+        (FakeFile("image.jpg"), False, ""),
+        (FakeFile("image.jpeg"), False, ""),
     ],
 )
 def test_compress_image(file, raises, err_msg):

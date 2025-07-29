@@ -3,14 +3,12 @@ from decimal import Decimal
 
 import django.db.models as models
 from colorfield.fields import ColorField
-from django.core.exceptions import ValidationError
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from simple_history.models import HistoricalRecords
 
 from rush.models import utils
 from rush.models.validators import (
-    validate_image,
     validate_image_or_svg,
     validate_only_integers_and_whitespace,
 )
@@ -161,10 +159,13 @@ class Style(models.Model):
 @receiver(pre_save, sender=Style)
 def compress_marker_icon(sender, instance: Style, **kwargs):
     if image := instance.marker_icon:
-        compressed = utils.compress_image(image)
-        # save = False avoids double-saving for efficiency and just
-        # assigns the compressed image value to the marker_icon field
-        image.save(compressed.name, compressed, save=False)
+        try:
+            compressed = utils.compress_image(image)
+            # save = False avoids double-saving for efficiency and just
+            # assigns the compressed image value to the marker_icon field
+            image.save(compressed.name, compressed, save=False)
+        except utils.CompressionFailed:
+            pass
 
 
 class Provider(models.TextChoices):
