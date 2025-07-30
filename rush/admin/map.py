@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Any
 
 from django import forms
 from django.contrib import admin
@@ -137,6 +138,25 @@ class MapDataAdminForm(forms.ModelForm):
         }
 
 
+def get_map_preview_html(
+    geojson: dict[str, Any],
+    change_element_id: str,
+    height: str = "400px",
+) -> str:
+    """
+    Return an HTML + JS snippet that renders a basic map preview.
+    """
+    leaflet_html = render_to_string(
+        template_name="admin/geojson_map_preview.html",
+        context={
+            "geojson_data": mark_safe(json.dumps(geojson)),
+            "height": height,
+            "change_element_id": change_element_id,
+        },
+    )
+    return mark_safe(leaflet_html)
+
+
 @admin.register(models.MapData)
 class MapDataAdmin(SimpleHistoryAdmin):
     form = MapDataAdminForm
@@ -155,7 +175,7 @@ class MapDataAdmin(SimpleHistoryAdmin):
     def render_change_form(self, request, context, *args, **kwargs):
         obj = context.get("original")
         geojson = obj.geojson if obj and obj.geojson else {}
-        map_preview_html = utils.get_map_preview_html(geojson, "geojson-input")
+        map_preview_html = get_map_preview_html(geojson, "geojson-input")
 
         try:
             context["adminform"].form.fields["geojson"].help_text = map_preview_html

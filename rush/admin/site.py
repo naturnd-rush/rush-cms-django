@@ -48,7 +48,7 @@ class InitiativeAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
     form = InitiativeForm
     list_display = ["title", "content_preview", "image_preview", "get_tags"]
-    content_preview = utils.content_preview_fn()
+    content_preview = utils.truncate_admin_text_from("content")
     autocomplete_fields = [
         # uses the searchable textbox in the admin form to add/remove Tags
         "tags"
@@ -144,7 +144,7 @@ class QuestionTabAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
     summernote_fields = ["content"]
     list_display = ["title", "content_preview"]
-    content_preview = utils.content_preview_fn()
+    content_preview = utils.truncate_admin_text_from("content")
 
 
 class QuestionTabInline(admin.TabularInline, SummernoteInlineModelAdmin):

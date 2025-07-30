@@ -58,8 +58,6 @@ class SliderAndTextboxNumberInput(forms.Widget):
         if not self.textbox_input:
             self.textbox_input = self._create_input(InputType.NUMBER)
 
-        print(f"Value: {value}, value type: {type(value)}")
-
         def render(input: forms.NumberInput, id: str) -> SafeText:
             return input.render(
                 name,
@@ -79,33 +77,33 @@ class SliderAndTextboxNumberInput(forms.Widget):
         )
 
 
-class LiveImagePreviewInput(forms.ClearableFileInput):
-    """
-    An image upload input field with life-previewing of the selected image.
+# class LiveImagePreviewInput(forms.ClearableFileInput):
+#     """
+#     An image upload input field with life-previewing of the selected image.
 
-    NOTE: For this widget to work the corresponding `live_image_preview_refresh.js`
-          script must be included in the Django form Media subclass.
+#     NOTE: For this widget to work the corresponding `live_image_preview_refresh.js`
+#           script must be included in the Django form Media subclass.
 
-          TODO: This is not used anymore and could be improved / deprecated depending on how the code progresses.
-    """
+#           TODO: This is not used anymore and could be improved / deprecated depending on how the code progresses.
+#     """
 
-    def __init__(self, attrs=None):
-        super().__init__(attrs)
+#     def __init__(self, attrs=None):
+#         super().__init__(attrs)
 
-    def render(self, name, value, attrs=None, renderer=None) -> str:
-        image_upload_html = forms.ClearableFileInput().render(
-            name=name,
-            value=value,
-            attrs={**self.attrs, "id": f"live_image_input_{name}"},
-            renderer=renderer,
-        )
-        src = f"{settings.MEDIA_URL}{value}" if value else "#"
-        return mark_safe(
-            f"""
-            {image_upload_html}
-            <img id="live_image_preview_{name}" src="{src}" style="max-width: 200px; display: none;" />
-            """
-        )
+#     def render(self, name, value, attrs=None, renderer=None) -> str:
+#         image_upload_html = forms.ClearableFileInput().render(
+#             name=name,
+#             value=value,
+#             attrs={**self.attrs, "id": f"live_image_input_{name}"},
+#             renderer=renderer,
+#         )
+#         src = f"{settings.MEDIA_URL}{value}" if value else "#"
+#         return mark_safe(
+#             f"""
+#             {image_upload_html}
+#             <img id="live_image_preview_{name}" src="{src}" style="max-width: 200px; display: none;" />
+#             """
+#         )
 
 
 def image_html(image_url: str, image_width: int = 200) -> str:
@@ -116,8 +114,8 @@ def image_html(image_url: str, image_width: int = 200) -> str:
     return mark_safe(f'<img src="{image_url}" width="{image_width}" height="auto" />')
 
 
-def content_preview_fn(
-    content_attr_name: str = "content",
+def truncate_admin_text_from(
+    content_attr_name: str,
     preview_chars: int = 500,
 ):
     """
@@ -132,22 +130,3 @@ def content_preview_fn(
         return format_html(content[:preview_chars] + "...")
 
     return inner
-
-
-def get_map_preview_html(
-    geojson: dict[str, any],
-    change_element_id: str,
-    height: str = "400px",
-) -> str:
-    """
-    Return an HTML + JS snippet that renders TODO
-    """
-    leaflet_html = render_to_string(
-        template_name="admin/geojson_map_preview.html",
-        context={
-            "geojson_data": mark_safe(json.dumps(geojson)),
-            "height": height,
-            "change_element_id": change_element_id,
-        },
-    )
-    return mark_safe(leaflet_html)
