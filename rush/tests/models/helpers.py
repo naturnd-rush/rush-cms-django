@@ -1,5 +1,5 @@
 import tempfile
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack
 from functools import wraps
 from unittest.mock import Mock
 
