@@ -13,10 +13,6 @@ from rush.models.validators import (
     validate_only_integers_and_whitespace,
 )
 
-"""
-Django models related to geographical data and styling.
-"""
-
 
 class LineCap(models.TextChoices):
     """
@@ -166,76 +162,3 @@ def compress_marker_icon(sender, instance: Style, **kwargs):
             image.save(compressed.name, compressed, save=False)
         except utils.CompressionFailed:
             pass
-
-
-class Provider(models.TextChoices):
-    GEOJSON = "geojson"
-    OPEN_GREEN_MAP = "open_green_map"  # TODO: Implement me!
-    ESRI_FEATURE_SERVER = "esri_feature_server"  # TODO: Not sure how this gets implemented with the current MapData model
-    GENERIC_REST = "generic_rest"  # TODO: Not sure how this gets implemented with the current MapData model
-
-
-class MapData(models.Model):
-    # TODO: Add on_create validation
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
-    name = models.CharField(max_length=255, unique=True)
-    provider = models.CharField(max_length=255, choices=Provider.choices)
-    geojson = models.JSONField(null=True, blank=True)
-
-    # Open Green Map metadata
-    ogm_map_id = models.CharField(max_length=1024, null=True, blank=True)
-    feature_url_template = models.CharField(max_length=1024, null=True, blank=True)
-    icon_url_template = models.CharField(max_length=1024, null=True, blank=True)
-    image_url_template = models.CharField(max_length=1024, null=True, blank=True)
-
-    history = HistoricalRecords()
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        # better plural name in the admin table list
-        verbose_name_plural = "Map Data"
-
-
-class Layer(models.Model):
-    """
-    MapData + Styling + Legend information combo.
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
-    name = models.CharField(max_length=255)
-    description = models.TextField(
-        help_text="The layer description that will appear in the map legend to help people understand what the layer data represents."
-    )
-    map_data = models.ForeignKey(
-        to=MapData,
-        # MapData deletion should fail if a Layer references it.
-        on_delete=models.PROTECT,
-    )
-    styles = models.ManyToManyField(Style, through="StylesOnLayer")
-    serialized_leaflet_json = models.JSONField(default=dict)
-    history = HistoricalRecords()
-
-    def __str__(self):
-        return self.name
-
-
-class StylesOnLayer(models.Model):
-    """
-    Through table for adding multiple Styles on a single Layer with the ability to
-    reuse styles on other Layers.
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
-
-    style = models.ForeignKey(Style, on_delete=models.CASCADE)
-    layer = models.ForeignKey(Layer, on_delete=models.CASCADE)
-
-    # Some expression that will be matched against a GeoJSON feature's properties
-    # to decide whether this style will be applied to any given feature on the map.
-    # The default is True, which means this style will be applied to all Features by default!
-    feature_mapping = models.TextField(default="true")
-
-    # Optional HTML text field for describing what the popup template will be used
-    popup = models.TextField(null=True, blank=True)

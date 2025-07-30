@@ -1,6 +1,7 @@
 # Module exports
 from rush.models.infra import DeployLog, DeployStatus
-from rush.models.map import Layer, MapData, Provider, Style, StylesOnLayer
+from rush.models.layer import Layer, StylesOnLayer
+from rush.models.map_data import MapData, Provider
 from rush.models.site import (
     Initiative,
     InitiativeTag,
@@ -10,3 +11,4 @@ from rush.models.site import (
     Question,
     QuestionTab,
 )
+from rush.models.style import Style

@@ -6,7 +6,7 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 
-from rush.models.map import *
+from rush.models.style import Style
 from rush.tests.models.helpers import use_tmp_media_dir
 
 
