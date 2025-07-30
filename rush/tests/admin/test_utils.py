@@ -5,6 +5,19 @@ import pytest
 from rush.admin.utils import *
 
 
+@pytest.mark.parametrize(
+    "value, decimal",
+    [
+        (1, Decimal("1")),
+        (12.45, Decimal("12.45")),
+        ("foo", Decimal("0")),
+        (float("1"), Decimal("1")),
+    ],
+)
+def test_get_decimal(value: Any, decimal: Decimal):
+    assert get_decimal(value) == decimal
+
+
 class TestSliderAndTextboxNumberInput:
 
     @pytest.mark.parametrize(
@@ -26,19 +39,6 @@ class TestSliderAndTextboxNumberInput:
         assert input.input_type == type.value
 
     @pytest.mark.parametrize(
-        "value, decimal",
-        [
-            (1, Decimal("1")),
-            (12.45, Decimal("12.45")),
-            ("foo", Decimal("0")),
-            (float("1"), Decimal("1")),
-        ],
-    )
-    def test_get_decimal(self, value: Any, decimal: Decimal):
-        instance = SliderAndTextboxNumberInput()
-        assert instance._get_decimal(value) == decimal
-
-    @pytest.mark.parametrize(
         "name, value, min, max, step",
         [
             ("test_widget", 12, 1, 100, 0.01),
@@ -47,15 +47,19 @@ class TestSliderAndTextboxNumberInput:
     )
     def test_render(self, name, value, min, max, step):
 
+        # create slider and text box number input
         instance = SliderAndTextboxNumberInput(min=min, max=max, step=step)
         assert instance.slider_input == None
         assert instance.textbox_input == None
 
+        # render the input html
         result = instance.render(name, value)
 
+        # both inputs should now be populated
         assert isinstance(instance.slider_input, forms.NumberInput)
         assert isinstance(instance.textbox_input, forms.NumberInput)
 
+        # The html should contain the correct values
         assert f'data-fieldname="{name}"' in result
         assert (
             f'<input type="range" name="{name}" value="{value}" min="{min}" max="{max}" step="{step}" id="slider_{name}">'
@@ -65,3 +69,24 @@ class TestSliderAndTextboxNumberInput:
             f'<input type="number" name="{name}" value="{value}" min="{min}" max="{max}" step="{step}" id="id_{name}">'
             in result
         )
+
+
+@pytest.mark.parametrize(
+    "content, content_attr_name, max_chars, expected_value",
+    [
+        ("Hello world!", "content", 11, "Hello world..."),
+        ("Hello world!", "content", 2, "He..."),
+        (None, "content", 2, "No content"),
+    ],
+)
+def test_truncate_admin_text_from(
+    content: str,
+    content_attr_name: str,
+    max_chars: int,
+    expected_value: str,
+):
+    model_admin = Mock()
+    model = Mock(content=content)
+    truncate_fn = truncate_admin_text_from(content_attr_name, max_chars=max_chars)
+    truncated = truncate_fn(model_admin, model)
+    assert truncated == expected_value

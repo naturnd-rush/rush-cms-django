@@ -9,6 +9,18 @@ from django.utils.html import format_html
 from django.utils.safestring import SafeString, SafeText, mark_safe
 
 
+def get_decimal(obj: Any) -> Decimal:
+    """
+    Convert any object to a Decimal. If the object is numeric, then it will
+    be converted to it's corresponding decimal number. Otherwise, this function
+    will return zero.
+    """
+    try:
+        return Decimal(str(obj))
+    except (InvalidOperation, ValueError, TypeError):
+        return Decimal("0")
+
+
 class InputType(Enum):
     SLIDER = "range"  # reserved string keyword "range" in django-land
     NUMBER = "number"
@@ -41,12 +53,6 @@ class SliderAndTextboxNumberInput(forms.Widget):
             }
         )
 
-    def _get_decimal(self, value: Any) -> Decimal:
-        try:
-            return Decimal(str(value))
-        except (InvalidOperation, ValueError, TypeError):
-            return Decimal("0")
-
     def render(self, name, value, attrs=None, renderer=None) -> SafeString:
 
         # lazily create the slider and number inputs
@@ -58,7 +64,7 @@ class SliderAndTextboxNumberInput(forms.Widget):
         def render(input: forms.NumberInput, id: str) -> SafeText:
             return input.render(
                 name,
-                self._get_decimal(value),
+                get_decimal(value),
                 attrs={**self.attrs, "id": id},
                 renderer=renderer,
             )
@@ -112,8 +118,8 @@ def image_html(image_url: str, image_width: int = 200) -> str:
 
 
 def truncate_admin_text_from(
-    content_attr_name: str,
-    preview_chars: int = 500,
+    admin_attr_name: str,
+    max_chars: int = 500,
 ):
     """
     Return an admin model function that renders a preview of some
@@ -121,9 +127,9 @@ def truncate_admin_text_from(
     """
 
     def inner(admin_instance: admin.ModelAdmin, obj: models.Model) -> str:
-        content = getattr(obj, content_attr_name, None)
+        content = getattr(obj, admin_attr_name, None)
         if not content:
             return "No content"
-        return format_html(content[:preview_chars] + "...")
+        return format_html("{}...", content[:max_chars])
 
     return inner

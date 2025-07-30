@@ -17,6 +17,10 @@ class FakeFile(Mock):
 
 
 def use_tmp_media_dir(func):
+    """
+    Tell Django to use a temporary MEDIA_ROOT directory which is cleaned up
+    after the decorated function finishes executing.
+    """
 
     @wraps(func)
     def wrapper(*args, **kwargs):
