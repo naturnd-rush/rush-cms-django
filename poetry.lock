@@ -285,20 +285,6 @@ typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.13\""}
 test = ["pytest (>=6)"]
 
 [[package]]
-name = "gdal"
-version = "3.8.4"
-description = "GDAL: Geospatial Data Abstraction Library"
-optional = false
-python-versions = ">=3.6.0"
-groups = ["main"]
-files = [
-    {file = "GDAL-3.8.4.tar.gz", hash = "sha256:7c51e0ae7a7ccf43ad9e4bf435176baa9276653dfa16fd167c3632f6e7275207"},
-]
-
-[package.extras]
-numpy = ["numpy (>1.0.0)"]
-
-[[package]]
 name = "graphene"
 version = "3.4.3"
 description = "GraphQL Framework for Python"
@@ -994,4 +980,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "cf7df7d91d4afb33fe6aa819f5303f3b956e5d571e3ce6708dff199c368923b5"
+content-hash = "7ba26592ac756e0cc0cf968faadbc0d30e7251ffcdc3a1b01249f57dd82ce5ab"
