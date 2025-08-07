@@ -40,6 +40,7 @@ jobs:
       run: |
 
         # run container to test db connecting
+        cp .env-template .env
         docker compose \
           -f docker-compose.yml \
           up --abort-on-container-exit --exit-code-from django
