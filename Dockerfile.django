@@ -1,4 +1,5 @@
 FROM ghcr.io/osgeo/gdal:ubuntu-small-latest
+RUN apt-get update
 
 # Set working directory and copy poetry config data
 WORKDIR /rush_admin
@@ -6,9 +7,7 @@ COPY pyproject.toml ./
 COPY poetry.lock ./
 
 # Install pipx --> poetry --> django + other required libs
-RUN apt-get update
 RUN apt-get install -y pipx
-RUN rm -rf /var/lib/apt/lists/*
 RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
 RUN poetry install --without os_specific
@@ -21,10 +20,12 @@ COPY static ./static
 COPY templates ./templates
 COPY manage.py ./manage.py
 COPY LICENSE ./LICENSE
-COPY .env-template ./.env
 
-# Configure GDAL env path for django
-ENV GDAL_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/libgdal.so.37"
+# Wait for the postgres database service before executing commands
+RUN apt-get install -y netcat-openbsd
+COPY wait-for-db.sh /wait-for-db.sh
+RUN chmod +x /wait-for-db.sh
+ENTRYPOINT ["/wait-for-db.sh"]
 
-# Configure entrypoint script
-ENTRYPOINT ["poetry", "run", "python", "manage.py", "runserver"]
+# Clean-up apt package lists
+RUN rm -rf /var/lib/apt/lists/*

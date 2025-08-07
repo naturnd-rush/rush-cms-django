@@ -1,53 +1,47 @@
 name: Django Tests
 
 on:
-  pull_request:
+  push:
     branches: [main]
+  pull_request:
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-      DJANGO_SETTINGS_MODULE: config.unit_test_settings
-      PYTHONUNBUFFERED: 1
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
 
-      - name: Configure Poetry
-        run: |
-          poetry config virtualenvs.create false
-          poetry install
+    - name: Build and run tests using Compose
+      run: |
 
-      - name: Run migrations
-        run: |
-          python manage.py migrate
+        # build with cache
+        docker compose \
+          -f docker-compose.yml \
+          build --progress=plain --build-arg BUILDKIT_INLINE_CACHE=1
+        
+        # run container with test commands
+        docker compose \
+          -f docker-compose.yml \
+          -f docker-compose-run-tests.yml \
+          up --abort-on-container-exit --exit-code-from django
 
-      - name: Run tests
-        run: |
-          pytest --ds=config.unit_test_settings
+    - name: Cleanup
+      if: always()
+      run: docker compose down -v

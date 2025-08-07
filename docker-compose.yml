@@ -1,25 +1,10 @@
 version: '3.9'
 
+# Compose file that specifies test commands for the rush admin site
+
 services:
-
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile.django
-    image: rush_admin/django
-    volumes:
-      - .:/app
-    depends_on:
-      - db
-
-  db:
-    build:
-      context: .
-      dockerfile: Dockerfile.postgres
-    image: rush_admin/postgres
-    environment:
-      - POSTGRES_DB=rush
-      - POSTGRES_USER=rush_admin
-      - POSTGRES_PASSWORD=password
-    ports:
-      - "5432:5432"
+  django:
+    command: [
+      "poetry", "run", "python", "manage.py", "runserver", "&&", 
+      "poetry", "run", "pytest",
+    ]
