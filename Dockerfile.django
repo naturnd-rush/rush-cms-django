@@ -1,0 +1,30 @@
+FROM ghcr.io/osgeo/gdal:ubuntu-small-latest
+
+# Set working directory and copy poetry config data
+WORKDIR /rush_admin
+COPY pyproject.toml ./
+COPY poetry.lock ./
+
+# Install pipx --> poetry --> django + other required libs
+RUN apt-get update
+RUN apt-get install -y pipx
+RUN rm -rf /var/lib/apt/lists/*
+RUN pipx install poetry
+ENV PATH="/root/.local/bin:$PATH"
+RUN poetry install
+
+# Copy source code and default env vars
+COPY config ./config
+COPY frontend ./frontend
+COPY rush ./rush
+COPY static ./static
+COPY templates ./templates
+COPY manage.py ./manage.py
+COPY LICENSE ./LICENSE
+COPY .env-template ./.env
+
+# Configure GDAL env path for django
+ENV GDAL_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/libgdal.so.37"
+
+# Configure entrypoint script
+ENTRYPOINT ["/bin/bash"]
