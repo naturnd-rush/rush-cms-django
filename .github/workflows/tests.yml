@@ -35,18 +35,14 @@ jobs:
         docker compose \
           -f docker-compose.yml \
           build --progress=plain --build-arg BUILDKIT_INLINE_CACHE=1
-        
-    - name: Run Compose Project DB Connection Test...
-      run: |
-
-        # run container to test db connecting
-        cp .env-template .env
-        docker compose \
-          -f docker-compose.yml \
-          up --abort-on-container-exit --exit-code-from django
 
     - name: Run Tests
       run: |
+
+        # create env file in pipeline container for compose to pick up.
+        # (we can't just tell compose to use the .env-template file instead
+        # because it only does variable substitution for .env)
+        cp .env-template .env
 
         # run container to test db connecting
         docker compose \
