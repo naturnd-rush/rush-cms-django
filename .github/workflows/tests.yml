@@ -28,7 +28,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildx-
 
-    - name: Build and run tests using Compose
+    - name: Build Docker Compose Project
       run: |
 
         # build with cache
@@ -36,7 +36,18 @@ jobs:
           -f docker-compose.yml \
           build --progress=plain --build-arg BUILDKIT_INLINE_CACHE=1
         
-        # run container with test commands
+    - name: Run Compose Project DB Connection Test...
+      run: |
+
+        # run container to test db connecting
+        docker compose \
+          -f docker-compose.yml \
+          up --abort-on-container-exit --exit-code-from django
+
+    - name: Run Tests
+      run: |
+
+        # run container to test db connecting
         docker compose \
           -f docker-compose.yml \
           -f docker-compose-run-tests.yml \
