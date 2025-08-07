@@ -11,7 +11,7 @@ RUN apt-get install -y pipx
 RUN rm -rf /var/lib/apt/lists/*
 RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
-RUN poetry install
+RUN poetry install --without os_specific
 
 # Copy source code and default env vars
 COPY config ./config
@@ -27,4 +27,4 @@ COPY .env-template ./.env
 ENV GDAL_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu/libgdal.so.37"
 
 # Configure entrypoint script
-ENTRYPOINT ["/bin/bash"]
+ENTRYPOINT ["poetry", "run", "python", "manage.py", "runserver"]
