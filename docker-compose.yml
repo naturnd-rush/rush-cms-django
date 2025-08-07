@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
 
   django:
@@ -12,10 +10,10 @@ services:
     depends_on:
       - postgres
     env_file:
-      - .env
+      - .env-template
     environment:
       - POSTGRES_DATABASE_HOST=postgres # db container service defined below
-      - GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so.37 # Configure GDAL env path for django (should be stable since we are using a fixed GDAL base image)
+      - GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so.37 # configure GDAL env path for django (should be stable since we are using a fixed GDAL base image)
     command: ["poetry", "run", "python", "manage.py", "runserver"]
 
   postgres:

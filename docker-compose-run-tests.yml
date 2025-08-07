@@ -1,5 +1,3 @@
-version: '3.9'
-
 # Compose file that specifies test commands for the rush admin site
 
 services:
