@@ -6,8 +6,6 @@ from django.db import models
 Django models related to frontend UI / display.
 """
 
-# TODO: make a page/link model! Probably one model with dual interpretation by the frontend.
-
 
 import uuid
 
