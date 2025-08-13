@@ -15,7 +15,6 @@ class QuestionTab(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
     question = models.ForeignKey(
-        null=True,
         # Delete all QuestionTabs when a Question is deleted.
         to=Question,
         on_delete=models.CASCADE,
