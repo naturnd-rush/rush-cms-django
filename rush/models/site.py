@@ -20,6 +20,7 @@ class Question(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     title = models.CharField(max_length=255)
+    subtitle = models.CharField(max_length=255)
     image = models.ImageField(upload_to="question_images/", null=True, blank=True)
     initiatives = models.ManyToManyField(to="Initiative", blank=True)
     questions = models.ManyToManyField(to="Layer", related_name="questions")
@@ -30,7 +31,9 @@ class Question(models.Model):
 
 
 class QuestionTab(models.Model):
-    """ """
+    """
+    A subtab of the question where content can go.
+    """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     title = models.CharField(max_length=255)
