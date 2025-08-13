@@ -38,7 +38,9 @@ def image_test_params():
     [*image_test_params(), valid_file("test.svg"), valid_file("test.SVG")],
 )
 def test_validate_image_or_svg(file: Mock, raises: bool, err_msg: str):
-    """PNG, JPEG, and SVG all allowed."""
+    """
+    PNG, JPEG, and SVG all allowed.
+    """
     if raises:
         with pytest.raises(InvalidFileType, match=err_msg):
             validate_image_or_svg(file)
@@ -81,7 +83,9 @@ def test_validate_image(file: Mock, raises: bool, err_msg: str):
     ],
 )
 def test_validate_only_integers_and_whitespace(value: str, raises: bool):
-    """Only digits and whitespace allowed."""
+    """
+    Only digits and whitespace allowed.
+    """
     if raises:
         msg = "This field must contain only digits and whitespace."
         with pytest.raises(ValidationError, match=msg):

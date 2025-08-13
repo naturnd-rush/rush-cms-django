@@ -69,5 +69,5 @@ def test_create_style_does_not_compress_marker_icon_svgs():
     style = Style.objects.create(**kwargs)
 
     assert os.path.exists(style.marker_icon.path)
-    assert style.marker_icon.name == "test_image.svg"
+    assert style.marker_icon.name == "marker_icons/test_image.svg"
     assert style.marker_icon.size == svg.size  # no compression
