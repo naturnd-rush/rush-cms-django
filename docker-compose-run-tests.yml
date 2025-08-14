@@ -2,8 +2,5 @@
 
 services:
   django:
-    command: [
-      "poetry", "run", "python", "manage.py", "runserver", "&&", 
-      "poetry", "run", "pytest",
-    ]
+    command: ["poetry", "run", "pytest"]
 
