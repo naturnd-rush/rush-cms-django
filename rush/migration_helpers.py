@@ -23,7 +23,6 @@ def big_int_to_uuid_operations(model: Type[Model], field: str) -> list[Operation
 
     model_name = model.__name__.lower()
     tmp_field_name = f"__tmp_migration_{field}"
-    print(f"Model name: {model_name}, tmp_field_name: {tmp_field_name}")
     return [
         # make not primary key
         AlterField(
