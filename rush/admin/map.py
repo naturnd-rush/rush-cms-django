@@ -4,7 +4,6 @@ from typing import Any
 
 from django import forms
 from django.contrib import admin
-from django.db import models as django_db_models
 from django.forms.utils import flatatt
 from django.template.loader import render_to_string
 from django.urls import reverse
