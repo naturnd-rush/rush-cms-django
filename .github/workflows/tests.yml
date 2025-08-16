@@ -23,13 +23,13 @@ jobs:
     - name: Set up Docker Buildx (for caching)
       uses: docker/setup-buildx-action@v3
 
-    - name: Load Docker cache
-      uses: actions/cache@v4
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
+    # - name: Load Docker cache
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: /tmp/.buildx-cache
+    #     key: ${{ runner.os }}-buildx-${{ github.sha }}
+    #     restore-keys: |
+    #       ${{ runner.os }}-buildx-
 
     - name: Build Docker Compose Project
       run: |
