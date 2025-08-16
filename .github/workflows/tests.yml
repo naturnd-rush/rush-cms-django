@@ -63,16 +63,18 @@ jobs:
         #   --cache-to=type=local,dest=/tmp/.buildx-cache
 
     - name: Run Django Tests
-      run: docker compose \
-            -f docker-compose.yml \
-            -f docker-compose-run-django-tests.yml \
-            up --abort-on-container-exit --exit-code-from django
+      run: |
+        docker compose \
+          -f docker-compose.yml \
+          -f docker-compose-run-django-tests.yml \
+          up --abort-on-container-exit --exit-code-from django
 
     - name: Run Vite Tests
-      run: docker compose \
-            -f docker-compose.yml \
-            -f docker-compose-run-vite-tests.yml \
-            up --abort-on-container-exit --exit-code-from django
+      run: | 
+        docker compose \
+          -f docker-compose.yml \
+          -f docker-compose-run-vite-tests.yml \
+          up --abort-on-container-exit --exit-code-from django
 
     - name: Save Docker cache
       if: success()
