@@ -36,7 +36,7 @@ jobs:
           -f docker-compose.yml \
           build --progress=plain --build-arg BUILDKIT_INLINE_CACHE=1
 
-    - name: Run Tests
+    - name: Run Django Tests
       run: |
 
         # create env file in pipeline container for compose to pick up.
@@ -44,10 +44,17 @@ jobs:
         # because it only does variable substitution for .env)
         cp .env-template .env
 
-        # run container to test db connecting
         docker compose \
           -f docker-compose.yml \
-          -f docker-compose-run-tests.yml \
+          -f docker-compose-run-django-tests.yml \
+          up --abort-on-container-exit --exit-code-from django
+
+    - name: Run Vite Tests
+      run: |
+
+        docker compose \
+          -f docker-compose.yml \
+          -f docker-compose-run-vite-tests.yml \
           up --abort-on-container-exit --exit-code-from django
 
     - name: Cleanup

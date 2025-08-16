@@ -1,0 +1,6 @@
+# Compose file that specifies test commands for the rush admin site
+
+services:
+  django:
+    command: ["npm", "--prefix", "frontend", "test"]
+

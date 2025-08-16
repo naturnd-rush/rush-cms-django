@@ -22,12 +22,15 @@ COPY manage.py ./manage.py
 COPY LICENSE ./LICENSE
 
 # Install node dependencies and compile JS for the frontend
-RUN (cd frontend && nom install)
+RUN apt-get install -y curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+RUN (cd frontend && npm install)
 RUN (cd frontend && npx vite build)
 
 # Wait for the postgres database service before executing commands
 RUN apt-get install -y netcat-openbsd
-COPY wait-for-db.sh /wait-for-db.shs
+COPY wait-for-db.sh /wait-for-db.sh
 RUN chmod +x /wait-for-db.sh
 ENTRYPOINT ["/wait-for-db.sh"]
 
