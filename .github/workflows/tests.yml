@@ -42,7 +42,7 @@ jobs:
       run: |
 
         # build with cache
-        docker compose -f docker-compose.yml build \ 
+        docker compose -f docker-compose.yml build \
           --progress=plain \
           --build-arg BUILDKIT_INLINE_CACHE=1 \
           --cache-from=type=local,src=/tmp/.buildx-cache \
