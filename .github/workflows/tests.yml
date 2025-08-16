@@ -38,15 +38,29 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildx-
 
-    - name: Build Docker Compose Project
+    - name: Build Dockerfiles
       run: |
 
-        # build with cache
-        docker compose -f docker-compose.yml build \
-          --progress=plain \
-          --build-arg BUILDKIT_INLINE_CACHE=1 \
-          --cache-from=type=local,src=/tmp/.buildx-cache \
-          --cache-to=type=local,dest=/tmp/.buildx-cache
+        docker buildx build \
+        --file Dockerfile.django \
+        --cache-from=type=local,src=/tmp/.buildx-cache \
+        --cache-to=type=local,dest=/tmp/.buildx-cache \
+        --progress=plain \
+        .
+
+        docker buildx build \
+        --file Dockerfile.postgres \
+        --cache-from=type=local,src=/tmp/.buildx-cache \
+        --cache-to=type=local,dest=/tmp/.buildx-cache \
+        --progress=plain \
+        .
+
+        # # build with cache
+        # docker compose -f docker-compose.yml build \
+        #   --progress=plain \
+        #   --build-arg BUILDKIT_INLINE_CACHE=1 \
+        #   --cache-from=type=local,src=/tmp/.buildx-cache \
+        #   --cache-to=type=local,dest=/tmp/.buildx-cache
 
     - name: Run Django Tests
       run: |
