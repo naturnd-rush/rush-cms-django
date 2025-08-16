@@ -157,7 +157,7 @@ export const inlineElements = {
  * Find which styles apply to a given GeoJSON feature.
  * @param feature the feature to get applied styles for.
  * @param stylesOnLayer the styles present on the current map layer.
- * @returns an array of styles that should be applied to the given feature.
+ * @returns an array of styles that should be applied to the given feature. 
  */
 function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<StyleOnLayer>): Array<AppliedStyle>{
     const parser = new Parser();
