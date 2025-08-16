@@ -20,16 +20,23 @@ jobs:
     - name: Prepare cache dir
       run: mkdir -p /tmp/.buildx-cache
 
+    - name: Prepare Env
+      run:
+        # create env file in pipeline container for compose to pick up.
+        # (we can't just tell compose to use the .env-template file instead
+        # because it only does variable substitution for .env)
+        cp .env-template .env
+
     - name: Set up Docker Buildx (for caching)
       uses: docker/setup-buildx-action@v3
 
-    # - name: Load Docker cache
-    #   uses: actions/cache@v4
-    #   with:
-    #     path: /tmp/.buildx-cache
-    #     key: ${{ runner.os }}-buildx-${{ github.sha }}
-    #     restore-keys: |
-    #       ${{ runner.os }}-buildx-
+    - name: Load Docker cache
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
 
     - name: Build Docker Compose Project
       run: |
@@ -43,11 +50,6 @@ jobs:
 
     - name: Run Django Tests
       run: |
-
-        # create env file in pipeline container for compose to pick up.
-        # (we can't just tell compose to use the .env-template file instead
-        # because it only does variable substitution for .env)
-        cp .env-template .env
 
         docker compose \
           -f docker-compose.yml \
