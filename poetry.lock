@@ -286,13 +286,13 @@ test = ["pytest (>=6)"]
 
 [[package]]
 name = "gdal"
-version = "3.8.4"
+version = "3.11.3"
 description = "GDAL: Geospatial Data Abstraction Library"
 optional = false
-python-versions = ">=3.6.0"
-groups = ["main"]
+python-versions = ">=3.8.0"
+groups = ["os_specific"]
 files = [
-    {file = "GDAL-3.8.4.tar.gz", hash = "sha256:7c51e0ae7a7ccf43ad9e4bf435176baa9276653dfa16fd167c3632f6e7275207"},
+    {file = "gdal-3.11.3.tar.gz", hash = "sha256:4c3ad0fae393b5ddb093a7e4b890077839b2a6acdbd19202657fe4e881886efa"},
 ]
 
 [package.extras]
@@ -994,4 +994,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "cf7df7d91d4afb33fe6aa819f5303f3b956e5d571e3ce6708dff199c368923b5"
+content-hash = "9743760ffd4febb8abf5435de37c9d025d65367022afb1523b2ee71ae1f28887"

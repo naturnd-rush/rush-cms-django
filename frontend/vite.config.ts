@@ -30,5 +30,9 @@ export default defineConfig({
                 assetFileNames: '[name][extname]',
             },
         },
-    }
+    },
+    test: {
+      environment: 'jsdom', // adds simulated browser calls, i.e., window, document, etc. to the test environment
+      globals: true,
+    },
 })

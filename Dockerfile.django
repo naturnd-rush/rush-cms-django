@@ -1,0 +1,38 @@
+FROM ghcr.io/osgeo/gdal:ubuntu-small-latest
+RUN apt-get update
+
+# Set working directory and copy poetry config data
+WORKDIR /rush_admin
+COPY pyproject.toml ./
+COPY poetry.lock ./
+
+# Install pipx --> poetry --> django + other required libs
+RUN apt-get install -y pipx
+RUN pipx install poetry
+ENV PATH="/root/.local/bin:$PATH"
+RUN poetry install --without os_specific
+
+# Copy source code and default env vars
+COPY config ./config
+COPY frontend ./frontend
+COPY rush ./rush
+COPY static ./static
+COPY templates ./templates
+COPY manage.py ./manage.py
+COPY LICENSE ./LICENSE
+
+# Install node dependencies and compile JS for the frontend
+RUN apt-get install -y curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+RUN (cd frontend && npm install)
+RUN (cd frontend && npx vite build)
+
+# Wait for the postgres database service before executing commands
+RUN apt-get install -y netcat-openbsd
+COPY wait-for-db.sh /wait-for-db.sh
+RUN chmod +x /wait-for-db.sh
+ENTRYPOINT ["/wait-for-db.sh"]
+
+# Clean-up apt package lists
+RUN rm -rf /var/lib/apt/lists/*

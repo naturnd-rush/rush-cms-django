@@ -61,8 +61,8 @@ function rgbToHex(r: number, g: number, b: number): string {
  * or return undefined if both numbers are none or undefined.
  */
 export function interpolateNumbers(n1: number | undefined | null, n2: number | undefined | null): number | undefined {
-    n1 = isNaN(Number(n1)) ? undefined : Number(n1);
-    n2 = isNaN(Number(n2)) ? undefined : Number(n2);
+    n1 = isNaN(Number(n1)) || n1 === null ? undefined : Number(n1);
+    n2 = isNaN(Number(n2)) || n2 === null ? undefined : Number(n2);
     if (n1 === undefined && n2 === undefined){
         return undefined;
     }

@@ -16,7 +16,6 @@ graphene-django = "^3.2.3"
 django-simple-history = "^3.8.0"
 pillow = "^11.1.0"
 django-leaflet = "^0.31.0"
-gdal = "3.8.4"
 python-decouple = "^3.8"
 django-colorfield = "^0.12.0"
 requests = "^2.32.3"
@@ -27,6 +26,9 @@ dj-database-url = "^3.0.1"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
 pytest-django = "^4.11.1"
+
+[tool.poetry.group.os_specific.dependencies]
+gdal = "^3.8.4"
 
 [build-system]
 requires = ["poetry-core"]

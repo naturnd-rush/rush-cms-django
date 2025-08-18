@@ -1,53 +1,82 @@
-name: Django Tests
+name: Test
+
 
 on:
-  pull_request:
+  push:
     branches: [main]
+  pull_request:
 
 jobs:
-  test:
+  run:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-      DJANGO_SETTINGS_MODULE: config.unit_test_settings
-      PYTHONUNBUFFERED: 1
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+    - name: Prepare cache dir
+      run: mkdir -p /tmp/.buildx-cache
 
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
+    - name: Prepare Env
+      run:
+        # create env file in pipeline container for compose to pick up.
+        # (we can't just tell compose to use the .env-template file instead
+        # because it only does variable substitution for .env)
+        cp .env-template .env
 
-      - name: Configure Poetry
-        run: |
-          poetry config virtualenvs.create false
-          poetry install
+    - name: Set up Docker Buildx (for caching)
+      uses: docker/setup-buildx-action@v3
 
-      - name: Run migrations
-        run: |
-          python manage.py migrate
+    - name: Load Docker cache
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
 
-      - name: Run tests
-        run: |
-          pytest --ds=config.unit_test_settings
+    - name: Build Dockerfiles
+      run: |
+
+        docker buildx build \
+        --file Dockerfile.django \
+        --cache-from=type=local,src=/tmp/.buildx-cache \
+        --cache-to=type=local,dest=/tmp/.buildx-cache \
+        --progress=plain \
+        .
+
+        docker buildx build \
+        --file Dockerfile.postgres \
+        --cache-from=type=local,src=/tmp/.buildx-cache \
+        --cache-to=type=local,dest=/tmp/.buildx-cache \
+        --progress=plain \
+        .
+
+    - name: Run Django Tests
+      run: |
+        docker compose \
+          -f docker-compose.yml \
+          -f docker-compose-run-django-tests.yml \
+          up --abort-on-container-exit --exit-code-from django
+
+    - name: Run Vite Tests
+      run: | 
+        docker compose \
+          -f docker-compose.yml \
+          -f docker-compose-run-vite-tests.yml \
+          up --abort-on-container-exit --exit-code-from django
+
+    - name: Save Docker cache
+      if: success()
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-docker-buildx-cache
+
+    - name: Cleanup
+      if: always()
+      run: docker compose down -v
