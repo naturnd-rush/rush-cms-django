@@ -36,3 +36,9 @@ However, if you already have other Postgres servers running locally, you may wan
 7. Visit the development server url with `/admin` appended after the base url and use your superuser credentials to login.
 8. That's it! You should now have a working version of the RUSH Admin Site's development server :)
 
+
+## Dev Processes:
+
+### Setting Up Rclone + Backblaze:
+We use rclone and Backblaze for backing up our prodution data. If you want to test the `backup.sh` script or configure encrypted backups to a new remote you can use these steps as a template.
+1. TODO: Write these when configuring the remote on production!
