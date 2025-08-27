@@ -1,5 +1,5 @@
 # Sam's Backup Program
-This is a generic backup program written by Samuel Morris using rclone and is so far only compatible with a postgres database.
+This is a generic backup program written by Samuel Morris using rclone for a project using a postgres database.
 
 ## Prerequisites:
 1. Install and configure `rclone` with a remote, see [their documentation](https://rclone.org/docs/).
@@ -13,6 +13,8 @@ c.) NOTE: There are multiple versions of `yq`. The one you want is here: https:/
 See `config.yaml` to configure this backup program.
 
 ## Usage:
+Place the `backups/` directory inside your root project directory. 
+
 Run the bash program from inside the top-level directory of your project using `./backups/run.sh`.
 
-If you have an environment file like `.env` formatted without the export keyword, you can use this command `export $(grep -v '^#' .env | xargs)` to export your environment so that the variables propagate to each subprocess correctly.
+Here is an example crontab that will perform a backup every day at 4:00 AM, assuming your project exists in a directory called `/user/project`, you have some optional environment variables in `/user/project/.env` that you want exported so they can be read by `config.yaml`, and you've placed this directory in "/user/project/backups": `0 4 * * * cd /user/project && set -a && . /user/project/.env && set +a && /bin/bash /user/project/backups/run.sh`.
