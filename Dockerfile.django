@@ -1,5 +1,4 @@
 FROM ghcr.io/osgeo/gdal:ubuntu-small-latest
-RUN apt-get update
 
 # Set working directory and copy poetry config data
 WORKDIR /rush_admin
@@ -7,9 +6,10 @@ COPY pyproject.toml ./
 COPY poetry.lock ./
 
 # Install pipx --> poetry --> django + other required libs
-RUN apt-get install -y pipx
+RUN apt-get update && apt-get install -y pipx
 RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
+RUN poetry lock
 RUN poetry install --without os_specific
 
 # Copy source code and default env vars
