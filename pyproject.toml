@@ -28,7 +28,7 @@ pytest = "^8.4.1"
 pytest-django = "^4.11.1"
 
 [tool.poetry.group.os_specific.dependencies]
-gdal = "^3.8.4"
+gdal = "3.8.4"
 
 [build-system]
 requires = ["poetry-core"]

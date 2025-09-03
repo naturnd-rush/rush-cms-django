@@ -64,9 +64,7 @@ class DeployRunner:
             with open(settings.DEPLOY_NGINX_CONFIG_PATH, "w") as file:
                 file.write(config)
             # symlink config to the enabled directory (this enables the site)
-            self.execute(
-                f"ln -sf {settings.DEPLOY_NGINX_CONFIG_PATH} {settings.DEPLOY_NGINX_ENABLED_PATH}"
-            )
+            self.execute(f"ln -sf {settings.DEPLOY_NGINX_CONFIG_PATH} {settings.DEPLOY_NGINX_ENABLED_PATH}")
             self.execute("sudo systemctl restart nginx")
             self.execute("sudo systemctl restart gunicorn")
             self.logger.info("Deployment succeeded.")
