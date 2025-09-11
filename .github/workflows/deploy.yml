@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Send Deploy Webhook to RUSH Admin Site
         env:
-          WEBHOOK_URL: "https://whatstherush.earth/github/deploy/"
+          WEBHOOK_URL: "https://whatstherush.earth/deploy/"
           SECRET: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}
         run: |
           PAYLOAD='{"repository": "${{ github.repository }}", "ref": "${{ github.ref }}", "action": "deploy-prod"}'

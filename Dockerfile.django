@@ -11,6 +11,8 @@ RUN pipx install poetry
 ENV PATH="/root/.local/bin:$PATH"
 RUN poetry lock
 RUN poetry install --without os_specific
+RUN poetry run python manage.py makemigrations
+RUN poetry run python manage.py migrate
 
 # Copy source code and default env vars
 COPY config ./config
