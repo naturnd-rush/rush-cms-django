@@ -1,8 +1,7 @@
 SAM*.md
 /.django_dev*
 node_modules/
-backups/logs
-backups/current_backups.txt
+backups/
 
 
 ####
