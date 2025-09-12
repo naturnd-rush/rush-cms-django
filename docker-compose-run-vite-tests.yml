@@ -3,4 +3,3 @@
 services:
   django:
     command: ["npm", "--prefix", "frontend", "test"]
-
