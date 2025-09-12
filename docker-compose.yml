@@ -4,6 +4,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.django
+      # args:
+      #   # For calling django makemigrations and migrate during the build stage (.env and environment are not injected by Docker until container runtime).
+      #   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      #   DJANGO_DEBUG: ${DJANGO_DEBUG}
     image: rush_admin/django
     volumes:
       - .:/app
@@ -14,7 +18,10 @@ services:
     environment:
       - POSTGRES_DATABASE_HOST=postgres # db container service defined below
       - GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so.37 # configure GDAL env path for django (should be stable since we are using a fixed GDAL base image)
-    command: ["poetry", "run", "python", "manage.py", "runserver"]
+    command: >
+      sh -c "poetry run python manage.py makemigrations &&
+            poetry run python manage.py migrate &&
+            poetry run python manage.py runserver 0.0.0.0:8000"
 
   postgres:
     build:

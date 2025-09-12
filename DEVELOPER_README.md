@@ -13,7 +13,7 @@
 5. Run `poetry add "GDAL==X.X.X"`, where the X's represent the major, minor, and patch version numbers outputted by the find command from step 3. E.g., if the first line of output reads: `/usr/lib/x86_64-linux-gnu/libgdal.so.34.3.8.4`, you would run `poetry add "GDAL==3.8.4"`, ignoring the first number, 34.
 6. You __may__ also need to install Python bindings for GDAL on your operating system: `sudo apt install python3-gdal`.
 
-### c.) Create a local PostGIS server:
+### c.) Create a local PostGIS database:
 A quick way to do this is to download docker on your machine and run: 
 ```
 docker run --name rush_postgis_container \
@@ -23,7 +23,7 @@ docker run --name rush_postgis_container \
   -p 5432:5432 \
   -d postgis/postgis
 ```
-However, if you already have other Postgres servers running locally, you may want to configure the `POSTGRES_*` lines in your `.env` file to make sure Django knows which database to look at.
+However, if you already have other Postgres databases running locally, you may want to configure the `POSTGRES_*` lines in your `.env` file to make sure Django knows which database to look at.
 
 
 ### d.) Setup Django Project:

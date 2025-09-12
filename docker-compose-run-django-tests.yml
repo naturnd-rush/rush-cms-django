@@ -3,4 +3,3 @@
 services:
   django:
     command: ["poetry", "run", "pytest"]
-
