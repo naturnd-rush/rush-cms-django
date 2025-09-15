@@ -103,7 +103,7 @@ class QuestionType(DjangoObjectType):
 class PageType(DjangoObjectType):
     class Meta:
         model = models.Page
-        fields = ["id", "title", "content"]
+        fields = ["id", "title", "content", "background_image"]
 
 
 class Query(graphene.ObjectType):
