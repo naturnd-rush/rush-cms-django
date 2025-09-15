@@ -7,8 +7,8 @@ from simple_history.models import HistoricalRecords
 class Provider(models.TextChoices):
     GEOJSON = "geojson"
     OPEN_GREEN_MAP = "open_green_map"  # TODO: Implement me!
-    ESRI_FEATURE_SERVER = "esri_feature_server"  # TODO: Not sure how this gets implemented with the current MapData model
-    GENERIC_REST = "generic_rest"  # TODO: Not sure how this gets implemented with the current MapData model
+    # ESRI_FEATURE_SERVER = "esri_feature_server"  # TODO: Not sure how this gets implemented with the current MapData model
+    # GENERIC_REST = "generic_rest"  # TODO: Not sure how this gets implemented with the current MapData model
 
 
 class MapData(models.Model):
