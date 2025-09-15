@@ -15,6 +15,12 @@ class MapDataType(DjangoObjectType):
         fields = ["id", "name", "provider", "geojson", "ogm_provider"]
 
 
+class OGMProviderType(DjangoObjectType):
+    class Meta:
+        model = models.OpenGreenMapProvider
+        fields = ["id", "map_link", "campaign_link"]
+
+
 class StylesOnLayersType(DjangoObjectType):
     class Meta:
         model = models.StylesOnLayer
@@ -99,6 +105,9 @@ class PageType(DjangoObjectType):
 
 class Query(graphene.ObjectType):
 
+    allOpenGreenMapProviders = graphene.List(OGMProviderType)
+    openGreenMapProvider = graphene.Field(OGMProviderType, id=graphene.UUID(required=True))
+
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
 
@@ -117,6 +126,12 @@ class Query(graphene.ObjectType):
 
     all_pages = graphene.List(PageType)
     page = graphene.Field(PageType, id=graphene.UUID(required=True))
+
+    def resolve_all_open_green_map_providers(self, info):
+        return models.OpenGreenMapProvider.objects.all()
+
+    def resolve_open_green_map_provider(self, info, id):
+        return models.OpenGreenMapProvider.objects.get(pk=id)
 
     def resolve_all_layers(self, info):
         return models.Layer.objects.all()

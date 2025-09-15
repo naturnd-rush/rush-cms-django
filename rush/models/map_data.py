@@ -22,7 +22,7 @@ class OpenGreenMapProvider(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     map_link = models.CharField(max_length=2000)
-    campagn_link = models.CharField(max_length=2000, null=True, blank=True)
+    campaign_link = models.CharField(max_length=2000, null=True, blank=True)
 
 
 class MapData(models.Model):
