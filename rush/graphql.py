@@ -15,6 +15,17 @@ class MapDataType(DjangoObjectType):
         fields = ["id", "name", "provider", "geojson", "ogm_provider"]
 
 
+class MapDataTypeWithoutGeoJson(DjangoObjectType):
+    """
+    Defensive type to prevent people from querying geojson from allMapDatas, which
+    would be too computationally expensive and probably isn't needed by any API client.
+    """
+
+    class Meta:
+        model = models.MapData
+        fields = ["id", "name", "provider", "ogm_provider"]
+
+
 class OGMProviderType(DjangoObjectType):
     class Meta:
         model = models.OpenGreenMapProvider
@@ -62,6 +73,11 @@ class LayerType(DjangoObjectType):
 
 
 class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
+    """
+    Defensive type to prevent people from querying serializedLeafletJSON from allLayers, which
+    would be too computationally expensive and probably isn't needed by any API client.
+    """
+
     class Meta:
         model = models.Layer
         fields = ["id", "name", "description", "styles"]
@@ -114,7 +130,7 @@ class Query(graphene.ObjectType):
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
 
-    all_map_datas = graphene.List(MapDataType)
+    all_map_datas = graphene.List(MapDataTypeWithoutGeoJson)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
     map_data_by_name = graphene.Field(MapDataType, name=graphene.String(required=True))
 
