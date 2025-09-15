@@ -12,16 +12,7 @@ is allowed to query and communicate to the frontend.
 class MapDataType(DjangoObjectType):
     class Meta:
         model = models.MapData
-        fields = [
-            "id",
-            "name",
-            "provider",
-            "geojson",
-            "ogm_map_id",
-            "feature_url_template",
-            "icon_url_template",
-            "image_url_template",
-        ]
+        fields = ["id", "name", "provider", "geojson", "ogm_provider"]
 
 
 class StylesOnLayersType(DjangoObjectType):

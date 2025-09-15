@@ -131,9 +131,7 @@ class MapDataAdminForm(forms.ModelForm):
         model = models.MapData
         fields = "__all__"
         widgets = {
-            "geojson": forms.Textarea(
-                attrs={"rows": 20, "cols": 150, "id": "geojson-input"}
-            ),
+            "geojson": forms.Textarea(attrs={"rows": 20, "cols": 150, "id": "geojson-input"}),
         }
 
 
@@ -160,14 +158,6 @@ def get_map_preview_html(
 class MapDataAdmin(SimpleHistoryAdmin):
     form = MapDataAdminForm
     exclude = ["id"]
-    exclude = [
-        # for now, exclude these because they are confusing to people who just wanna upload GeoJson
-        *exclude,
-        "ogm_map_id",
-        "feature_url_template",
-        "icon_url_template",
-        "image_url_template",
-    ]
     list_display = ["name", "provider"]
     search_fields = ["name"]
 
@@ -213,9 +203,7 @@ class StyleForm(forms.ModelForm):
             "name",
         ]
         widgets = {
-            "stroke_weight": utils.SliderAndTextboxNumberInput(
-                max=30, step=0.05, attrs={"class": "inline-field"}
-            ),
+            "stroke_weight": utils.SliderAndTextboxNumberInput(max=30, step=0.05, attrs={"class": "inline-field"}),
             "stroke_opacity": utils.SliderAndTextboxNumberInput(),
             "stroke_dash_offset": utils.SliderAndTextboxNumberInput(max=100, step=1),
             "fill_opacity": utils.SliderAndTextboxNumberInput(),
