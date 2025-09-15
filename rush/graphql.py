@@ -61,7 +61,7 @@ class StyleType(DjangoObjectType):
 class LayerType(DjangoObjectType):
     class Meta:
         model = models.Layer
-        fields = ["id", "name", "description", "serialized_leaflet_json"]
+        fields = ["id", "name", "description", "styles", "serialized_leaflet_json"]
 
 
 class LayerGroupType(DjangoObjectType):
@@ -113,9 +113,7 @@ class Query(graphene.ObjectType):
     map_data_by_name = graphene.Field(MapDataType, name=graphene.String(required=True))
 
     all_styles_on_layers = graphene.List(StylesOnLayersType)
-    styles_on_layer = graphene.Field(
-        StylesOnLayersType, id=graphene.UUID(required=True)
-    )
+    styles_on_layer = graphene.Field(StylesOnLayersType, id=graphene.UUID(required=True))
 
     all_styles = graphene.List(StyleType)
     style = graphene.Field(StyleType, id=graphene.UUID(required=True))
