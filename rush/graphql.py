@@ -64,6 +64,12 @@ class LayerType(DjangoObjectType):
         fields = ["id", "name", "description", "styles", "serialized_leaflet_json"]
 
 
+class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
+    class Meta:
+        model = models.Layer
+        fields = ["id", "name", "description", "styles"]
+
+
 class LayerGroupType(DjangoObjectType):
     class Meta:
         model = models.LayerGroup
@@ -102,7 +108,7 @@ class PageType(DjangoObjectType):
 
 class Query(graphene.ObjectType):
 
-    all_layers = graphene.List(LayerType)
+    all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
 
     all_questions = graphene.List(QuestionType)
