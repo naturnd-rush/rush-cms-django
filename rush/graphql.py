@@ -12,18 +12,13 @@ is allowed to query and communicate to the frontend.
 class MapDataType(DjangoObjectType):
     class Meta:
         model = models.MapData
-        fields = ["id", "name", "provider", "geojson", "ogm_provider"]
+        fields = ["id", "name", "provider", "geojson_provider", "ogm_provider"]
 
 
-class MapDataTypeWithoutGeoJson(DjangoObjectType):
-    """
-    Defensive type to prevent people from querying geojson from allMapDatas, which
-    would be too computationally expensive and probably isn't needed by any API client.
-    """
-
+class GeoJsonProviderType(DjangoObjectType):
     class Meta:
-        model = models.MapData
-        fields = ["id", "name", "provider", "ogm_provider"]
+        model = models.GeoJsonProvider
+        fields = ["id", "geojson"]
 
 
 class OGMProviderType(DjangoObjectType):
@@ -121,8 +116,8 @@ class PageType(DjangoObjectType):
 
 class Query(graphene.ObjectType):
 
-    allOpenGreenMapProviders = graphene.List(OGMProviderType)
-    openGreenMapProvider = graphene.Field(OGMProviderType, id=graphene.UUID(required=True))
+    all_open_green_map_providers = graphene.List(OGMProviderType)
+    open_green_map_provider = graphene.Field(OGMProviderType, id=graphene.UUID(required=True))
 
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
@@ -130,7 +125,6 @@ class Query(graphene.ObjectType):
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
 
-    all_map_datas = graphene.List(MapDataTypeWithoutGeoJson)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
     map_data_by_name = graphene.Field(MapDataType, name=graphene.String(required=True))
 
@@ -160,9 +154,6 @@ class Query(graphene.ObjectType):
 
     def resolve_question(self, info, id):
         return models.Question.objects.get(pk=id)
-
-    def resolve_all_map_datas(self, info):
-        return models.MapData.objects.all()
 
     def resolve_map_data(self, info, id):
         return models.MapData.objects.get(pk=id)
