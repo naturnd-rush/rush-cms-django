@@ -100,12 +100,8 @@ export async function getStyleById(styleId: string): Promise<Style | null> {
     return style;
 }
 
-export interface GeoJsonProvider{
-    geojson: string;
-}
-
 export interface MapData{
-    geojson_provider: GeoJsonProvider | null,
+    geojson: string,
 }
 
 export async function getMapDataById(mapDataId: string): Promise<MapData | null>{

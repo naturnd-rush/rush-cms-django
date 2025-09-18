@@ -94,10 +94,7 @@ export async function getMapDataUpdate(mapDataSelectSpan: HTMLSpanElement): Prom
     if (mapData === null){
         return clearMapData;
     }
-    else if (mapData.geojson_provider === null){
-        return clearMapData;
-    }
-    const geojson = JSON.parse(mapData.geojson_provider.geojson);
+    const geojson = JSON.parse(mapData.geojson);
     if (geojson.features === null || geojson.features === undefined){
         return clearMapData;
     }

@@ -14,7 +14,7 @@
         }).addTo(map);
 
         // Load initial GeoJSON
-        const geojsonString = '{{ geojson_data }}';
+        const geojsonString = "{{ geojson_data|escapejs }}";
         let geojsonData = JSON.parse(geojsonString);
         let geoJsonLayer;
         if (geojsonData && geojsonData.type === "FeatureCollection") {

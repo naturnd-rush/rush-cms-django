@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import graphene
 from graphene_django.types import DjangoObjectType
 
@@ -12,19 +14,27 @@ is allowed to query and communicate to the frontend.
 class MapDataType(DjangoObjectType):
     class Meta:
         model = models.MapData
-        fields = ["id", "name", "provider", "geojson_provider", "ogm_provider"]
+        fields = [
+            "id",
+            "name",
+            "provider_state",
+            "geojson",
+            "map_link",
+            "campaign_link",
+        ]
+
+    geojson = graphene.String()
+
+    def resolve_geojson(self, info):
+        if self.has_geojson_data():  # type: ignore
+            return self.get_raw_geojson_data()  # type: ignore
+        return None
 
 
-class GeoJsonProviderType(DjangoObjectType):
+class MapDataWithoutGeoJsonType(DjangoObjectType):
     class Meta:
-        model = models.GeoJsonProvider
-        fields = ["id", "geojson"]
-
-
-class OGMProviderType(DjangoObjectType):
-    class Meta:
-        model = models.OpenGreenMapProvider
-        fields = ["id", "map_link", "campaign_link"]
+        model = models.MapData
+        fields = ["id", "name", "provider_state", "map_link", "campaign_link"]
 
 
 class StylesOnLayersType(DjangoObjectType):
@@ -116,15 +126,13 @@ class PageType(DjangoObjectType):
 
 class Query(graphene.ObjectType):
 
-    all_open_green_map_providers = graphene.List(OGMProviderType)
-    open_green_map_provider = graphene.Field(OGMProviderType, id=graphene.UUID(required=True))
-
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
 
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
 
+    all_map_datas = graphene.List(MapDataWithoutGeoJsonType)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
     map_data_by_name = graphene.Field(MapDataType, name=graphene.String(required=True))
 
@@ -137,12 +145,6 @@ class Query(graphene.ObjectType):
     all_pages = graphene.List(PageType)
     page = graphene.Field(PageType, id=graphene.UUID(required=True))
 
-    def resolve_all_open_green_map_providers(self, info):
-        return models.OpenGreenMapProvider.objects.all()
-
-    def resolve_open_green_map_provider(self, info, id):
-        return models.OpenGreenMapProvider.objects.get(pk=id)
-
     def resolve_all_layers(self, info):
         return models.Layer.objects.all()
 
@@ -154,6 +156,9 @@ class Query(graphene.ObjectType):
 
     def resolve_question(self, info, id):
         return models.Question.objects.get(pk=id)
+
+    def resolve_all_map_datas(self, info):
+        return models.MapData.objects.all()
 
     def resolve_map_data(self, info, id):
         return models.MapData.objects.get(pk=id)

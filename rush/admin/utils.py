@@ -1,12 +1,13 @@
 from decimal import Decimal, InvalidOperation
 from enum import Enum
-from typing import Any
+from typing import Any, Callable, List, Tuple, TypeVar, Union
 
 from django import forms
 from django.contrib import admin
 from django.db import models
 from django.utils.html import format_html
 from django.utils.safestring import SafeString, SafeText, mark_safe
+from typing_extensions import Generic, TypeVarTuple, Unpack
 
 
 def get_decimal(obj: Any) -> Decimal:

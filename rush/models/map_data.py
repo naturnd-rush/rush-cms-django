@@ -1,74 +1,87 @@
 import uuid
+from typing import Any, Dict, List
 
 import django.db.models as models
 from simple_history.models import HistoricalRecords
 
 
-class Provider(models.TextChoices):
-    GEOJSON = "geojson"
-    OPEN_GREEN_MAP = "open_green_map"
-    # ESRI_FEATURE_SERVER = "esri_feature_server"  # TODO: Not sure how this gets implemented with the current MapData model
-    # GENERIC_REST = "generic_rest"  # TODO: Not sure how this gets implemented with the current MapData model
-
-    def find_or_create(self, map_data: "MapData") -> "Provider":
-        """
-        Find the `Provider` on a given `MapData` instance. Or, if none is found, create
-        a new one on the `MapData` instance and return it.
-        """
-        ...
-
-    def switch(self, map_data: "MapData", new_provider: "Provider") -> None:
-        """
-        Switch the given `MapData` instance to a new `Provider` type, e.g., GEOJSON --> OPEN_GREEN_MAP.
-        This function does nothing if `new_provider` is the same as the current `MapData.provider`.
-        WARNING: This function will delete any data relevant to the old provider.
-        """
-        ...
-
-    def _delete(self, map_data: "MapData") -> bool:
-        """
-        Delete the `Provider`'s data off of the given `MapData` instance, if it exists,
-        and return `True` if any data was deleted, or `False` otherwise.
-        """
-        ...
-
-
-class OpenGreenMapProvider(models.Model):
-    """
-    The map data is provided by Open Green Maps, see their API schema: https://docs.giscollective.com/en/Rest-api/.
-
-    NOTE: I'm storing URLs/links with a maximum length of 2000 characers following this stack-overflow post:
-    https://stackoverflow.com/questions/417142/what-is-the-maximum-length-of-a-url-in-different-browsers:
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
-    map_link = models.CharField(max_length=2000)
-    campaign_link = models.CharField(max_length=2000, null=True, blank=True)
-
-
-class GeoJsonProvider(models.Model):
-    """
-    The map data is provided by the user copy-pasting raw GEOJson data into the RUSH admin site.
-    """
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
-    geojson = models.JSONField(default=dict, null=False)
-
-
 class MapData(models.Model):
+
+    class ProviderState(models.TextChoices):
+        UNSET = "unset"
+        GEOJSON = "geojson"
+        OPEN_GREEN_MAP = "open_green_map"
+
+    class NoGeoJsonData(Exception):
+        """
+        There is no GeoJSON data available for this MapData object right now.
+        """
+
+        ...
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     name = models.CharField(max_length=255, unique=True)
+    provider_state = models.CharField(max_length=255, choices=ProviderState.choices, default=ProviderState.UNSET)
 
-    provider = models.CharField(max_length=255, choices=Provider.choices)
-    # geojson = models.JSONField(null=True, blank=True, default="")
-    geojson_provider = models.ForeignKey(to=GeoJsonProvider, null=True, blank=True, on_delete=models.CASCADE)
-    ogm_provider = models.ForeignKey(to=OpenGreenMapProvider, null=True, blank=True, on_delete=models.CASCADE)
+    # Geojson provider fields
+    _geojson = models.JSONField(default=dict, null=True, blank=True)
+
+    # Open green map provider fields
+    map_link = models.CharField(max_length=2000, null=True, blank=True)
+    campaign_link = models.CharField(max_length=2000, null=True, blank=True)
 
     history = HistoricalRecords()
 
+    def has_geojson_data(self) -> bool:
+        try:
+            self.get_raw_geojson_data()
+            return True
+        except self.NoGeoJsonData:
+            return False
+
+    def get_raw_geojson_data(self) -> str:
+        """
+        Get the raw GeoJSON data from this MapData object, or raise `NoGeoJsonData` if none exists.
+        """
+        if self.provider_state == self.ProviderState.GEOJSON and self._geojson:
+            return self._geojson
+        # NOTE: Other ProviderState's may be supported in the future.
+        raise self.NoGeoJsonData
+
+    @classmethod
+    def get_formfield_map(cls) -> Dict[ProviderState, List[Dict[str, Any]]]:
+        """
+        The formfields to show in the edit/change form depending on the `ProviderState`.
+        """
+        return {
+            cls.ProviderState.UNSET: [],
+            cls.ProviderState.GEOJSON: [
+                {
+                    "name": "_geojson",
+                    "required": True,
+                }
+            ],
+            cls.ProviderState.OPEN_GREEN_MAP: [
+                {
+                    "name": "map_link",
+                    "required": True,
+                },
+                {
+                    "name": "campaign_link",
+                    "required": False,
+                },
+            ],
+        }
+
     def __str__(self):
         return self.name
+
+    def __repr__(self):
+        return "<MapData '{}', provided by: {}, {}>".format(
+            self.name,
+            self.provider_state,
+            self.id,
+        )
 
     class Meta:
         # better plural name in the admin table list
