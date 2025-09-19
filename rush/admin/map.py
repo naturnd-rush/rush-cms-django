@@ -279,7 +279,7 @@ class MapDataAdmin(SimpleHistoryAdmin):
         """
         geojson = self._get_geojson_str(context)
         context["map_data_admin_form_config"] = mark_safe(json.dumps(asdict(mdaf_config)))
-        context["initial_geojson_data"] = mark_safe(json.dumps(geojson))
+        context["initial_geojson_data"] = mark_safe(geojson)
         return super().render_change_form(request, context, *args, **kwargs)
 
 

@@ -93,6 +93,8 @@ export async function getMapDataUpdate(mapDataSelectSpan: HTMLSpanElement): Prom
     const mapData = await getMapDataByName(mapDataName);
     if (mapData === null){
         return clearMapData;
+    } else if (mapData.geojson === null){
+        return clearMapData;
     }
     const geojson = JSON.parse(mapData.geojson);
     if (geojson.features === null || geojson.features === undefined){
@@ -708,7 +710,6 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         const hash = cyrb53(JSON.stringify(popupTemplates));
         if (hash !== previousHash){
             previousHash = hash;
-            console.log("Changed: ", hash);
             doStyleUpdate();
         }
         setTimeout(pollPopupChanges, 1000);

@@ -101,7 +101,7 @@ export async function getStyleById(styleId: string): Promise<Style | null> {
 }
 
 export interface MapData{
-    geojson: string,
+    geojson: string | null,
 }
 
 export async function getMapDataById(mapDataId: string): Promise<MapData | null>{

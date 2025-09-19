@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import Any, Dict, List
 
@@ -44,7 +45,7 @@ class MapData(models.Model):
         Get the raw GeoJSON data from this MapData object, or raise `NoGeoJsonData` if none exists.
         """
         if self.provider_state == self.ProviderState.GEOJSON and self._geojson:
-            return self._geojson
+            return json.dumps(self._geojson)
         # NOTE: Other ProviderState's may be supported in the future.
         raise self.NoGeoJsonData
 
