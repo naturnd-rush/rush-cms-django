@@ -1,4 +1,4 @@
-import {type Style, getStyleById, getMapDataByName} from "./graphql"
+import {type Style, getStyleById, getMapDataById} from "./graphql"
 import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygon } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
@@ -86,11 +86,18 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
  */
 export async function getMapDataUpdate(mapDataSelectSpan: HTMLSpanElement): Promise<MapDataUpdate>{
     const clearMapData = {type: "MapData", newGeoJsonData: null} as MapDataUpdate;
-    const mapDataName = mapDataSelectSpan.title;
-    if (mapDataName === null || mapDataName === ""){
+    let mapDataId = null;
+    for (let child of mapDataSelectSpan.childNodes){
+        if (child instanceof HTMLOptionElement && child.selected){
+            console.log(child);
+            mapDataId = child.value;
+        }
+    }
+    console.log("getting map data by id: ", mapDataId);
+    if (mapDataId === null || mapDataId === ""){
         return clearMapData;
     }
-    const mapData = await getMapDataByName(mapDataName);
+    const mapData = await getMapDataById(mapDataId);
     if (mapData === null){
         return clearMapData;
     } else if (mapData.geojson === null){
@@ -511,7 +518,7 @@ function getPopupTemplate(appliedStyles: Array<AppliedStyle>): string | null {
     return popupTemplate;
 }
 
-function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
+function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void {
 
     // Always remove the previous layer, if there is one, from the map. 
     // Otherwse, it overlaps with the new layer being drawn.
@@ -523,6 +530,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     // Update currentLayer if we are receiving new map data.
     if ("MapData" === update.type){
         const newGeoJson = (update as MapDataUpdate).newGeoJsonData;
+        console.log("Re-drawing map layer from new map data update: ", update);
         if (newGeoJson === null){
             state.currentLayer = null;
         } else {
@@ -729,8 +737,8 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     });
 
     // Hook into the map-data selection element
-    const mapDataSelectSpanId = "select2-id_map_data-container";
-    const mapDataSelectSpan = await waitForElementById(mapDataSelectSpanId);
+    //const mapDataSelectSpanId = "select2-id_map_data-container";
+    const mapDataSelectSpan = await waitForElementById("id_map_data");
 
     // Listen to redraw the map when the map-data is changed.
     const mapDataChangeObserver = new MutationObserver((mutations) => {

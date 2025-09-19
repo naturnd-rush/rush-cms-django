@@ -75,8 +75,17 @@ class StyleOnLayerInline(admin.TabularInline):
     ]
 
 
+class MapDataChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj) -> str:
+        if obj and isinstance(obj, models.MapData):
+            # Customize the MapData dropdown label without touching __str__
+            return f"{obj.name} ({obj.provider_state.upper()})"
+        return "Unknown Map Data"
+
+
 class LayerForm(forms.ModelForm):
     serialized_leaflet_json = forms.CharField(widget=forms.HiddenInput())
+    map_data = MapDataChoiceField(queryset=models.MapData.objects.all())
 
     class Meta:
         model = models.Layer

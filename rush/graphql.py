@@ -17,6 +17,7 @@ class MapDataType(DjangoObjectType):
         fields = [
             "id",
             "name",
+            "dropdown_name",
             "provider_state",
             "geojson",
             "map_link",
@@ -24,17 +25,28 @@ class MapDataType(DjangoObjectType):
         ]
 
     geojson = graphene.String()
+    dropdown_name = graphene.String()
 
     def resolve_geojson(self, info):
         if self.has_geojson_data():  # type: ignore
             return self.get_raw_geojson_data()  # type: ignore
         return None
 
+    def resolve_dropdown_name(self, info):
+        return str(self)
 
-class MapDataWithoutGeoJsonType(DjangoObjectType):
-    class Meta:
+
+class MapDataWithoutGeoJsonType(MapDataType):
+    class Meta:  # type: ignore
         model = models.MapData
-        fields = ["id", "name", "provider_state", "map_link", "campaign_link"]
+        fields = [
+            "id",
+            "name",
+            "dropdown_name",
+            "provider_state",
+            "map_link",
+            "campaign_link",
+        ]
 
 
 class StylesOnLayersType(DjangoObjectType):
@@ -134,7 +146,7 @@ class Query(graphene.ObjectType):
 
     all_map_datas = graphene.List(MapDataWithoutGeoJsonType)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
-    map_data_by_name = graphene.Field(MapDataType, name=graphene.String(required=True))
+    map_data_by_dropdown_name = graphene.Field(MapDataType, dropdownName=graphene.String(required=True))
 
     all_styles_on_layers = graphene.List(StylesOnLayersType)
     styles_on_layer = graphene.Field(StylesOnLayersType, id=graphene.UUID(required=True))
@@ -163,8 +175,8 @@ class Query(graphene.ObjectType):
     def resolve_map_data(self, info, id):
         return models.MapData.objects.get(pk=id)
 
-    def resolve_map_data_by_name(self, info, name: str):
-        return models.MapData.objects.get(name=name)
+    def resolve_map_data_by_dropdown_name(self, info, dropdownName: str):
+        return models.MapData.objects.get(name=dropdownName.split("(")[0].strip())
 
     def resolve_all_styles_on_layers(self, info):
         return models.StylesOnLayer.objects.all()

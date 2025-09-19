@@ -51,7 +51,7 @@ class MapData(models.Model):
 
     def __str__(self):
         # Don't change me. Breaks graphql API getMapDataByName for clients.
-        return self.name
+        return f"{self.name} ({self.provider_state.upper()})"
 
     def __repr__(self):
         return "<MapData '{}', provided by: {}, {}>".format(

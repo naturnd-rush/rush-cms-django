@@ -126,8 +126,8 @@ export async function getMapDataById(mapDataId: string): Promise<MapData | null>
 
 export async function getMapDataByName(name: string): Promise<MapData | null>{
     const query = `
-        query ($name: String!) {
-            mapDataByName(name: $name) {
+        query ($dropdownName: String!) {
+            mapDataByDropdownName(dropdownName: $dropdownName) {
                 geojson
             }
         }
@@ -136,7 +136,7 @@ export async function getMapDataByName(name: string): Promise<MapData | null>{
         JSON.stringify({
             query,
             variables: {
-                name: name
+                dropdownName: name
             }
         })
     );
