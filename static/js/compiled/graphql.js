@@ -22,6 +22,7 @@ class s extends Error{constructor(e){super(e)}}async function a(r){const e=await
         query ($id: UUID!) {
             mapData(id: $id) {
                 geojson
+                providerState
             }
         }
     `,variables:{id:r}}))).data.mapData}export{i as a,n as g};

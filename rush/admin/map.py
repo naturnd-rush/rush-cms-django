@@ -29,7 +29,7 @@ class SummernoteWidget(SummernoteWidgetBase):
                 "height": "300px",
                 "width": "500px",
                 "toolbar": [
-                    ["style", ["bold", "italic", "underline"]],
+                    ["style", ["bold", "italic", "underline", "h1"]],
                     ["para", ["ul", "ol"]],
                     ["insert", ["link", "picture"]],
                 ],
