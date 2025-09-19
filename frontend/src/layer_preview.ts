@@ -409,21 +409,22 @@ function getPolygonCentroid(polygonCoords: Position[]): L.Point{
     return getCentroid(points);
 }
 
-async function showSpinner(){
-    const mapDataSelectSpan = await waitForElementById("id_map_data");
-    const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
-    if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON"){
-        console.log("SHOWING SPINNER");
-        const mapPreviewEl = document.getElementById("map-preview");
-        const spinnerEl = document.getElementById("map-spinner");
-        if (mapPreviewEl !== null && spinnerEl !== null){
-            mapPreviewEl.classList.add('blur');
-            spinnerEl.classList.remove('hidden');
-        } else {
-            console.error("Couldn't find map-preview and map-spinner in the DOM!");
-        }
-    }
-}
+// async function showSpinner(){
+//     // THIS IS BAD: SPINNER SHOWING QUERIES AN ASYNC REQUEST!!!
+//     const mapDataSelectSpan = await waitForElementById("id_map_data");
+//     const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
+//     if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON"){
+//         console.log("SHOWING SPINNER");
+//         const mapPreviewEl = document.getElementById("map-preview");
+//         const spinnerEl = document.getElementById("map-spinner");
+//         if (mapPreviewEl !== null && spinnerEl !== null){
+//             mapPreviewEl.classList.add('blur');
+//             spinnerEl.classList.remove('hidden');
+//         } else {
+//             console.error("Couldn't find map-preview and map-spinner in the DOM!");
+//         }
+//     }
+// }
 
 function hideSpinner(){
     const mapPreviewEl = document.getElementById("map-preview");
@@ -439,7 +440,7 @@ function hideSpinner(){
 function showSpinnerAfter(numSeconds: number, state: MapPreviewState): void {
     setTimeout(() => {
         if (state.isUpdating){
-            showSpinner();
+            //showSpinner();
         }
     }, numSeconds * 1000)
 }
@@ -681,14 +682,14 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     const mapDataSelectSpan = await waitForElementById("id_map_data");
     (await waitForElementById('id_map_data_helptext')).appendChild(await waitForElementById("map-spinner"));
     hideSpinner();
-    showSpinner();
+    //showSpinner();
     
     // Shorthand for redrawing the map by fetching new styles / popup info
     const doStyleUpdate = () => {
         mapDataFromSpan(mapDataSelectSpan).then((mapData) => {
             if (mapData?.providerState === "GEOJSON"){
                 mapPreviewState.isUpdating = true;
-                showSpinnerAfter(1, mapPreviewState);
+                //showSpinnerAfter(1, mapPreviewState);
                 getStyleUpdate().then(styleUpdate => {
                     drawMapPreview(map, mapPreviewState, styleUpdate);
                 });
@@ -743,7 +744,7 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'visible') {
             mapPreviewState.isUpdating = true;
-            showSpinnerAfter(1, mapPreviewState);
+            //showSpinnerAfter(1, mapPreviewState);
             getStyleUpdate().then(styleUpdate => {
                 drawMapPreview(map, mapPreviewState, styleUpdate);
             });
@@ -768,7 +769,7 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         if (mapData?.providerState === "GEOJSON"){
             showMapPreviewAndStyles();
             mapPreviewState.isUpdating = true;
-            showSpinnerAfter(1, mapPreviewState);
+            //showSpinnerAfter(1, mapPreviewState);
             getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
         } else {
             hideMapPreviewAndStyles();
