@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import graphene
 from graphene_django.types import DjangoObjectType
 
@@ -15,12 +17,35 @@ class MapDataType(DjangoObjectType):
         fields = [
             "id",
             "name",
-            "provider",
+            "dropdown_name",
+            "provider_state",
             "geojson",
-            "ogm_map_id",
-            "feature_url_template",
-            "icon_url_template",
-            "image_url_template",
+            "map_link",
+            "campaign_link",
+        ]
+
+    geojson = graphene.String()
+    dropdown_name = graphene.String()
+
+    def resolve_geojson(self, info):
+        if self.has_geojson_data():  # type: ignore
+            return self.get_raw_geojson_data()  # type: ignore
+        return None
+
+    def resolve_dropdown_name(self, info):
+        return str(self)
+
+
+class MapDataWithoutGeoJsonType(MapDataType):
+    class Meta:  # type: ignore
+        model = models.MapData
+        fields = [
+            "id",
+            "name",
+            "dropdown_name",
+            "provider_state",
+            "map_link",
+            "campaign_link",
         ]
 
 
@@ -61,7 +86,18 @@ class StyleType(DjangoObjectType):
 class LayerType(DjangoObjectType):
     class Meta:
         model = models.Layer
-        fields = ["id", "name", "description", "serialized_leaflet_json"]
+        fields = ["id", "name", "description", "styles", "serialized_leaflet_json"]
+
+
+class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
+    """
+    Defensive type to prevent people from querying serializedLeafletJSON from allLayers, which
+    would be too computationally expensive and probably isn't needed by any API client.
+    """
+
+    class Meta:
+        model = models.Layer
+        fields = ["id", "name", "description", "styles"]
 
 
 class LayerGroupType(DjangoObjectType):
@@ -85,7 +121,7 @@ class QuestionTabType(DjangoObjectType):
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
-        fields = ["id", "title", "tabs"]
+        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs"]
 
     # Link one half of the many-to-many through table in the graphql schema
     layers_on_question = graphene.List(LayerOnQuestionType)
@@ -97,25 +133,23 @@ class QuestionType(DjangoObjectType):
 class PageType(DjangoObjectType):
     class Meta:
         model = models.Page
-        fields = ["id", "title", "content"]
+        fields = ["id", "title", "content", "background_image"]
 
 
 class Query(graphene.ObjectType):
 
-    all_layers = graphene.List(LayerType)
+    all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
 
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
 
-    all_map_datas = graphene.List(MapDataType)
+    all_map_datas = graphene.List(MapDataWithoutGeoJsonType)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
-    map_data_by_name = graphene.Field(MapDataType, name=graphene.String(required=True))
+    map_data_by_dropdown_name = graphene.Field(MapDataType, dropdownName=graphene.String(required=True))
 
     all_styles_on_layers = graphene.List(StylesOnLayersType)
-    styles_on_layer = graphene.Field(
-        StylesOnLayersType, id=graphene.UUID(required=True)
-    )
+    styles_on_layer = graphene.Field(StylesOnLayersType, id=graphene.UUID(required=True))
 
     all_styles = graphene.List(StyleType)
     style = graphene.Field(StyleType, id=graphene.UUID(required=True))
@@ -141,8 +175,8 @@ class Query(graphene.ObjectType):
     def resolve_map_data(self, info, id):
         return models.MapData.objects.get(pk=id)
 
-    def resolve_map_data_by_name(self, info, name: str):
-        return models.MapData.objects.get(name=name)
+    def resolve_map_data_by_dropdown_name(self, info, dropdownName: str):
+        return models.MapData.objects.get(name=dropdownName.split("(")[0].strip())
 
     def resolve_all_styles_on_layers(self, info):
         return models.StylesOnLayer.objects.all()

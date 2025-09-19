@@ -1,4 +1,4 @@
-import {type Style, getStyleById, getMapDataByName} from "./graphql"
+import {type Style, type MapData, getStyleById, getMapDataById} from "./graphql"
 import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygon } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
@@ -81,17 +81,29 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
     };
 }
 
+async function mapDataFromSpan(mapDataSelectSpan: HTMLSpanElement): Promise<MapData | null> {
+    let mapDataId = null;
+    for (let child of mapDataSelectSpan.childNodes){
+        if (child instanceof HTMLOptionElement && child.selected){
+            console.log(child);
+            mapDataId = child.value;
+        }
+    }
+    if (mapDataId === null || mapDataId === ""){
+        return null;
+    }
+    return await getMapDataById(mapDataId);
+}
+
 /**
  * Fetch GeoJSON using the UUID present in the map-data input field.
  */
 export async function getMapDataUpdate(mapDataSelectSpan: HTMLSpanElement): Promise<MapDataUpdate>{
     const clearMapData = {type: "MapData", newGeoJsonData: null} as MapDataUpdate;
-    const mapDataName = mapDataSelectSpan.title;
-    if (mapDataName === null || mapDataName === ""){
-        return clearMapData;
-    }
-    const mapData = await getMapDataByName(mapDataName);
+    const mapData = await mapDataFromSpan(mapDataSelectSpan);
     if (mapData === null){
+        return clearMapData;
+    } else if (mapData.geojson === null){
         return clearMapData;
     }
     const geojson = JSON.parse(mapData.geojson);
@@ -397,14 +409,19 @@ function getPolygonCentroid(polygonCoords: Position[]): L.Point{
     return getCentroid(points);
 }
 
-function showSpinner(){
-    const mapPreviewEl = document.getElementById("map-preview");
-    const spinnerEl = document.getElementById("map-spinner");
-    if (mapPreviewEl !== null && spinnerEl !== null){
-        mapPreviewEl.classList.add('blur');
-        spinnerEl.classList.remove('hidden');
-    } else {
-        console.error("Couldn't find map-preview and map-spinner in the DOM!");
+async function showSpinner(){
+    const mapDataSelectSpan = await waitForElementById("id_map_data");
+    const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
+    if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON"){
+        console.log("SHOWING SPINNER");
+        const mapPreviewEl = document.getElementById("map-preview");
+        const spinnerEl = document.getElementById("map-spinner");
+        if (mapPreviewEl !== null && spinnerEl !== null){
+            mapPreviewEl.classList.add('blur');
+            spinnerEl.classList.remove('hidden');
+        } else {
+            console.error("Couldn't find map-preview and map-spinner in the DOM!");
+        }
     }
 }
 
@@ -509,7 +526,7 @@ function getPopupTemplate(appliedStyles: Array<AppliedStyle>): string | null {
     return popupTemplate;
 }
 
-function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void{
+function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void {
 
     // Always remove the previous layer, if there is one, from the map. 
     // Otherwse, it overlaps with the new layer being drawn.
@@ -521,6 +538,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     // Update currentLayer if we are receiving new map data.
     if ("MapData" === update.type){
         const newGeoJson = (update as MapDataUpdate).newGeoJsonData;
+        console.log("Re-drawing map layer from new map data update: ", update);
         if (newGeoJson === null){
             state.currentLayer = null;
         } else {
@@ -660,15 +678,21 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     mapPreviewState.centroidMarkers.addTo(map);
 
     // Move spinner from top of page to inside the map preview box and show the spinner initially as the map preview is drawn
+    const mapDataSelectSpan = await waitForElementById("id_map_data");
     (await waitForElementById('id_map_data_helptext')).appendChild(await waitForElementById("map-spinner"));
+    hideSpinner();
     showSpinner();
     
     // Shorthand for redrawing the map by fetching new styles / popup info
     const doStyleUpdate = () => {
-        mapPreviewState.isUpdating = true;
-        showSpinnerAfter(1, mapPreviewState);
-        getStyleUpdate().then(styleUpdate => {
-            drawMapPreview(map, mapPreviewState, styleUpdate);
+        mapDataFromSpan(mapDataSelectSpan).then((mapData) => {
+            if (mapData?.providerState === "GEOJSON"){
+                mapPreviewState.isUpdating = true;
+                showSpinnerAfter(1, mapPreviewState);
+                getStyleUpdate().then(styleUpdate => {
+                    drawMapPreview(map, mapPreviewState, styleUpdate);
+                });
+            }
         });
     };
 
@@ -708,22 +732,11 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         const hash = cyrb53(JSON.stringify(popupTemplates));
         if (hash !== previousHash){
             previousHash = hash;
-            console.log("Changed: ", hash);
             doStyleUpdate();
         }
         setTimeout(pollPopupChanges, 1000);
     };
     pollPopupChanges();
-
-
-    // // Listen to redraw the map when a style is changed.
-    // inlineElements.styles.addEventListener(() => {
-    //     mapPreviewState.isUpdating = true;
-    //     showSpinnerAfter(1, mapPreviewState);
-    //     getStyleUpdate().then(styleUpdate => {
-    //         drawMapPreview(map, mapPreviewState, styleUpdate);
-    //     });
-    // });
     
     // Listen to redraw the map when the tab is refocused (the user leaves and then comes back).
     // This can happen after a user edits one of the inline styles and then clicks on the layer edit tab.
@@ -737,21 +750,32 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         }
     });
 
-    // Hook into the map-data selection element
-    const mapDataSelectSpanId = "select2-id_map_data-container";
-    const mapDataSelectSpan = await waitForElementById(mapDataSelectSpanId);
-
     // Listen to redraw the map when the map-data is changed.
-    const mapDataChangeObserver = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.type === "childList") {
-                mapPreviewState.isUpdating = true;
-                showSpinnerAfter(1, mapPreviewState);
-                getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
-            }
-        });
-    });
-    mapDataChangeObserver.observe(mapDataSelectSpan!, {childList: true});
+    const mapPreviewEl = await waitForElementById("map-preview");
+    const stylesOnLayersGroupEl = await waitForElementById("stylesonlayer_set-group");
+    async function onMapDataDropdownChange(){
+        const mapData = await mapDataFromSpan(mapDataSelectSpan);
+        const hideMapPreviewAndStyles = () => {
+            console.log("Hiding ", mapPreviewEl, stylesOnLayersGroupEl);
+            mapPreviewEl.style.display = 'none';
+            stylesOnLayersGroupEl.style.display = 'none';
+        };
+        const showMapPreviewAndStyles = () => {
+            mapPreviewEl.style.display = 'block';
+            stylesOnLayersGroupEl.style.display = 'block';
+        };
+        console.log(mapData?.providerState);
+        if (mapData?.providerState === "GEOJSON"){
+            showMapPreviewAndStyles();
+            mapPreviewState.isUpdating = true;
+            showSpinnerAfter(1, mapPreviewState);
+            getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
+        } else {
+            hideMapPreviewAndStyles();
+        }
+    };
+    onMapDataDropdownChange(); // for initial load
+    mapDataSelectSpan.addEventListener("change", onMapDataDropdownChange);
 
     // Draw the initial map using the current map-data and style info.
     Promise.all([

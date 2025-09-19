@@ -1,34 +1,64 @@
+import json
 import uuid
+from typing import Any, Dict, List
 
 import django.db.models as models
 from simple_history.models import HistoricalRecords
 
 
-class Provider(models.TextChoices):
-    GEOJSON = "geojson"
-    OPEN_GREEN_MAP = "open_green_map"  # TODO: Implement me!
-    ESRI_FEATURE_SERVER = "esri_feature_server"  # TODO: Not sure how this gets implemented with the current MapData model
-    GENERIC_REST = "generic_rest"  # TODO: Not sure how this gets implemented with the current MapData model
-
-
 class MapData(models.Model):
 
-    # TODO: Add on_create validation
+    class ProviderState(models.TextChoices):
+        UNSET = "unset"
+        GEOJSON = "geojson"
+        OPEN_GREEN_MAP = "open_green_map"
+
+    class NoGeoJsonData(Exception):
+        """
+        There is no GeoJSON data available for this MapData object right now.
+        """
+
+        ...
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     name = models.CharField(max_length=255, unique=True)
-    provider = models.CharField(max_length=255, choices=Provider.choices)
-    geojson = models.JSONField(null=True, blank=True)
+    provider_state = models.CharField(max_length=255, choices=ProviderState.choices, default=ProviderState.UNSET)
 
-    # Open Green Map metadata
-    ogm_map_id = models.CharField(max_length=1024, null=True, blank=True)
-    feature_url_template = models.CharField(max_length=1024, null=True, blank=True)
-    icon_url_template = models.CharField(max_length=1024, null=True, blank=True)
-    image_url_template = models.CharField(max_length=1024, null=True, blank=True)
+    # Geojson provider fields
+    _geojson = models.JSONField(default=dict, null=True, blank=True)
+
+    # Open green map provider fields
+    map_link = models.CharField(max_length=2000, null=True, blank=True)
+    campaign_link = models.CharField(max_length=2000, null=True, blank=True)
 
     history = HistoricalRecords()
 
+    def has_geojson_data(self) -> bool:
+        try:
+            self.get_raw_geojson_data()
+            return True
+        except self.NoGeoJsonData:
+            return False
+
+    def get_raw_geojson_data(self) -> str:
+        """
+        Get the raw GeoJSON data from this MapData object, or raise `NoGeoJsonData` if none exists.
+        """
+        if self.provider_state == self.ProviderState.GEOJSON and self._geojson:
+            return json.dumps(self._geojson)
+        # NOTE: Other ProviderState's may be supported in the future.
+        raise self.NoGeoJsonData
+
     def __str__(self):
-        return self.name
+        # Don't change me. Breaks graphql API getMapDataByName for clients.
+        return f"{self.name} ({self.provider_state.upper()})"
+
+    def __repr__(self):
+        return "<MapData '{}', provided by: {}, {}>".format(
+            self.name,
+            self.provider_state,
+            self.id,
+        )
 
     class Meta:
         # better plural name in the admin table list

@@ -101,7 +101,8 @@ export async function getStyleById(styleId: string): Promise<Style | null> {
 }
 
 export interface MapData{
-    geojson: string,
+    geojson: string | null,
+    providerState: "GEOJSON" | "OPEN_GREEN_MAP" | "UNSET",
 }
 
 export async function getMapDataById(mapDataId: string): Promise<MapData | null>{
@@ -109,6 +110,7 @@ export async function getMapDataById(mapDataId: string): Promise<MapData | null>
         query ($id: UUID!) {
             mapData(id: $id) {
                 geojson
+                providerState
             }
         }
     `;
@@ -124,22 +126,23 @@ export async function getMapDataById(mapDataId: string): Promise<MapData | null>
     return mapData;
 }
 
-export async function getMapDataByName(name: string): Promise<MapData | null>{
-    const query = `
-        query ($name: String!) {
-            mapDataByName(name: $name) {
-                geojson
-            }
-        }
-    `;
-    const response = await executeQuery(
-        JSON.stringify({
-            query,
-            variables: {
-                name: name
-            }
-        })
-    );
-    const mapData: MapData | null = response.data.mapDataByName;
-    return mapData;
-}
+// export async function getMapDataByName(name: string): Promise<MapData | null>{
+//     const query = `
+//         query ($dropdownName: String!) {
+//             mapDataByDropdownName(dropdownName: $dropdownName) {
+//                 geojson
+//             }
+//         }
+//     `;
+//     const response = await executeQuery(
+//         JSON.stringify({
+//             query,
+//             variables: {
+//                 dropdownName: name
+//             }
+//         })
+//     );
+//     console.debug("getMapDataByName response: ", response);
+//     const mapData: MapData | null = response.data.mapDataByName;
+//     return mapData;
+// }
