@@ -736,21 +736,13 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         }
     });
 
-    // Hook into the map-data selection element
-    //const mapDataSelectSpanId = "select2-id_map_data-container";
-    const mapDataSelectSpan = await waitForElementById("id_map_data");
-
     // Listen to redraw the map when the map-data is changed.
-    const mapDataChangeObserver = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-            if (mutation.type === "childList") {
-                mapPreviewState.isUpdating = true;
-                showSpinnerAfter(1, mapPreviewState);
-                getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
-            }
-        });
-    });
-    mapDataChangeObserver.observe(mapDataSelectSpan!, {childList: true});
+    const mapDataSelectSpan = await waitForElementById("id_map_data");
+    mapDataSelectSpan.addEventListener("change", () => {
+        mapPreviewState.isUpdating = true;
+        showSpinnerAfter(1, mapPreviewState);
+        getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
+    })
 
     // Draw the initial map using the current map-data and style info.
     Promise.all([
