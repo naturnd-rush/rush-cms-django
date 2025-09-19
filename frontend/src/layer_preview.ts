@@ -715,16 +715,6 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         setTimeout(pollPopupChanges, 1000);
     };
     pollPopupChanges();
-
-
-    // // Listen to redraw the map when a style is changed.
-    // inlineElements.styles.addEventListener(() => {
-    //     mapPreviewState.isUpdating = true;
-    //     showSpinnerAfter(1, mapPreviewState);
-    //     getStyleUpdate().then(styleUpdate => {
-    //         drawMapPreview(map, mapPreviewState, styleUpdate);
-    //     });
-    // });
     
     // Listen to redraw the map when the tab is refocused (the user leaves and then comes back).
     // This can happen after a user edits one of the inline styles and then clicks on the layer edit tab.

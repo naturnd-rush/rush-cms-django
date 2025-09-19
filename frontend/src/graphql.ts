@@ -140,6 +140,7 @@ export async function getMapDataByName(name: string): Promise<MapData | null>{
             }
         })
     );
+    console.debug("getMapDataByName response: ", response);
     const mapData: MapData | null = response.data.mapDataByName;
     return mapData;
 }

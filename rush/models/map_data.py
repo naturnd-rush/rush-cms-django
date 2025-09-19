@@ -49,32 +49,8 @@ class MapData(models.Model):
         # NOTE: Other ProviderState's may be supported in the future.
         raise self.NoGeoJsonData
 
-    # @classmethod
-    # def get_formfield_map(cls) -> Dict[ProviderState, List[Dict[str, Any]]]:
-    #     """
-    #     The formfields to show in the edit/change form depending on the `ProviderState`.
-    #     """
-    #     return {
-    #         cls.ProviderState.UNSET: [],
-    #         cls.ProviderState.GEOJSON: [
-    #             {
-    #                 "name": "_geojson",
-    #                 "required": True,
-    #             },
-    #         ],
-    #         cls.ProviderState.OPEN_GREEN_MAP: [
-    #             {
-    #                 "name": "map_link",
-    #                 "required": True,
-    #             },
-    #             {
-    #                 "name": "campaign_link",
-    #                 "required": False,
-    #             },
-    #         ],
-    #     }
-
     def __str__(self):
+        # Don't change me. Breaks graphql API getMapDataByName for clients.
         return self.name
 
     def __repr__(self):
