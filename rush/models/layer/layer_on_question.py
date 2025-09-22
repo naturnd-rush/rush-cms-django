@@ -23,3 +23,6 @@ class LayerOnQuestion(models.Model):
         on_delete=models.CASCADE,
         help_text="The title of the layer group.",
     )
+
+    def __str__(self) -> str:
+        return "{} on {}".format(self.layer.name, self.question.title)

@@ -118,8 +118,8 @@ class QuestionForm(forms.ModelForm):
         fields = [
             # "layers",
             "title",
+            "subtitle",
             "image",
-            # "tabs",
             "initiatives",
         ]
 

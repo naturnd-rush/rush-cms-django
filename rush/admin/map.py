@@ -56,7 +56,7 @@ class SummernoteWidget(SummernoteWidgetBase):
 class StylesOnLayerInlineForm(forms.ModelForm):
     class Meta:
         model = models.StylesOnLayer
-        fields = ["style", "feature_mapping", "popup"]
+        fields = ["style", "feature_mapping", "legend_description", "legend_order", "popup"]
         widgets = {
             "popup": SummernoteWidget(),
             "feature_mapping": forms.Textarea(attrs={"rows": 1, "cols": 50}),
