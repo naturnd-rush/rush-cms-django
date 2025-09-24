@@ -1,6 +1,7 @@
 import json
 import logging
-from typing import Any
+from dataclasses import asdict, dataclass
+from typing import Any, List
 
 from django import forms
 from django.contrib import admin
@@ -28,7 +29,7 @@ class SummernoteWidget(SummernoteWidgetBase):
                 "height": "300px",
                 "width": "500px",
                 "toolbar": [
-                    ["style", ["bold", "italic", "underline"]],
+                    ["style", ["bold", "italic", "underline", "h1"]],
                     ["para", ["ul", "ol"]],
                     ["insert", ["link", "picture"]],
                 ],
@@ -55,7 +56,7 @@ class SummernoteWidget(SummernoteWidgetBase):
 class StylesOnLayerInlineForm(forms.ModelForm):
     class Meta:
         model = models.StylesOnLayer
-        fields = ["style", "feature_mapping", "popup"]
+        fields = ["style", "feature_mapping", "legend_description", "legend_order", "popup"]
         widgets = {
             "popup": SummernoteWidget(),
             "feature_mapping": forms.Textarea(attrs={"rows": 1, "cols": 50}),
@@ -74,8 +75,17 @@ class StyleOnLayerInline(admin.TabularInline):
     ]
 
 
+class MapDataChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj) -> str:
+        if obj and isinstance(obj, models.MapData):
+            # Customize the MapData dropdown label without touching __str__
+            return f"{obj.name} ({obj.provider_state.upper()})"
+        return "Unknown Map Data"
+
+
 class LayerForm(forms.ModelForm):
     serialized_leaflet_json = forms.CharField(widget=forms.HiddenInput())
+    map_data = MapDataChoiceField(queryset=models.MapData.objects.all())
 
     class Meta:
         model = models.Layer
@@ -90,14 +100,11 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     search_fields = ["name"]
 
     def render_change_form(self, request, context, *args, **kwargs):
-        # obj = context.get("original")
-        # geojson = obj.map_data.geojson if obj and obj.map_data.geojson else {}
         map_preview_html = mark_safe(
             '<div id="map-preview" style="height: 600px; margin-bottom: 1em;"></div>'
             '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />'
             '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>'
         )
-
         try:
             context["adminform"].form.fields["map_data"].help_text = map_preview_html
         except (KeyError, AttributeError):
@@ -125,63 +132,164 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
         super().save_model(request, obj, form, change)
 
 
+@dataclass
+class MapDataAdminFormConfig:
+    """
+    This form is a little more complicated and requires some configuration to determine
+    it's business logic. An instance of this class stores all the necessary configuration
+    data for this form.
+    """
+
+    @dataclass
+    class Field:
+        fieldname: str
+        required: bool  # is the field required on form save?
+
+    @dataclass
+    class Provider:
+        state: models.MapData.ProviderState
+        fields: List["MapDataAdminFormConfig.Field"]
+        map_preview: bool  # Whether to render the map preview for this provider
+
+    providers: List["MapDataAdminFormConfig.Provider"]
+
+    def get_fields(self) -> List[Field]:
+        fields = []
+        for provider in self.providers:
+            for field in provider.fields:
+                fields.append(field)
+        return fields
+
+    def get_provider(self, provider_state: models.MapData.ProviderState | str) -> Provider | None:
+        """
+        Get an admin form config `Provider` from a `ProviderState`, or return None if none could be found.
+        """
+        if not isinstance(provider_state, models.MapData.ProviderState):
+            provider_state = models.MapData.ProviderState(provider_state)
+        for provider in self.providers:
+            if provider.state == provider_state:
+                return provider
+        return None
+
+
+mdaf_config = MapDataAdminFormConfig(
+    providers=[
+        MapDataAdminFormConfig.Provider(
+            state=models.MapData.ProviderState.GEOJSON,
+            fields=[MapDataAdminFormConfig.Field("_geojson", required=True)],
+            map_preview=True,
+        ),
+        MapDataAdminFormConfig.Provider(
+            state=models.MapData.ProviderState.OPEN_GREEN_MAP,
+            fields=[
+                MapDataAdminFormConfig.Field("map_link", required=True),
+                MapDataAdminFormConfig.Field("campaign_link", required=False),
+            ],
+            map_preview=False,
+        ),
+    ]
+)
+
+
 class MapDataAdminForm(forms.ModelForm):
+    """
+    For submitting `MapData` info.
+    """
 
     class Meta:
         model = models.MapData
-        fields = "__all__"
-        widgets = {
-            "geojson": forms.Textarea(
-                attrs={"rows": 20, "cols": 150, "id": "geojson-input"}
-            ),
-        }
+        fields = ["id", "name", "provider_state", *[field.fieldname for field in mdaf_config.get_fields()]]
 
+    def get_initial_for_field(self, field, field_name):
+        if field_name == "_geojson":
+            if self.instance and isinstance(self.instance, models.MapData):
+                if self.instance._geojson is None:
+                    # Replace "null" in geojson form field with "{}"
+                    return {}
+        return super().get_initial_for_field(field, field_name)
 
-def get_map_preview_html(
-    geojson: dict[str, Any],
-    change_element_id: str,
-    height: str = "400px",
-) -> str:
-    """
-    Return an HTML + JS snippet that renders a basic map preview.
-    """
-    leaflet_html = render_to_string(
-        template_name="admin/geojson_map_preview.html",
-        context={
-            "geojson_data": mark_safe(json.dumps(geojson)),
-            "height": height,
-            "change_element_id": change_element_id,
-        },
-    )
-    return mark_safe(leaflet_html)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Inject field information on provider so the frontend can know which
+        # provider fields to show depending on what value is selected in the dropdown.
+        # TODO: Should probably move this to the admin "render changeform" method and use context[VAR_NAME]
+        #       to inject this data, instead of hackily putting JSON data into HTML elements like this...
+        # self.fields["provider_state"].widget.attrs["show-fields-map"] = json.dumps(
+        #     models.MapData.get_formfield_map()
+        # )
+        # all_fields = []
+        # for fieldlist in models.MapData.get_formfield_map().values():
+        #     for field in fieldlist:
+        #         all_fields.append(field["name"])
+        # self.fields["provider_state"].widget.attrs["all-fields"] = json.dumps({"fieldnames": all_fields})
+
+        # Remove "UNSET" option from dropdown menu
+        self.fields["provider_state"].choices = [
+            (value, label)
+            for value, label in models.MapData.ProviderState.choices
+            if value != models.MapData.ProviderState.UNSET
+        ]
+
+    def clean(self) -> dict[str, Any]:
+        cleaned_data = super().clean()
+        provider = mdaf_config.get_provider(cleaned_data["provider_state"])
+
+        if not (
+            self.instance
+            and provider
+            and isinstance(self.instance, models.MapData)
+            and "provider_state" in cleaned_data
+            and cleaned_data["provider_state"] in models.MapData.ProviderState
+        ):
+            # Exit early
+            return cleaned_data
+
+        required_fieldnames = [field.fieldname for field in provider.fields if field.required]
+        for fieldname in required_fieldnames:
+            if fieldname not in self.errors:
+                if fieldname not in cleaned_data or not cleaned_data[fieldname]:
+                    # Enforce required fields dynamically (depending on selected provider state)
+                    self.add_error(fieldname, "This field is required.")
+
+        non_provider_fieldnames = [
+            field.fieldname for field in mdaf_config.get_fields() if field not in provider.fields
+        ]
+        for fieldname in non_provider_fieldnames:
+            # Ignore fields dynamically (belonging to other provider states)
+            if fieldname in self.errors:
+                self.errors.pop(fieldname)
+            cleaned_data[fieldname] = None
+
+        return cleaned_data
 
 
 @admin.register(models.MapData)
 class MapDataAdmin(SimpleHistoryAdmin):
     form = MapDataAdminForm
     exclude = ["id"]
-    exclude = [
-        # for now, exclude these because they are confusing to people who just wanna upload GeoJson
-        *exclude,
-        "ogm_map_id",
-        "feature_url_template",
-        "icon_url_template",
-        "image_url_template",
-    ]
-    list_display = ["name", "provider"]
+    list_display = ["name", "provider_state"]
     search_fields = ["name"]
 
-    def render_change_form(self, request, context, *args, **kwargs):
-        obj = context.get("original")
-        geojson = obj.geojson if obj and obj.geojson else {}
-        map_preview_html = get_map_preview_html(geojson, "geojson-input")
+    @staticmethod
+    def _get_geojson_str(context) -> str:
+        if map_data := context.get("original"):
+            if isinstance(map_data, models.MapData):
+                try:
+                    return map_data.get_raw_geojson_data()
+                except models.MapData.NoGeoJsonData:
+                    pass
+        return "{}"
 
-        try:
-            context["adminform"].form.fields["geojson"].help_text = map_preview_html
-        except (KeyError, AttributeError):
-            logger.exception("Failed to inject map preview.")
-        finally:
-            return super().render_change_form(request, context, *args, **kwargs)
+    def render_change_form(self, request, context, *args, **kwargs):
+        """
+        Inject initial GeoJSON data into page so we can render an initial
+        `MapData` preview in the change form.
+        """
+        geojson = self._get_geojson_str(context)
+        context["map_data_admin_form_config"] = mark_safe(json.dumps(asdict(mdaf_config)))
+        context["initial_geojson_data"] = mark_safe(geojson)
+        return super().render_change_form(request, context, *args, **kwargs)
 
 
 class StyleForm(forms.ModelForm):
@@ -213,9 +321,7 @@ class StyleForm(forms.ModelForm):
             "name",
         ]
         widgets = {
-            "stroke_weight": utils.SliderAndTextboxNumberInput(
-                max=30, step=0.05, attrs={"class": "inline-field"}
-            ),
+            "stroke_weight": utils.SliderAndTextboxNumberInput(max=30, step=0.05, attrs={"class": "inline-field"}),
             "stroke_opacity": utils.SliderAndTextboxNumberInput(),
             "stroke_dash_offset": utils.SliderAndTextboxNumberInput(max=100, step=1),
             "fill_opacity": utils.SliderAndTextboxNumberInput(),

@@ -1,0 +1,153 @@
+{% extends "admin/change_form.html" %}
+{% load static %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <div id="map-preview" style="height: 400px; width: 730px; margin-bottom: 1em;"></div>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+
+        /**
+         * Move the element 'elToMove' directly below 'referenceEl' in the DOM.
+         */
+        const moveBelow = (referenceEl, elToMove) => {
+            referenceEl.parentNode.insertBefore(elToMove, referenceEl.nextSibling);
+        };
+
+        /**
+         * Move the element 'elToMove' directly below 'referenceEl' in the DOM.
+         */
+        const moveAbove = (referenceEl, elToMove) => {
+            referenceEl.parentNode.insertBefore(elToMove, referenceEl.previousSibling);
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+
+            // Parse the MapDataAdminFormConfig object to JS
+            const config = JSON.parse("{{ map_data_admin_form_config|escapejs }}");
+            console.log(config);
+
+            // Get constant elements
+            const providerStateInputEl = document.getElementById("id_provider_state");
+            const submitRowEl = document.querySelector("div.submit-row");
+            const mapPreviewEl = document.getElementById("map-preview");
+
+            // Initialize map
+            moveAbove(submitRowEl, mapPreviewEl);
+            let map = L.map('map-preview').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Load initial GeoJSON from server
+            const geojsonString = "{{ initial_geojson_data|escapejs }}";
+            let geojsonData = JSON.parse(geojsonString);
+            let geoJsonLayer;
+            if (geojsonData && geojsonData.type === "FeatureCollection") {
+                geoJsonLayer = L.geoJSON(geojsonData).addTo(map);
+                map.fitBounds(geoJsonLayer.getBounds());
+            }
+
+            // Monitor for live changes
+            const geojsonInput = document.getElementById("id__geojson");
+            const reDrawMapPreview = () => {
+                let data = null;
+                try {
+                    data = JSON.parse(geojsonInput.value);
+                    if (geoJsonLayer) {
+                        map.removeLayer(geoJsonLayer);
+                    }
+                    geoJsonLayer = L.geoJSON(data).addTo(map);
+                    map.fitBounds(geoJsonLayer.getBounds());
+                } catch (e) {
+                    if (geoJsonLayer) {
+                        // Remove old layer
+                        map.removeLayer(geoJsonLayer);
+                    }
+                    // TODO: Add form error
+                    // const errorList = document.querySelector("div.field-_geojson ul.errorlist");
+                    // if (errorList === null){
+                    //     geojsonInput.insertBefore("<div class='errorlist'>" + e + "</div>")
+                    // }
+                    // console.log(errorList);
+                }
+            };
+            geojsonInput.addEventListener('input', reDrawMapPreview);
+
+            // const showFieldsMap = JSON.parse(providerStateInputEl.getAttribute('show-fields-map'));
+            // const allFields = JSON.parse(providerStateInputEl.getAttribute('all-fields'))['fieldnames'];
+            
+            const refreshHiddenFields = () => {
+                let providerFieldnames = [];
+                for (let provider of config["providers"]){
+                    if (provider.state === providerStateInputEl.value){
+                        for (let field of provider.fields){
+                            providerFieldnames.push(field.fieldname);
+                        }
+                        break;
+                    }
+                }
+                let nonProviderFieldnames = [];
+                for (let provider of config["providers"]){
+                    if (provider.state !== providerStateInputEl.value){
+                        for (let field of provider.fields){
+                            nonProviderFieldnames.push(field.fieldname);
+                        }
+                    }
+                }
+
+                /**
+                 * Show or hide a form-row.
+                 */
+                const FormRowState = {
+                    SHOW: "show",
+                    HIDE: "hide",
+                };
+                const editFormRow = (fieldname, formRowState) => {
+                    let el = document.querySelector("div.field-" + fieldname);
+                    if (el !== null){
+                        if (formRowState == FormRowState.HIDE){
+                            el.style.display = "none";
+                        } else if (formRowState == FormRowState.SHOW){
+                            el.style.display = "block";
+                        } else {
+                            console.error("Cannot edit form-row using unsupported FormRowState: " + formRowState + "'.");
+                        }
+                    } else {
+                        console.warn("Missing form-row for field '" + fieldname + "'.");
+                    }
+                };
+
+                // Hide non-provider fields
+                for (let fieldname of nonProviderFieldnames){
+                    editFormRow(fieldname, FormRowState.HIDE);
+                }
+
+                // Show provider fields
+                for (let fieldname of providerFieldnames){
+                    editFormRow(fieldname, FormRowState.SHOW);
+                }
+
+                // show/hide the map-preview dynamically, depending on the config
+                for (let provider of config["providers"]){
+                    if (provider.state === providerStateInputEl.value){
+                        if (provider.map_preview === true){
+                            mapPreviewEl.style.display = 'block';
+                        } else {
+                            mapPreviewEl.style.display = 'none';
+                        }
+                        break;
+                    }
+                }
+            };
+
+            providerStateInputEl.addEventListener("change", () => {
+                refreshHiddenFields();
+                reDrawMapPreview();
+            });
+            refreshHiddenFields(); // Initial load
+    });
+    </script>
+{% endblock %}
