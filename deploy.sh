@@ -1,3 +1,5 @@
+#!/usr/bin/bash
+
 cd /srv/rush-cms-django
 git pull origin main
 poetry lock
