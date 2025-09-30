@@ -51,8 +51,9 @@ jobs:
 
         docker buildx build \
         --file Dockerfile.postgres \
-        --cache-from=type=local,src=/tmp/.buildx-cache \
-        --cache-to=type=local,dest=/tmp/.buildx-cache \
+        # Probably don't need to cache the DB...
+        # --cache-from=type=local,src=/tmp/.buildx-cache \
+        # --cache-to=type=local,dest=/tmp/.buildx-cache \
         --progress=plain \
         .
 
