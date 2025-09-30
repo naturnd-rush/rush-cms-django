@@ -22,15 +22,11 @@ requests = "^2.32.3"
 jinja2 = "^3.1.6"
 gunicorn = "^23.0.0"
 dj-database-url = "^3.0.1"
-gdal = "3.8.4"
 django-cors-headers = "^4.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
 pytest-django = "^4.11.1"
-
-[tool.poetry.group.os_specific.dependencies]
-gdal = "3.8.4"
 
 [build-system]
 requires = ["poetry-core"]
