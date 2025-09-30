@@ -1,39 +1,47 @@
+# Use fixed ubuntu small image version with GDAL and Python pre-installed.
 FROM ghcr.io/osgeo/gdal:ubuntu-small-3.11.4
-
-# Set working directory and copy poetry config data
 WORKDIR /rush_admin
-COPY pyproject.toml ./
-COPY poetry.lock ./
 
-# Install pipx --> poetry --> django + other required libs
-RUN apt-get update && apt-get install -y pipx
+# Install curl, pipx, and netcat (wait-for-db.sh script needs it.)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl pipx netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add NodeSource repo and install nodejs.
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Poetry (Python package manager) and set it's path manually.
+# For some reason, running `pipx ensurepath` doesn't seem to work here.
 RUN pipx install poetry
-# Set path manually here because pipx ensurepath doesn't seem to work properly...
 ENV PATH="/root/.local/bin:$PATH"
-RUN poetry lock
+
+# Copy Python dependency manifests and install. The `--without os_specific` flag
+# skips the Python gdal installation which is already set up for us in the base image.
+COPY pyproject.toml poetry.toml poetry.lock ./
 RUN poetry install --without os_specific
 
-# Copy source code and default env vars
+# Copy node dependency manifests and install.
+COPY frontend/package*.json ./frontend/
+RUN (cd frontend && npm install)
+
+# Copy the frontend source code, vite config, and build the frontend code.
+COPY frontend/src ./frontend/src/
+COPY frontend/vite.config.ts ./frontend/
+RUN (cd frontend && npx vite build)
+
+# Copy the rest of the project over.
 COPY config ./config
-COPY frontend ./frontend
 COPY rush ./rush
 COPY static ./static
 COPY templates ./templates
 COPY manage.py ./manage.py
+COPY pytest.ini ./pytest.ini
+COPY wait-for-db.sh /wait-for-db.sh
 COPY LICENSE ./LICENSE
 
-# Install node dependencies and compile JS for the frontend
-RUN apt-get install -y curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
-RUN (cd frontend && npm install)
-RUN (cd frontend && npx vite build)
-
 # Wait for the postgres database service before executing commands
-RUN apt-get install -y netcat-openbsd
-COPY wait-for-db.sh /wait-for-db.sh
 RUN chmod +x /wait-for-db.sh
 ENTRYPOINT ["/wait-for-db.sh"]
-
-# Clean-up apt package lists
-RUN rm -rf /var/lib/apt/lists/*
