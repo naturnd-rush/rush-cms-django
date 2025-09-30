@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
 cd /srv/rush-cms-django
 git pull origin main
 poetry lock
