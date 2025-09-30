@@ -34,7 +34,7 @@ urlpatterns = [
         "graphql/",
         csrf_exempt(GraphQLView.as_view(graphiql=True, schema=get_schema())),
     ),
-    path("github/deploy/", views.deploy_webhook_handler),
+    # path("github/deploy/", views.deploy_webhook_handler),
 ]
 
 # Serve media files during development

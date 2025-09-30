@@ -5,21 +5,34 @@ on:
     branches:
       - main
 
+
 jobs:
   send_webhook:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send Deploy Webhook to RUSH Admin Site
+      - name: Send Webhook
+        id: request  # for reference when checking response status
         env:
-          WEBHOOK_URL: "https://whatstherush.earth/github/deploy/"
-          SECRET: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}
+          URL: ${{ secrets.RUSH_DEPLOY_WEBHOOK_URL }}
+          SECRET: ${{ secrets.RUSH_DEPLOY_WEBHOOK_SECRET }}
         run: |
-          PAYLOAD='{"repository": "${{ github.repository }}", "ref": "${{ github.ref }}", "action": "deploy-prod"}'
+          BODY='{}'
+          TIMESTAMP=$(date +%s)
+          SIGNATURE=$(echo -n "$TIMESTAMP$BODY" | openssl dgst -sha256 -hmac "$SECRET" | cut -d " " -f2)
+          response=$(curl -X POST $URL \
+              -H "Content-Type: application/json" \
+              -H "X-Timestamp: $TIMESTAMP" \
+              -H "X-Signature: $SIGNATURE" \
+              -d "$BODY")
+          echo "Response: $response"
+          status=$(echo "$response" | jq -r '.success')
+          echo "status=$status" >> $GITHUB_OUTPUT
 
-          SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')
-
-          curl -X POST "$WEBHOOK_URL" \
-               -H "Content-Type: application/json" \
-               -H "X-Hub-Signature-256: sha256=$SIGNATURE" \
-               -d "$PAYLOAD"
+      - name: Check response # Gives a nice lil "x" if the pipeline fails
+        run: |
+          if [ "${{ steps.request.outputs.status }}" != true ]; then
+            echo "Deployment failed with status=${{ steps.request.outputs.status }}"
+            exit 1
+          fi
+          echo "Deployment succeeded."
