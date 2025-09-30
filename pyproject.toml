@@ -8,7 +8,7 @@ readme = "README.md"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.12.3"
 django = "^5.1.7"
 psycopg = {extras = ["binary"], version = "^3.2.6"}
 django-summernote = "^0.8.20.0"
