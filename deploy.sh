@@ -3,16 +3,16 @@ set -euo pipefail
 
 # Cd to project and pull
 cd /srv/rush-cms-django
+echo "Pulling repository from $(pwd)..."
 git pull origin main
 
-# MAke sure we use the correct poetry environment
+# Make sure we use the correct poetry environment
 POETRY="/home/deploy/.local/bin/poetry"
 export POETRY_VIRTUALENVS_IN_PROJECT=true
-$POETRY env use "/srv/rush-cms-django/.venv/bin/python"
-$POETRY env info
+$($POETRY env activate)
+echo "Deploying with virtualenv: $($POETRY env info --path)"
 
 # Install any new dependencies
-$POETRY lock
 $POETRY install --no-interaction --no-root
 
 # Migrate Django and collect static
