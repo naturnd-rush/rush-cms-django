@@ -4,7 +4,7 @@ set -euo pipefail
 cd /srv/rush-cms-django
 POETRY="/home/deploy/.local/bin/poetry"
 export POETRY_VIRTUALENVS_IN_PROJECT=true
-poetry env info
+$POETRY env info
 
 git pull origin main
 
