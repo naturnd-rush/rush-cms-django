@@ -64,9 +64,11 @@ INSTALLED_APPS = [
     "simple_history",  # Simple changelog + diff for select models
     "leaflet",  # Leaflet Django integration
     "colorfield",  # Django Admin colorpicker UI
+    "corsheaders",  # CORS headers for frontend on different origin
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -179,3 +181,12 @@ LEAFLET_CONFIG = {
     "TILES": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     "ATTRIBUTION_PREFIX": "Powered by Leaflet",
 }
+
+# CORS configuration
+CORS_ORIGIN_ALLOW_ALL = DEBUG # Development
+CORS_ALLOWED_ORIGINS = [
+    host for host in config("DJANGO_ALLOWED_ORIGINS", cast=str).split(",") if host != ""
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    host for host in config("DJANGO_ALLOWED_ORIGIN_REGEXES", cast=str).split(",") if host != ""
+]

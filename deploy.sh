@@ -2,13 +2,26 @@
 set -euo pipefail
 
 cd /srv/rush-cms-django
-PYTHON="/srv/rush-cms-django/.venv/bin/python" # Want project-specific Python virtual environment.
-POETRY="/home/deploy/.local/bin/poetry" # BUT must use deployer's Poetry installation (since it only has permission to run that version of Poetry).
-
+echo "Pulling repository to $(pwd)..."
 git pull origin main
 
-"$POETRY" lock
-"$POETRY" install
-"$PYTHON" manage.py migrate
-"$PYTHON" manage.py collectstatic --noinput
+# Source the project venv
+VENV="/srv/rush-cms-django/.venv"
+if [ ! -f "$VENV/bin/activate" ]; then
+    echo "ERROR: Venv not found at $VENV"
+    exit 1
+fi
+source "$VENV/bin/activate"
+echo "Using Python: $(which python)"
+
+# Make sure poetry uses this Python
+POETRY="/home/deploy/.local/bin/poetry"
+echo "Using Poetry env: $($POETRY env info --path)..."
+$POETRY install --no-interaction --no-root
+
+# Migrate Django and collect static
+$(which python) manage.py migrate
+$(which python) manage.py collectstatic --noinput
+
+# Restart Gunicorn
 sudo systemctl restart gunicorn.service
