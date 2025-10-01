@@ -2,13 +2,16 @@
 set -euo pipefail
 
 cd /srv/rush-cms-django
-PYTHON="/srv/rush-cms-django/.venv/bin/python" # Want project-specific Python virtual environment.
-POETRY="/home/deploy/.local/bin/poetry" # BUT must use deployer's Poetry installation (since it only has permission to run that version of Poetry).
+POETRY="/home/deploy/.local/bin/poetry"
+export POETRY_VIRTUALENVS_IN_PROJECT=true
+poetry env info
 
 git pull origin main
 
-"$POETRY" lock
-"$POETRY" install
-"$PYTHON" manage.py migrate
-"$PYTHON" manage.py collectstatic --noinput
+$POETRY lock
+$POETRY install --no-interaction --no-root
+
+$POETRY run python manage.py migrate
+$POETRY run python manage.py collectstatic --noinput
+
 sudo systemctl restart gunicorn.service
