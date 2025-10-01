@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from time_machine import time_machine_fixture
 
 
 class Page(models.Model):
