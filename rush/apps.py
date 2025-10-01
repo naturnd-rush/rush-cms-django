@@ -4,3 +4,6 @@ from django.apps import AppConfig
 class RushConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "rush"
+
+    def ready(self):
+        import rush.signals
