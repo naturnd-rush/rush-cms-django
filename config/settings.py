@@ -20,9 +20,7 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("DJANGO_SECRET_KEY", cast=str)
 DEBUG = config("DJANGO_DEBUG", cast=bool)
-ALLOWED_HOSTS = [
-    host for host in config("DJANGO_ALLOWED_HOSTS", cast=str).split(",") if host != ""
-]
+ALLOWED_HOSTS = [host for host in config("DJANGO_ALLOWED_HOSTS", cast=str).split(",") if host != ""]
 MEDIA_ROOT = config("DJANGO_MEDIA_ROOT", cast=str)
 STATIC_ROOT = config("DJANGO_STATIC_ROOT", cast=str)
 GDAL_LIBRARY_PATH = config("GDAL_LIBRARY_PATH", cast=str)
@@ -44,6 +42,10 @@ DEPLOY_GUNICORN_SOCKET_PATH = config("DEPLOY_GUNICORN_SOCKET_PATH", cast=str)
 DEPLOY_NGINX_CONFIG_PATH = config("DEPLOY_NGINX_CONFIG_PATH", cast=str)
 DEPLOY_NGINX_ENABLED_PATH = config("DEPLOY_NGINX_ENABLED_PATH", cast=str)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
+
+CONSOLE_LOG_LEVEL = config("CONSOLE_LOG_LEVEL", cast=str)
+FILE_LOG_LEVEL = config("FILE_LOG_LEVEL", cast=str)
+LOG_DIR = config("LOG_DIR", cast=str)
 
 # Application definition
 INSTALLED_APPS = [
