@@ -15,6 +15,7 @@ from simple_history.admin import SimpleHistoryAdmin
 
 from rush import models
 from rush.admin import utils
+from rush.admin.log_changes_admin_base import LogChangesAdminBase
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ class LayerForm(forms.ModelForm):
 
 
 @admin.register(models.Layer)
-class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
+class LayerAdmin(LogChangesAdminBase, SummernoteModelAdmin, SimpleHistoryAdmin):
     form = LayerForm
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]

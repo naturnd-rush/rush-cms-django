@@ -1,10 +1,16 @@
 import uuid
+from typing import Any, Dict
 
 import django.db.models as models
 from simple_history.models import HistoricalRecords
 
+from rush.logger import get_logger
+from rush.models.base import BaseModel
 
-class Layer(models.Model):
+logger = get_logger()
+
+
+class Layer(BaseModel):
     """
     MapData + Styling + Legend information combo.
     """
@@ -26,3 +32,12 @@ class Layer(models.Model):
 
     def __str__(self):
         return self.name
+
+    def log_changes_dict(self) -> Dict[str, Any]:
+        data = super().log_changes_dict() | {
+            "styles": [style.log_changes_dict() for style in self.styles.all()],
+            "map_data": str(self.map_data),
+        }
+        data.pop("serialized_leaflet_json")  # Too big to include in logs...
+        logger.debug(f"Serialization data: {data}")
+        return data

@@ -8,6 +8,7 @@ from django.dispatch import receiver
 from simple_history.models import HistoricalRecords
 
 from rush.models import utils
+from rush.models.base import BaseModel
 from rush.models.validators import (
     validate_image_or_svg,
     validate_only_integers_and_whitespace,
@@ -46,7 +47,7 @@ class FillRule(models.TextChoices):
     EVENODD = "evenodd"
 
 
-class Style(models.Model):
+class Style(BaseModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     name = models.CharField(max_length=255)
     draw_stroke = models.BooleanField(
