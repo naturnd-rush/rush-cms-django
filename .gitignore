@@ -2,6 +2,7 @@ SAM*.md
 /.django_dev*
 node_modules/
 backups/
+logs/*
 
 
 ####

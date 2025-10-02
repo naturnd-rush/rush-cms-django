@@ -146,7 +146,7 @@ class LayerType(DjangoObjectType):
     def resolve_styles_on_layer(self, info):
         if isinstance(self, models.Layer):
             return models.StylesOnLayer.objects.filter(layer__id=self.id)
-        raise ValueError("Expected layer object while resolving query!")
+        raise ValueError("Expected Layer object while resolving query!")
 
 
 class LayerTypeWithoutSerializedLeafletJSON(LayerType):
@@ -163,7 +163,14 @@ class LayerTypeWithoutSerializedLeafletJSON(LayerType):
 class LayerGroupType(DjangoObjectType):
     class Meta:
         model = models.LayerGroup
-        fields = ["id", "group_name", "group_description"]
+        fields = ["id", "group_name", "group_description", "layers"]
+
+    layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
+
+    def resolve_layers(self, info):
+        if isinstance(self, models.LayerGroup):
+            return models.Layer.objects.filter(layeronquestion__layer_group=self).distinct()
+        raise ValueError("Expected LayerGroup object while resolving query!")
 
 
 class LayerOnQuestionType(DjangoObjectType):
@@ -201,6 +208,8 @@ class Query(graphene.ObjectType):
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
 
+    all_layer_groups = graphene.List(LayerGroupType)
+
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
 
@@ -222,6 +231,9 @@ class Query(graphene.ObjectType):
 
     def resolve_layer(self, info, id):
         return models.Layer.objects.get(pk=id)
+
+    def resolve_all_layer_groups(self, info):
+        return models.LayerGroup.objects.all()
 
     def resolve_all_questions(self, info):
         return models.Question.objects.all()
