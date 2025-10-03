@@ -3,7 +3,7 @@ set -euo pipefail
 
 cd /srv/rush-cms-django
 echo "Pulling repository to $(pwd)..."
-git pull origin main
+sudo git pull origin main
 
 # Source the project venv
 VENV="/srv/rush-cms-django/.venv"
