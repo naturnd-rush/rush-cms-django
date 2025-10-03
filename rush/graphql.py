@@ -212,6 +212,7 @@ class Query(graphene.ObjectType):
 
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
+    question_tab_by_id = graphene.Field(QuestionTabType, id=graphene.UUID(required=True))
 
     all_map_datas = graphene.List(MapDataWithoutGeoJsonType)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
@@ -240,6 +241,9 @@ class Query(graphene.ObjectType):
 
     def resolve_question(self, info, id):
         return models.Question.objects.get(pk=id)
+
+    def resolve_question_tab_by_id(self, info, id):
+        return models.QuestionTab.objects.get(pk=id)
 
     def resolve_all_map_datas(self, info):
         return models.MapData.objects.all()
