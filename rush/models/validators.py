@@ -34,7 +34,11 @@ class UnsupportedFileType(InvalidFileType):
     ):
         self.offending_type = offending_type
         self.supported_types = supported_types
-        msg = f'Unsupported file type "{offending_type}". Please upload one of: {", ".join([f'"{x}"' for x in supported_types])}.'
+        # Build a user-friendly message listing supported mime types.
+        supported_list = ", ".join(f'"{x}"' for x in supported_types)
+        msg = 'Unsupported file type "{}". Please upload one of: {}.'.format(
+            offending_type, supported_list
+        )
         super().__init__(message=msg, *args, **kwargs)
 
 
