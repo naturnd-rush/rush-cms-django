@@ -3,6 +3,7 @@ SAM*.md
 node_modules/
 backups/
 logs/*
+poetry.lock
 
 
 ####
