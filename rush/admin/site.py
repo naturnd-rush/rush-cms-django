@@ -164,7 +164,7 @@ class QuestionAdmin(SimpleHistoryAdmin):
     form = QuestionForm
     list_display = [
         "title",
-        "slug",  # new line for slug
+        "slug",  
         "image_preview",
         "get_initiatives",
     ]
