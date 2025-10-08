@@ -168,7 +168,7 @@ class QuestionAdmin(SimpleHistoryAdmin):
         "image_preview",
         "get_initiatives",
     ]
-    prepopulated_fields = {"slug": ("title",)} # new line for slug
+    prepopulated_fields = {"slug": ("title",)}
     autocomplete_fields = ["initiatives"]
     inlines = [QuestionTabInline, LayerOnQuestionStackedInline]
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
