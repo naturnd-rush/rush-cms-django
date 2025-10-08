@@ -200,7 +200,7 @@ class InitiativeType(DjangoObjectType):
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
-        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs","slug"] #slug field added
+        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs","slug"] 
 
     # Link one half of the many-to-many through table in the graphql schema
     layers_on_question = graphene.List(LayerOnQuestionType)
