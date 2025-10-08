@@ -118,7 +118,7 @@ class QuestionForm(forms.ModelForm):
         fields = [
             # "layers",
             "title",
-            "slug", #new line for slug
+            "slug", 
             "subtitle",
             "image",
             "initiatives",
