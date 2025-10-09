@@ -200,7 +200,7 @@ class InitiativeType(DjangoObjectType):
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
-        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs"]
+        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs","slug"] 
 
     # Link one half of the many-to-many through table in the graphql schema
     layers_on_question = graphene.List(LayerOnQuestionType)
@@ -224,6 +224,7 @@ class Query(graphene.ObjectType):
 
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
+    question_by_slug = graphene.Field(QuestionType, slug=graphene.String(required=True))
     question_tab_by_id = graphene.Field(QuestionTabType, id=graphene.UUID(required=True))
 
     all_map_datas = graphene.List(MapDataWithoutGeoJsonType)
@@ -254,6 +255,9 @@ class Query(graphene.ObjectType):
     def resolve_question(self, info, id):
         return models.Question.objects.get(pk=id)
 
+    def resolve_question_by_slug(self, info, slug: str):
+        return models.Question.objects.get(slug=slug)
+      
     def resolve_question_tab_by_id(self, info, id):
         return models.QuestionTab.objects.get(pk=id)
 

@@ -118,6 +118,7 @@ class QuestionForm(forms.ModelForm):
         fields = [
             # "layers",
             "title",
+            "slug", 
             "subtitle",
             "image",
             "initiatives",
@@ -163,9 +164,11 @@ class QuestionAdmin(SimpleHistoryAdmin):
     form = QuestionForm
     list_display = [
         "title",
+        "slug",  
         "image_preview",
         "get_initiatives",
     ]
+    prepopulated_fields = {"slug": ("title",)}
     autocomplete_fields = ["initiatives"]
     inlines = [QuestionTabInline, LayerOnQuestionStackedInline]
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
