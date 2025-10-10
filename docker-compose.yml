@@ -20,6 +20,7 @@ services:
       - GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so.37 # configure GDAL env path for django (should be stable since we are using a fixed GDAL base image)
     command: >
       sh -c "poetry run python manage.py migrate &&
+            python manage.py showmigrations --plan && 
             poetry run python manage.py runserver 0.0.0.0:8000"
 
   postgres:
