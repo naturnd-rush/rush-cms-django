@@ -1,10 +1,7 @@
-import re
-
 import graphene
 from graphene_django.types import DjangoObjectType
 
 from rush import models
-from rush.context_processors import base_media_url
 
 """
 GraphQL Schema for RUSH models. This file defines what data GraphQL
@@ -194,7 +191,7 @@ class InitiativeTagType(DjangoObjectType):
 class InitiativeType(DjangoObjectType):
     class Meta:
         model = models.Initiative
-        fields = ["id", "title", "image", "content", "tags"]
+        fields = ["id", "title", "link", "image", "content", "tags"]
 
 
 class QuestionType(DjangoObjectType):

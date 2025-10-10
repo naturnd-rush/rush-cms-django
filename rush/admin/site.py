@@ -25,7 +25,7 @@ class InitiativeForm(forms.ModelForm):
 
     class Meta:
         model = models.Initiative
-        fields = ["title", "image", "content", "tags"]
+        fields = ["title", "link", "image", "content", "tags"]
 
     def __init__(self, *args, **kwargs):
         """
@@ -47,7 +47,7 @@ class InitiativeForm(forms.ModelForm):
 class InitiativeAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
     exclude = ["id"]
     form = InitiativeForm
-    list_display = ["title", "content_preview", "image_preview", "get_tags"]
+    list_display = ["title", "link", "content_preview", "image_preview", "get_tags"]
     content_preview = utils.truncate_admin_text_from("content")
     autocomplete_fields = [
         # uses the searchable textbox in the admin form to add/remove Tags
