@@ -2,4 +2,7 @@
 
 services:
   django:
-    command: ["poetry", "run", "pytest"]
+    command: >
+      sh -c "poetry run python manage.py migrate &&
+            python manage.py showmigrations --plan && 
+            poetry run pytest"
