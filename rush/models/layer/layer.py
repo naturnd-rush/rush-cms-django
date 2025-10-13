@@ -17,6 +17,7 @@ class Layer(models.Model):
     map_data = models.ForeignKey(
         to="MapData",
         # MapData deletion should fail if a Layer references it.
+        # TODO: Check if this actually works or if I got it backwards...
         on_delete=models.PROTECT,
     )
     styles = models.ManyToManyField("Style", through="StylesOnLayer")
