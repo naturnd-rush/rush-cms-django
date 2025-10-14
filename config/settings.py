@@ -20,9 +20,7 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("DJANGO_SECRET_KEY", cast=str)
 DEBUG = config("DJANGO_DEBUG", cast=bool)
-ALLOWED_HOSTS = [
-    host for host in config("DJANGO_ALLOWED_HOSTS", cast=str).split(",") if host != ""
-]
+ALLOWED_HOSTS = [host for host in config("DJANGO_ALLOWED_HOSTS", cast=str).split(",") if host != ""]
 MEDIA_ROOT = config("DJANGO_MEDIA_ROOT", cast=str)
 STATIC_ROOT = config("DJANGO_STATIC_ROOT", cast=str)
 GDAL_LIBRARY_PATH = config("GDAL_LIBRARY_PATH", cast=str)
@@ -181,10 +179,9 @@ LEAFLET_CONFIG = {
 }
 
 # CORS configuration
-CORS_ORIGIN_ALLOW_ALL = DEBUG # Development
-CORS_ALLOWED_ORIGINS = [
-    host for host in config("DJANGO_ALLOWED_ORIGINS", cast=str).split(",") if host != ""
-]
+CORS_ORIGIN_ALLOW_ALL = DEBUG  # Development
+CORS_ALLOWED_ORIGINS = [x for x in str(config("DJANGO_ALLOWED_ORIGINS", cast=str)).split(",") if x != ""]
 CORS_ALLOWED_ORIGIN_REGEXES = [
-    host for host in config("DJANGO_ALLOWED_ORIGIN_REGEXES", cast=str).split(",") if host != ""
+    x for x in str(config("DJANGO_ALLOWED_ORIGIN_REGEXES", cast=str)).split(",") if x != ""
 ]
+CSRF_TRUSTED_ORIGINS = [x for x in str(config("DJANGO_CSRF_TRUSTED_ORIGINS", cast=str)).split(",") if x != ""]
