@@ -185,3 +185,4 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     x for x in str(config("DJANGO_ALLOWED_ORIGIN_REGEXES", cast=str)).split(",") if x != ""
 ]
 CSRF_TRUSTED_ORIGINS = [x for x in str(config("DJANGO_CSRF_TRUSTED_ORIGINS", cast=str)).split(",") if x != ""]
+X_FRAME_OPTIONS = "SAMEORIGIN"  # Need cross-origin here for Summernote X-frame injection
