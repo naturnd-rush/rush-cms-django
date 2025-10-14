@@ -27,14 +27,13 @@ from rush.graphql import get_schema
 
 urlpatterns = [
     path("login/", views.rush_login_view),
-    path("", admin.site.urls),
     path("summernote/", include("django_summernote.urls")),
     path(
         # TODO: Remove csrf exempt here and add the token to internal graphQL requests!
         "graphql/",
         csrf_exempt(GraphQLView.as_view(graphiql=True, schema=get_schema())),
     ),
-    # path("github/deploy/", views.deploy_webhook_handler),
+    path("", admin.site.urls),
 ]
 
 # Serve media files during development
