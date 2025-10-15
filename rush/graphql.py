@@ -23,15 +23,11 @@ class MapDataType(DjangoObjectType):
         ]
 
     geojson = graphene.String()
-    dropdown_name = graphene.String()
 
     def resolve_geojson(self, info):
         if self.has_geojson_data():  # type: ignore
             return self.get_raw_geojson_data()  # type: ignore
         return None
-
-    def resolve_dropdown_name(self, info):
-        return str(self)
 
 
 class MapDataWithoutGeoJsonType(MapDataType):
