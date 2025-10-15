@@ -19,26 +19,29 @@ class MapDataType(DjangoObjectType):
             "geojson",
             "map_link",
             "campaign_link",
+            "geotiff_link",
         ]
 
     geojson = graphene.String()
+    geotiff_link = graphene.String()
 
     def resolve_geojson(self, info):
         if self.has_geojson_data():  # type: ignore
             return self.get_raw_geojson_data()  # type: ignore
         return None
 
+    def resolve_geotiff_link(self, info):
+        if isinstance(self, models.MapData):
+            if self.geotiff:
+                return self.geotiff.url
+            return None
+        raise ValueError("Expected API object to be an instance of MapData!")
+
 
 class MapDataWithoutGeoJsonType(MapDataType):
     class Meta:  # type: ignore
         model = models.MapData
-        fields = [
-            "id",
-            "name",
-            "provider_state",
-            "map_link",
-            "campaign_link",
-        ]
+        fields = [x for x in MapDataType._meta.fields if x != "geojson"]
 
 
 class StylesOnLayersType(DjangoObjectType):
@@ -48,10 +51,10 @@ class StylesOnLayersType(DjangoObjectType):
             "id",
             "legend_description",
             "legend_order",
-            # "legend_patch",
             "style",
             "layer",
         ]
+
 
 class StyleType(DjangoObjectType):
     class Meta:
@@ -80,7 +83,7 @@ class StyleType(DjangoObjectType):
 class LayerType(DjangoObjectType):
     class Meta:
         model = models.Layer
-        fields = ["id", "name", "description", "styles_on_layer", "serialized_leaflet_json"]
+        fields = ["id", "name", "map_data", "description", "styles_on_layer", "serialized_leaflet_json"]
 
     styles_on_layer = graphene.List(StylesOnLayersType)
 
@@ -141,7 +144,7 @@ class InitiativeType(DjangoObjectType):
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
-        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs","slug"] 
+        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs", "slug"]
 
     # Link one half of the many-to-many through table in the graphql schema
     layers_on_question = graphene.List(LayerOnQuestionType)
@@ -198,7 +201,7 @@ class Query(graphene.ObjectType):
 
     def resolve_question_by_slug(self, info, slug: str):
         return models.Question.objects.get(slug=slug)
-      
+
     def resolve_question_tab_by_id(self, info, id):
         return models.QuestionTab.objects.get(pk=id)
 
