@@ -1,9 +1,21 @@
 import json
 import uuid
-from typing import Any, Dict, List
 
 import django.db.models as models
+from django.conf import settings
 from simple_history.models import HistoricalRecords
+from storages.backends.s3 import S3Storage
+
+from rush.models.validators import validate_tiff
+
+backblaze_raster_storage = S3Storage(
+    bucket_name=settings.BACKBLAZE_RASTER_BUCKET_NAME,
+    endpoint_url=settings.BACKBLAZE_ENDPOINT_URL,
+    access_key=settings.BACKBLAZE_APP_KEY_ID,
+    secret_key=settings.BACKBLAZE_APP_KEY,
+    region_name=settings.BACKBLAZE_REGION_NAME,
+    default_acl="public-read",
+)
 
 
 class MapData(models.Model):
@@ -11,6 +23,7 @@ class MapData(models.Model):
     class ProviderState(models.TextChoices):
         UNSET = "unset"
         GEOJSON = "geojson"
+        GEOTIFF = "geotiff"  # for raster image data
         OPEN_GREEN_MAP = "open_green_map"
 
     class NoGeoJsonData(Exception):
@@ -30,6 +43,15 @@ class MapData(models.Model):
     # Open green map provider fields
     map_link = models.CharField(max_length=2000, null=True, blank=True)
     campaign_link = models.CharField(max_length=2000, null=True, blank=True)
+
+    # Geotiff provider fields
+    geotiff = models.FileField(
+        null=True,
+        blank=True,
+        storage=backblaze_raster_storage,
+        validators=[validate_tiff],
+        help_text="A GeoTIFF file to upload. It may take up to a couple minutes to upload depending on the file size.",
+    )
 
     history = HistoricalRecords()
 

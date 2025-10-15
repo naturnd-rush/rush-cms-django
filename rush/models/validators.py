@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db.models.fields.files import FieldFile
 
 
-class InvalidFileType(ValidationError):
+class BaseInvalidFileType(ValidationError):
     """
     The file type is invalid and cannot be used.
     """
@@ -20,7 +20,7 @@ class InvalidFileType(ValidationError):
         return str(self.message)
 
 
-class UnsupportedFileType(InvalidFileType):
+class UnsupportedFileType(BaseInvalidFileType):
     """
     The file type is known, but not supported.
     """
@@ -36,13 +36,11 @@ class UnsupportedFileType(InvalidFileType):
         self.supported_types = supported_types
         # Build a user-friendly message listing supported mime types.
         supported_list = ", ".join(f'"{x}"' for x in supported_types)
-        msg = 'Unsupported file type "{}". Please upload one of: {}.'.format(
-            offending_type, supported_list
-        )
+        msg = 'Unsupported file type "{}". Please upload one of: {}.'.format(offending_type, supported_list)
         super().__init__(message=msg, *args, **kwargs)
 
 
-class UnknownFileType(InvalidFileType):
+class UnknownFileType(BaseInvalidFileType):
     """
     The file type is unknown, and therefore invalid.
     """
@@ -70,6 +68,18 @@ def validate_image(file: FieldFile):
     Raise a validation-error if then file isn't a PNG or JPEG.
     """
     allowed = ["image/png", "image/jpeg"]
+    mime_type, _ = mimetypes.guess_type(file.name)
+    if not mime_type:
+        raise UnknownFileType(file.name)
+    if mime_type not in allowed:
+        raise UnsupportedFileType(mime_type, allowed)
+
+
+def validate_tiff(file: FieldFile):
+    """
+    Raise a validation-error if then file isn't a TIFF file (https://en.wikipedia.org/wiki/TIFF).
+    """
+    allowed = ["image/tiff", "image/tiff-fx"]
     mime_type, _ = mimetypes.guess_type(file.name)
     if not mime_type:
         raise UnknownFileType(file.name)

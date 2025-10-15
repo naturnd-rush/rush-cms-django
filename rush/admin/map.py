@@ -187,6 +187,11 @@ mdaf_config = MapDataAdminFormConfig(
             ],
             map_preview=False,
         ),
+        MapDataAdminFormConfig.Provider(
+            state=models.MapData.ProviderState.GEOTIFF,
+            fields=[MapDataAdminFormConfig.Field("geotiff", required=True)],
+            map_preview=False,
+        ),
     ]
 )
 
