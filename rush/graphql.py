@@ -53,56 +53,6 @@ class StylesOnLayersType(DjangoObjectType):
             "layer",
         ]
 
-    # legend_patch = graphene.String()
-
-    # def resolve_legend_patch(self, info):
-    #     """
-    #     Render a little legend patch for the style.
-    #     """
-    #     if not isinstance(self, models.StylesOnLayer):
-    #         raise ValueError("Expected StylesOnLayer object while resolving query!")
-
-    #     # Three scenarios:
-    #     # 1.) Style has only a marker icon;
-    #     # 2.) Style has only a polygon / line; and,
-    #     # 3.) Style has both marker icon and polygon / line.
-    #     style: models.Style = self.style
-    #     svg_html_id = "-".join(re.sub(r"[^A-Za-z]", "", self.legend_description).lower().split(" "))
-
-    #     if style.draw_marker and not style.draw_fill and not style.draw_stroke:
-    #         # Scenario 1: Only Marker Icon
-    #         request = info.context  # apparently this is where graphql puts the request
-    #         marker_url = f"{base_media_url(request)['BASE_MEDIA_URL']}{str(style.marker_icon)}"
-    #         marker_icon = (
-    #             '<svg width="45" height="27" fill="none" xmlns="http://www.w3.org/2000/svg">'
-    #             + "<img "
-    #             + f'src="{marker_url}" '
-    #             + 'width="40px" '
-    #             + 'height="40px" '
-    #             'style="'
-    #             + "position: absolute;"
-    #             + "left: 22.5px;"
-    #             + "top: 22.5px;"
-    #             + f"opacity: {style.marker_icon_opacity}"
-    #             + '"'
-    #             + "/>"
-    #             + "</svg>"
-    #         )
-    #         print(marker_icon)
-    #         return marker_icon
-
-    #     elif not style.draw_marker and (style.draw_fill or style.draw_stroke):
-    #         # Scenario 2: Only Polygon / Line
-    #         ...
-
-    #     elif style.draw_marker and (style.draw_fill or style.draw_stroke):
-    #         # Scenario 3: Both Marker Icon and Polygon / Line
-    #         ...
-
-    #     else:
-    #         raise ValueError("Unexpected combination of style data!")
-
-
 class StyleType(DjangoObjectType):
     class Meta:
         model = models.Style
