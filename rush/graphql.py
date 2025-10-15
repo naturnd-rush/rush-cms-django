@@ -15,7 +15,6 @@ class MapDataType(DjangoObjectType):
         fields = [
             "id",
             "name",
-            "dropdown_name",
             "provider_state",
             "geojson",
             "map_link",
@@ -36,7 +35,6 @@ class MapDataWithoutGeoJsonType(MapDataType):
         fields = [
             "id",
             "name",
-            "dropdown_name",
             "provider_state",
             "map_link",
             "campaign_link",
