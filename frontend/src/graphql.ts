@@ -102,7 +102,7 @@ export async function getStyleById(styleId: string): Promise<Style | null> {
 
 export interface MapData{
     geojson: string | null,
-    providerState: "GEOJSON" | "OPEN_GREEN_MAP" | "UNSET",
+    providerState: "GEOJSON" | "OPEN_GREEN_MAP" | "GEOTIFF" | "UNSET",
 }
 
 export async function getMapDataById(mapDataId: string): Promise<MapData | null>{

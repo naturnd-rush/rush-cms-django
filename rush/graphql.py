@@ -23,12 +23,13 @@ class MapDataType(DjangoObjectType):
         ]
 
     geojson = graphene.String()
-    geotiff_link = graphene.String()
 
     def resolve_geojson(self, info):
         if self.has_geojson_data():  # type: ignore
             return self.get_raw_geojson_data()  # type: ignore
         return None
+
+    geotiff_link = graphene.String()
 
     def resolve_geotiff_link(self, info):
         if isinstance(self, models.MapData):
@@ -38,10 +39,21 @@ class MapDataType(DjangoObjectType):
         raise ValueError("Expected API object to be an instance of MapData!")
 
 
-class MapDataWithoutGeoJsonType(MapDataType):
+class MapDataWithoutGeoJsonType(DjangoObjectType):
     class Meta:  # type: ignore
         model = models.MapData
         fields = [x for x in MapDataType._meta.fields if x != "geojson"]
+
+    # Still need this resolved and filed definition here because inheritance of
+    # mapDataType in this class keeps geojson accessible for some reason...
+    geotiff_link = graphene.String()
+
+    def resolve_geotiff_link(self, info):
+        if isinstance(self, models.MapData):
+            if self.geotiff:
+                return self.geotiff.url
+            return None
+        raise ValueError("Expected API object to be an instance of MapData!")
 
 
 class StylesOnLayersType(DjangoObjectType):
@@ -93,15 +105,17 @@ class LayerType(DjangoObjectType):
         raise ValueError("Expected Layer object while resolving query!")
 
 
-class LayerTypeWithoutSerializedLeafletJSON(LayerType):
+class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
     """
     Defensive type to prevent people from querying serializedLeafletJSON from allLayers, which
     would be too computationally expensive and probably isn't needed by any API client.
     """
 
+    map_data = graphene.Field(MapDataWithoutGeoJsonType)
+
     class Meta:  # type: ignore
         model = models.Layer
-        fields = ["id", "name", "description", "styles_on_layer"]
+        fields = ["id", "name", "description", "map_data"]
 
 
 class LayerGroupType(DjangoObjectType):

@@ -3,6 +3,7 @@ import uuid
 
 import django.db.models as models
 from django.conf import settings
+from django.core.validators import URLValidator
 from simple_history.models import HistoricalRecords
 from storages.backends.s3 import S3Storage
 
@@ -41,8 +42,18 @@ class MapData(models.Model):
     _geojson = models.JSONField(default=dict, null=True, blank=True)
 
     # Open green map provider fields
-    map_link = models.CharField(max_length=2000, null=True, blank=True)
-    campaign_link = models.CharField(max_length=2000, null=True, blank=True)
+    map_link = models.CharField(
+        max_length=2000,
+        null=True,
+        blank=True,
+        validators=[URLValidator(schemes=["https"])],
+    )
+    campaign_link = models.CharField(
+        max_length=2000,
+        null=True,
+        blank=True,
+        validators=[URLValidator(schemes=["https"])],
+    )
 
     # Geotiff provider fields
     geotiff = models.FileField(
