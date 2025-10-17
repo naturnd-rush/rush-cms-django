@@ -84,8 +84,32 @@ class MapDataChoiceField(forms.ModelChoiceField):
 
 
 class LayerForm(forms.ModelForm):
-    serialized_leaflet_json = forms.CharField(widget=forms.HiddenInput())
+
+    class LeafletSerializationFail(Exception):
+        """
+        Something went wrong while trying to serialize the leaflet
+        JSON before saving it to the Layer model.
+        """
+
+        ...
+
+    serialized_leaflet_json = forms.CharField(widget=forms.HiddenInput(), required=False)
     map_data = MapDataChoiceField(queryset=models.MapData.objects.all())
+
+    def clean_serialized_leaflet_json(self):
+        """
+        Prevent double-serialization of submitted GeoJSON data.
+        """
+        try:
+            map_data: models.MapData = self.cleaned_data["map_data"]
+            if map_data.provider_state == models.MapData.ProviderState.GEOJSON:
+                data = self.cleaned_data["serialized_leaflet_json"]
+                # The json.loads here avoids double-serialization. We need it because
+                # the data is serialized pre-transit to the server, and then again (mistakenly)
+                # by Django's JSONField.
+                return json.loads(data)
+        except Exception as e:
+            raise self.LeafletSerializationFail from e
 
     class Meta:
         model = models.Layer
@@ -111,25 +135,6 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
             logger.exception("Failed to inject map preview.")
         finally:
             return super().render_change_form(request, context, *args, **kwargs)
-
-    def _inject_serialized_leaflet_json(self, obj, form) -> None:
-        """
-        Takes the serialized leaflet json data from a hidden field on the form and injects it into
-        the model at model save time.
-        """
-        fieldname = "serialized_leaflet_json"
-        data = form.cleaned_data.get(fieldname)
-        if not data:
-            raise forms.ValidationError(f"Error saving {fieldname} data!")
-
-        # Avoid double-serialization
-        parsed = json.loads(data)
-
-        setattr(obj, fieldname, parsed)
-
-    def save_model(self, request, obj, form, change):
-        self._inject_serialized_leaflet_json(obj, form)
-        super().save_model(request, obj, form, change)
 
 
 @dataclass
@@ -187,6 +192,11 @@ mdaf_config = MapDataAdminFormConfig(
             ],
             map_preview=False,
         ),
+        MapDataAdminFormConfig.Provider(
+            state=models.MapData.ProviderState.GEOTIFF,
+            fields=[MapDataAdminFormConfig.Field("geotiff", required=True)],
+            map_preview=False,
+        ),
     ]
 )
 
@@ -196,9 +206,14 @@ class MapDataAdminForm(forms.ModelForm):
     For submitting `MapData` info.
     """
 
+    # provider_state = forms.ChoiceField(choices=models.MapData.ProviderState.choices, label="Data Type")
+
     class Meta:
         model = models.MapData
         fields = ["id", "name", "provider_state", *[field.fieldname for field in mdaf_config.get_fields()]]
+        labels = {
+            "provider_state": "Data Type",
+        }
 
     def get_initial_for_field(self, field, field_name):
         if field_name == "_geojson":

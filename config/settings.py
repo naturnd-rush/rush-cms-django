@@ -186,3 +186,11 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 ]
 CSRF_TRUSTED_ORIGINS = [x for x in str(config("DJANGO_CSRF_TRUSTED_ORIGINS", cast=str)).split(",") if x != ""]
 X_FRAME_OPTIONS = "SAMEORIGIN"  # Need cross-origin here for Summernote X-frame injection
+
+
+# Backblaze configuration for raster images
+BACKBLAZE_RASTER_BUCKET_NAME = "rush-webmap-raster"
+BACKBLAZE_ENDPOINT_URL = "https://s3.us-east-005.backblazeb2.com"
+BACKBLAZE_REGION_NAME = "us-east-005"  # Matching the above URL
+BACKBLAZE_APP_KEY_ID = str(config("BACKBLAZE_APP_KEY_ID", cast=str))
+BACKBLAZE_APP_KEY = str(config("BACKBLAZE_APP_KEY", cast=str))

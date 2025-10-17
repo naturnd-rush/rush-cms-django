@@ -15,36 +15,45 @@ class MapDataType(DjangoObjectType):
         fields = [
             "id",
             "name",
-            "dropdown_name",
             "provider_state",
             "geojson",
             "map_link",
             "campaign_link",
+            "geotiff_link",
         ]
 
     geojson = graphene.String()
-    dropdown_name = graphene.String()
 
     def resolve_geojson(self, info):
         if self.has_geojson_data():  # type: ignore
             return self.get_raw_geojson_data()  # type: ignore
         return None
 
-    def resolve_dropdown_name(self, info):
-        return str(self)
+    geotiff_link = graphene.String()
+
+    def resolve_geotiff_link(self, info):
+        if isinstance(self, models.MapData):
+            if self.geotiff:
+                return self.geotiff.url
+            return None
+        raise ValueError("Expected API object to be an instance of MapData!")
 
 
-class MapDataWithoutGeoJsonType(MapDataType):
+class MapDataWithoutGeoJsonType(DjangoObjectType):
     class Meta:  # type: ignore
         model = models.MapData
-        fields = [
-            "id",
-            "name",
-            "dropdown_name",
-            "provider_state",
-            "map_link",
-            "campaign_link",
-        ]
+        fields = [x for x in MapDataType._meta.fields if x != "geojson"]
+
+    # Still need this resolved and filed definition here because inheritance of
+    # mapDataType in this class keeps geojson accessible for some reason...
+    geotiff_link = graphene.String()
+
+    def resolve_geotiff_link(self, info):
+        if isinstance(self, models.MapData):
+            if self.geotiff:
+                return self.geotiff.url
+            return None
+        raise ValueError("Expected API object to be an instance of MapData!")
 
 
 class StylesOnLayersType(DjangoObjectType):
@@ -54,59 +63,9 @@ class StylesOnLayersType(DjangoObjectType):
             "id",
             "legend_description",
             "legend_order",
-            # "legend_patch",
             "style",
             "layer",
         ]
-
-    # legend_patch = graphene.String()
-
-    # def resolve_legend_patch(self, info):
-    #     """
-    #     Render a little legend patch for the style.
-    #     """
-    #     if not isinstance(self, models.StylesOnLayer):
-    #         raise ValueError("Expected StylesOnLayer object while resolving query!")
-
-    #     # Three scenarios:
-    #     # 1.) Style has only a marker icon;
-    #     # 2.) Style has only a polygon / line; and,
-    #     # 3.) Style has both marker icon and polygon / line.
-    #     style: models.Style = self.style
-    #     svg_html_id = "-".join(re.sub(r"[^A-Za-z]", "", self.legend_description).lower().split(" "))
-
-    #     if style.draw_marker and not style.draw_fill and not style.draw_stroke:
-    #         # Scenario 1: Only Marker Icon
-    #         request = info.context  # apparently this is where graphql puts the request
-    #         marker_url = f"{base_media_url(request)['BASE_MEDIA_URL']}{str(style.marker_icon)}"
-    #         marker_icon = (
-    #             '<svg width="45" height="27" fill="none" xmlns="http://www.w3.org/2000/svg">'
-    #             + "<img "
-    #             + f'src="{marker_url}" '
-    #             + 'width="40px" '
-    #             + 'height="40px" '
-    #             'style="'
-    #             + "position: absolute;"
-    #             + "left: 22.5px;"
-    #             + "top: 22.5px;"
-    #             + f"opacity: {style.marker_icon_opacity}"
-    #             + '"'
-    #             + "/>"
-    #             + "</svg>"
-    #         )
-    #         print(marker_icon)
-    #         return marker_icon
-
-    #     elif not style.draw_marker and (style.draw_fill or style.draw_stroke):
-    #         # Scenario 2: Only Polygon / Line
-    #         ...
-
-    #     elif style.draw_marker and (style.draw_fill or style.draw_stroke):
-    #         # Scenario 3: Both Marker Icon and Polygon / Line
-    #         ...
-
-    #     else:
-    #         raise ValueError("Unexpected combination of style data!")
 
 
 class StyleType(DjangoObjectType):
@@ -136,7 +95,7 @@ class StyleType(DjangoObjectType):
 class LayerType(DjangoObjectType):
     class Meta:
         model = models.Layer
-        fields = ["id", "name", "description", "styles_on_layer", "serialized_leaflet_json"]
+        fields = ["id", "name", "map_data", "description", "styles_on_layer", "serialized_leaflet_json"]
 
     styles_on_layer = graphene.List(StylesOnLayersType)
 
@@ -146,15 +105,17 @@ class LayerType(DjangoObjectType):
         raise ValueError("Expected Layer object while resolving query!")
 
 
-class LayerTypeWithoutSerializedLeafletJSON(LayerType):
+class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
     """
     Defensive type to prevent people from querying serializedLeafletJSON from allLayers, which
     would be too computationally expensive and probably isn't needed by any API client.
     """
 
+    map_data = graphene.Field(MapDataWithoutGeoJsonType)
+
     class Meta:  # type: ignore
         model = models.Layer
-        fields = ["id", "name", "description", "styles_on_layer"]
+        fields = ["id", "name", "description", "map_data"]
 
 
 class LayerGroupType(DjangoObjectType):
@@ -197,7 +158,7 @@ class InitiativeType(DjangoObjectType):
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
-        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs","slug"] 
+        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs", "slug"]
 
     # Link one half of the many-to-many through table in the graphql schema
     layers_on_question = graphene.List(LayerOnQuestionType)
@@ -254,7 +215,7 @@ class Query(graphene.ObjectType):
 
     def resolve_question_by_slug(self, info, slug: str):
         return models.Question.objects.get(slug=slug)
-      
+
     def resolve_question_tab_by_id(self, info, id):
         return models.QuestionTab.objects.get(pk=id)
 

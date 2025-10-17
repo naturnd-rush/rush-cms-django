@@ -21,7 +21,7 @@ class Layer(models.Model):
         on_delete=models.PROTECT,
     )
     styles = models.ManyToManyField("Style", through="StylesOnLayer")
-    serialized_leaflet_json = models.JSONField(default=dict)
+    serialized_leaflet_json = models.JSONField(default=dict, null=True, blank=True)
 
     history = HistoricalRecords()
 

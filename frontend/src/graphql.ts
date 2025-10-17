@@ -102,7 +102,7 @@ export async function getStyleById(styleId: string): Promise<Style | null> {
 
 export interface MapData{
     geojson: string | null,
-    providerState: "GEOJSON" | "OPEN_GREEN_MAP" | "UNSET",
+    providerState: "GEOJSON" | "OPEN_GREEN_MAP" | "GEOTIFF" | "UNSET",
 }
 
 export async function getMapDataById(mapDataId: string): Promise<MapData | null>{
@@ -125,24 +125,3 @@ export async function getMapDataById(mapDataId: string): Promise<MapData | null>
     const mapData: MapData | null = response.data.mapData;
     return mapData;
 }
-
-// export async function getMapDataByName(name: string): Promise<MapData | null>{
-//     const query = `
-//         query ($dropdownName: String!) {
-//             mapDataByDropdownName(dropdownName: $dropdownName) {
-//                 geojson
-//             }
-//         }
-//     `;
-//     const response = await executeQuery(
-//         JSON.stringify({
-//             query,
-//             variables: {
-//                 dropdownName: name
-//             }
-//         })
-//     );
-//     console.debug("getMapDataByName response: ", response);
-//     const mapData: MapData | null = response.data.mapDataByName;
-//     return mapData;
-// }
