@@ -20,7 +20,7 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("DJANGO_SECRET_KEY", cast=str)
 DEBUG = config("DJANGO_DEBUG", cast=bool)
-ALLOWED_HOSTS = [host for host in config("DJANGO_ALLOWED_HOSTS", cast=str).split(",") if host != ""]
+ALLOWED_HOSTS = [host for host in str(config("DJANGO_ALLOWED_HOSTS", cast=str)).split(",") if host != ""]
 MEDIA_ROOT = config("DJANGO_MEDIA_ROOT", cast=str)
 STATIC_ROOT = config("DJANGO_STATIC_ROOT", cast=str)
 GDAL_LIBRARY_PATH = config("GDAL_LIBRARY_PATH", cast=str)
