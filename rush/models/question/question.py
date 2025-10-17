@@ -39,3 +39,14 @@ class Question(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class ApprovedQuestion(Question):
+    """
+    Proxy model for Question to provide a different admin view.
+    """
+
+    class Meta:
+        proxy = True
+        verbose_name = "Approved Question"
+        verbose_name_plural = "Approved Questions"
