@@ -1,7 +1,6 @@
 import uuid
 
 from django.db import models
-from simple_history.models import HistoricalRecords
 
 from rush.models.question.question import Question
 
@@ -20,7 +19,6 @@ class QuestionTab(models.Model):
         on_delete=models.CASCADE,
         related_name="tabs",
     )
-    history = HistoricalRecords()
 
     def __str__(self):
         return f"{self.title} for question: '{self.question.title}'"

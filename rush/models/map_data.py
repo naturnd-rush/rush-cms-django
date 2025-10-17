@@ -4,10 +4,19 @@ import uuid
 import django.db.models as models
 from django.conf import settings
 from django.core.validators import URLValidator
-from simple_history.models import HistoricalRecords
 
 from rush.models.validators import validate_tiff
 from rush.storage import BackblazeStorageFactory
+
+
+def get_raster_storage():
+    """Get storage for raster image files (GeoTIFF)."""
+    return BackblazeStorageFactory.create_from_bucket_name(
+        settings.BACKBLAZE_RASTER_BUCKET_NAME,
+        validate_visibility=BackblazeStorageFactory.Visibility.PUBLIC,
+        persistance=BackblazeStorageFactory.Persistance.HARD_DELETE,
+        duplication=BackblazeStorageFactory.Duplication.LATEST_VERSION_ONLY,
+    )
 
 
 class MapData(models.Model):
@@ -50,17 +59,10 @@ class MapData(models.Model):
     geotiff = models.FileField(
         null=True,
         blank=True,
-        storage=BackblazeStorageFactory.create_from_bucket_name(
-            settings.BACKBLAZE_RASTER_BUCKET_NAME,
-            validate_visibility=BackblazeStorageFactory.Visibility.PUBLIC,
-            persistance=BackblazeStorageFactory.Persistance.HARD_DELETE,
-            duplication=BackblazeStorageFactory.Duplication.LATEST_VERSION_ONLY,
-        ),
+        storage=get_raster_storage,
         validators=[validate_tiff],
         help_text="A GeoTIFF file to upload. It may take up to a couple minutes to upload depending on the file size.",
     )
-
-    history = HistoricalRecords()
 
     def has_geojson_data(self) -> bool:
         try:

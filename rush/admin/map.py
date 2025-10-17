@@ -11,7 +11,6 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin
 from django_summernote.widgets import SummernoteWidgetBase
-from simple_history.admin import SimpleHistoryAdmin
 
 from rush import models
 from rush.admin import utils
@@ -117,7 +116,7 @@ class LayerForm(forms.ModelForm):
 
 
 @admin.register(models.Layer)
-class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
+class LayerAdmin(SummernoteModelAdmin):
     form = LayerForm
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]
@@ -280,7 +279,7 @@ class MapDataAdminForm(forms.ModelForm):
 
 
 @admin.register(models.MapData)
-class MapDataAdmin(SimpleHistoryAdmin):
+class MapDataAdmin(admin.ModelAdmin):
     form = MapDataAdminForm
     exclude = ["id"]
     list_display = ["name", "provider_state"]
@@ -353,7 +352,7 @@ class StyleForm(forms.ModelForm):
 
 
 @admin.register(models.Style)
-class StyleAdmin(SimpleHistoryAdmin):
+class StyleAdmin(admin.ModelAdmin):
     form = StyleForm
     readonly_fields = ["style_preview"]
     exclude = ["id"]

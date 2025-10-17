@@ -2,13 +2,15 @@ import uuid
 
 from django.core.exceptions import ValidationError
 from django.db import models
-from simple_history.models import HistoricalRecords
 
 
 class Question(models.Model):
     """
     A question that ties together one or more map layers into a data-driven narrative.
     """
+
+    class Meta:
+        ordering = ["display_order"]
 
     class DuplicateSlug(ValidationError):
         """
@@ -24,7 +26,7 @@ class Question(models.Model):
     initiatives = models.ManyToManyField(to="Initiative", blank=True)
     questions = models.ManyToManyField(to="Layer", related_name="questions")
     slug = models.SlugField(max_length=255, unique=True)
-    history = HistoricalRecords()
+    display_order = models.PositiveIntegerField(default=0, blank=False, null=False)
 
     def clean_slug(self):
         if same_slug_q := Question.objects.exclude(pk=self.id).filter(slug=self.slug).first():

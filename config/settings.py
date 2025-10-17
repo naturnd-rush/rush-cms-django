@@ -57,10 +57,10 @@ INSTALLED_APPS = [
     # RUSH dependencies
     "django_summernote",  # Rich text fields + editor
     "graphene_django",  # GraphQL support
-    "simple_history",  # Simple changelog + diff for select models
-    "leaflet",  # Leaflet Django integration
+    "leaflet",  # Leaflet Django integration  # TODO: Not sure if this is actually used.
     "colorfield",  # Django Admin colorpicker UI
     "corsheaders",  # CORS headers for frontend on different origin
+    "adminsortable2",  # Adds drag-and-drop sortable lists on the Django admin-site.
 ]
 
 MIDDLEWARE = [
@@ -72,7 +72,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

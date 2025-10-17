@@ -1,10 +1,10 @@
+from adminsortable2.admin import SortableAdminMixin
 from django import forms
 from django.contrib import admin
 from django.db import models
 from django.urls import reverse
 from django.utils.html import format_html_join
 from django_summernote.admin import SummernoteInlineModelAdmin, SummernoteModelAdmin
-from simple_history.admin import SimpleHistoryAdmin
 
 from rush import models
 from rush.admin import utils
@@ -44,7 +44,7 @@ class InitiativeForm(forms.ModelForm):
 
 
 @admin.register(models.Initiative)
-class InitiativeAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
+class InitiativeAdmin(SummernoteModelAdmin):
     exclude = ["id"]
     form = InitiativeForm
     list_display = ["title", "link", "content_preview", "image_preview", "get_tags"]
@@ -77,7 +77,7 @@ class InitiativeAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
 
 
 @admin.register(models.InitiativeTag)
-class InitiativeTagAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
+class InitiativeTagAdmin(SummernoteModelAdmin):
     exclude = ["id"]
     list_display = ["name", "tagged_initiatives"]
     search_fields = ["name"]
@@ -118,7 +118,7 @@ class QuestionForm(forms.ModelForm):
         fields = [
             # "layers",
             "title",
-            "slug", 
+            "slug",
             "subtitle",
             "image",
             "initiatives",
@@ -141,7 +141,7 @@ class QuestionForm(forms.ModelForm):
 
 
 @admin.register(models.QuestionTab)
-class QuestionTabAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
+class QuestionTabAdmin(SummernoteModelAdmin):
     exclude = ["id"]
     summernote_fields = ["content"]
     list_display = ["title", "content_preview"]
@@ -159,12 +159,12 @@ class QuestionTabInline(admin.TabularInline, SummernoteInlineModelAdmin):
 
 
 @admin.register(models.Question)
-class QuestionAdmin(SimpleHistoryAdmin):
+class QuestionAdmin(SortableAdminMixin, admin.ModelAdmin):  # type: ignore
     exclude = ["id"]
     form = QuestionForm
     list_display = [
         "title",
-        "slug",  
+        "slug",
         "image_preview",
         "get_initiatives",
     ]
@@ -186,6 +186,16 @@ class QuestionAdmin(SimpleHistoryAdmin):
         if obj.initiatives.count() > 0:
             return ", ".join([initiative.title for initiative in obj.initiatives.all()])
         return "No Initiatives"
+
+    @admin.action(description="Duplicate selected items")
+    def duplicate_object(self, request, queryset):
+        for obj in queryset:
+            obj.pk = None  # Clear primary key
+            obj.id = None  # Clear id if it exists
+            obj.slug = f"{obj.slug}-copy"  # Avoid unique constraint violations
+            obj.save()
+
+        self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
 
 
 @admin.register(models.LayerGroup)
