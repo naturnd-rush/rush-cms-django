@@ -1,8 +1,7 @@
 from adminsortable2.admin import SortableAdminMixin
 from django import forms
 from django.contrib import admin
-from django.db.models import QuerySet
-from django.http import HttpRequest
+from django.db import models
 from django.urls import reverse
 from django.utils.html import format_html_join
 from django_summernote.admin import SummernoteInlineModelAdmin, SummernoteModelAdmin
@@ -133,6 +132,14 @@ class QuestionForm(forms.ModelForm):
             self.fields["image"].help_text = utils.image_html(self.instance.image.url)
 
 
+@admin.register(models.QuestionTab)
+class QuestionTabAdmin(SummernoteModelAdmin):
+    exclude = ["id"]
+    summernote_fields = ["content"]
+    list_display = ["title", "content_preview"]
+    content_preview = utils.truncate_admin_text_from("content")
+
+
 class QuestionTabInline(admin.TabularInline, SummernoteInlineModelAdmin):
     """
     Allow editing of QuestionTab objects straight from the Question form.
@@ -144,7 +151,7 @@ class QuestionTabInline(admin.TabularInline, SummernoteInlineModelAdmin):
 
 
 @admin.register(models.Question)
-class QuestionAdmin(admin.ModelAdmin):  # type: ignore
+class QuestionAdmin(SortableAdminMixin, admin.ModelAdmin):  # type: ignore
     exclude = ["id"]
     form = QuestionForm
     list_display = [
@@ -156,7 +163,6 @@ class QuestionAdmin(admin.ModelAdmin):  # type: ignore
     prepopulated_fields = {"slug": ("title",)}
     autocomplete_fields = ["initiatives"]
     inlines = [QuestionTabInline, LayerOnQuestionStackedInline]
-    actions = ["duplicate_object"]
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
 
     def image_preview(self, obj):
@@ -172,29 +178,6 @@ class QuestionAdmin(admin.ModelAdmin):  # type: ignore
         if obj.initiatives.count() > 0:
             return ", ".join([initiative.title for initiative in obj.initiatives.all()])
         return "No Initiatives"
-
-    @admin.action(description="Duplicate selected items")
-    def duplicate_object(self, request, queryset):
-        for obj in queryset:
-            obj.pk = None  # Clear primary key
-            obj.id = None  # Clear id if it exists
-            obj.slug = f"{obj.slug}-copy"  # Avoid unique constraint violations
-            obj.save()
-
-        self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
-
-
-@admin.register(models.ApprovedQuestion)
-class ApprovedQuestionAdmin(SortableAdminMixin, QuestionAdmin):  # type: ignore
-    """
-    The ApproveQuestion admin list shows all approved questions
-    """
-
-    actions = ["duplicate_object"]
-
-    def get_queryset(self, request: HttpRequest) -> QuerySet[models.ApprovedQuestion]:
-        # TODO: When approval code is written, filter here.
-        return super().get_queryset(request)
 
     @admin.action(description="Duplicate selected items")
     def duplicate_object(self, request, queryset):
