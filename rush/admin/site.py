@@ -154,15 +154,11 @@ class QuestionTabInline(admin.TabularInline, SummernoteInlineModelAdmin):
 class QuestionAdmin(SortableAdminMixin, admin.ModelAdmin):  # type: ignore
     exclude = ["id"]
     form = QuestionForm
-    list_display = [
-        "title",
-        "slug",
-        "image_preview",
-        "get_initiatives",
-    ]
+    list_display = ["title", "slug", "image_preview", "get_initiatives", "display_order"]
     prepopulated_fields = {"slug": ("title",)}
     autocomplete_fields = ["initiatives"]
     inlines = [QuestionTabInline, LayerOnQuestionStackedInline]
+    actions = ["duplicate_object"]
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
 
     def image_preview(self, obj):
