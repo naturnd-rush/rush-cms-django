@@ -6,6 +6,7 @@ from enum import Enum
 from typing import IO, Any
 
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from storages.backends.s3 import S3Storage
 
 
@@ -56,13 +57,16 @@ class BackblazeStorageFactory:
         validate_visibility=Visibility.ANY,
         persistance=Persistance.USE_BUCKET_SETTINGS,
         duplication=Duplication.USE_BUCKET_SETTINGS,
-    ) -> S3Storage:
+    ) -> S3Storage | FileSystemStorage:
         """
         Create a Django-compatible S3Storage object for Backblaze by specifying a bucket name.
         Raise `UnexpectedVisibility` if the bucket's visibility does not match `validate_visibility`.
         Hard-deletes objects on remote if `persistance` is set to `Persistance.HARD_DELETE`.
         Only keeps the latest version of a file if `dupliation` is set to `Duplication.LATEST_VERSION_ONLY`.
         """
+        if settings.DEBUG:
+            # Don't try to connect to Backblaze in a dev environment
+            return FileSystemStorage(location=f"{settings.MEDIA_ROOT}/debug_raster_image_storage")
         if bucket_name not in cls._storage_instances:
             storage = S3Storage(
                 default_acl="public-read",
