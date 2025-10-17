@@ -111,13 +111,11 @@ class InitiativeTagAdmin(SummernoteModelAdmin):
 class QuestionForm(forms.ModelForm):
     """
     Override the default add/change page for the Question model admin.
-    TODO: Maybe delete this form and inject JS for preview using readonly_fields?
     """
 
     class Meta:
         model = models.Question
         fields = [
-            # "layers",
             "title",
             "slug",
             "subtitle",
@@ -128,17 +126,11 @@ class QuestionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         """
         Inject image HTML in "image" field help text.
+        TODO: Maybe delete this whole form and inject JS for preview using readonly_fields?
         """
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.image:
             self.fields["image"].help_text = utils.image_html(self.instance.image.url)
-
-    def clean_image(self):
-        """
-        Can add custom image validation here if we want...
-        """
-        image = self.cleaned_data.get("image")
-        return image
 
 
 class QuestionTabInline(admin.TabularInline, SummernoteInlineModelAdmin):
