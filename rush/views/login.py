@@ -2,8 +2,11 @@ from django.contrib import messages
 from django.contrib.admin.forms import AdminAuthenticationForm
 from django.contrib.auth import authenticate, login
 from django.shortcuts import redirect, render
+from ratelimit.decorators import ratelimit
 
 
+@ratelimit(key="ip", rate="10/m", method="POST", block=True)
+@ratelimit(key="ip", rate="500/d", method="POST", block=True)
 def rush_login_view(request):
     """
     GET --> Render the RUSH Admin login page.
