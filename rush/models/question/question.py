@@ -26,7 +26,7 @@ class Question(models.Model):
     initiatives = models.ManyToManyField(to="Initiative", blank=True)
     questions = models.ManyToManyField(to="Layer", related_name="questions")
     slug = models.SlugField(max_length=255, unique=True)
-    display_order = models.PositiveIntegerField(default=0, blank=False, null=False)
+    display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 
     def clean_slug(self):
         if same_slug_q := Question.objects.exclude(pk=self.id).filter(slug=self.slug).first():

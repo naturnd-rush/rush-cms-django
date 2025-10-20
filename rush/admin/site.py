@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from adminsortable2.admin import SortableAdminMixin
 from django import forms
 from django.contrib import admin
@@ -178,9 +180,9 @@ class QuestionAdmin(SortableAdminMixin, admin.ModelAdmin):  # type: ignore
     @admin.action(description="Duplicate selected items")
     def duplicate_object(self, request, queryset):
         for obj in queryset:
-            obj.pk = None  # Clear primary key
-            obj.id = None  # Clear id if it exists
-            obj.slug = f"{obj.slug}-copy"  # Avoid unique constraint violations
+            obj.pk = None  # Clear primary key (should auto-generate)
+            obj.id = None  # Clear id (should auto-generate)
+            obj.slug = f"{obj.slug}-copy-{uuid4().hex}"  # Avoid unique constraint violations
             obj.save()
 
         self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
