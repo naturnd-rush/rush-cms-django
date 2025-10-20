@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from adminsortable2.admin import SortableAdminMixin
+from adminsortable2.admin import SortableAdminMixin, SortableStackedInline
 from django import forms
 from django.contrib import admin
 from django.db import models
@@ -142,14 +142,14 @@ class QuestionTabAdmin(SummernoteModelAdmin):
     content_preview = utils.truncate_admin_text_from("content")
 
 
-class QuestionTabInline(admin.TabularInline, SummernoteInlineModelAdmin):
+class QuestionTabInline(SortableStackedInline, SummernoteInlineModelAdmin):
     """
     Allow editing of QuestionTab objects straight from the Question form.
     """
 
     exclude = ["id"]
     model = models.QuestionTab
-    extra = 1  # show 1 extra empty form
+    extra = 0  # don't display extra question tabs to add, let the user click
 
 
 @admin.register(models.Question)

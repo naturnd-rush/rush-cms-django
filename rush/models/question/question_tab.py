@@ -10,6 +10,9 @@ class QuestionTab(models.Model):
     A subtab of the question where content can go.
     """
 
+    class Meta:
+        ordering = ["display_order"]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     title = models.CharField(max_length=255)
     content = models.TextField()
@@ -19,6 +22,7 @@ class QuestionTab(models.Model):
         on_delete=models.CASCADE,
         related_name="tabs",
     )
+    display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 
     def __str__(self):
         return f"{self.title} for question: '{self.question.title}'"

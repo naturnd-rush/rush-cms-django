@@ -140,7 +140,7 @@ class LayerOnQuestionType(DjangoObjectType):
 class QuestionTabType(DjangoObjectType):
     class Meta:
         model = models.QuestionTab
-        fields = ["id", "title", "content"]
+        fields = ["id", "title", "content", "display_order"]
 
 
 class InitiativeTagType(DjangoObjectType):
