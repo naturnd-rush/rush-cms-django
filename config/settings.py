@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     # RUSH apps
     "rush",
     # RUSH dependencies
+    "nested_admin",  # Nested inline support for Django admin
     "django_summernote",  # Rich text fields + editor
     "graphene_django",  # GraphQL support
     "leaflet",  # Leaflet Django integration  # TODO: Not sure if this is actually used.

@@ -1,11 +1,6 @@
 from uuid import uuid4
 
-from adminsortable2.admin import (
-    SortableAdminBase,
-    SortableAdminMixin,
-    SortableStackedInline,
-    SortableTabularInline,
-)
+import nested_admin.nested as nested
 from django import forms
 from django.contrib import admin
 from django.db import models
@@ -17,14 +12,7 @@ from rush import models
 from rush.admin import utils
 
 
-class LayerGroupOnQuestionInline(SortableTabularInline, admin.TabularInline):
-    verbose_name_plural = "Layer Groups"
-    model = models.LayerGroupOnQuestion
-    extra = 0
-    exclude = ["id"]
-
-
-class LayerOnLayerGroupInline(SortableTabularInline, admin.TabularInline):
+class LayerOnLayerGroupInline(nested.NestedTabularInline):
     verbose_name_plural = "Layers"
     model = models.LayerOnLayerGroup
     extra = 0
@@ -33,6 +21,16 @@ class LayerOnLayerGroupInline(SortableTabularInline, admin.TabularInline):
         "layer",
         # "layer_group",
     ]
+    sortable_field_name = "display_order"
+
+
+class LayerGroupOnQuestionInline(nested.NestedTabularInline):
+    verbose_name_plural = "Layer Groups"
+    model = models.LayerGroupOnQuestion
+    extra = 0
+    exclude = ["id"]
+    inlines = [LayerOnLayerGroupInline]
+    sortable_field_name = "display_order"
 
 
 class InitiativeForm(forms.ModelForm):
@@ -157,7 +155,7 @@ class QuestionTabAdmin(SummernoteModelAdmin):
     content_preview = utils.truncate_admin_text_from("content")
 
 
-class QuestionTabInline(SortableStackedInline, SummernoteInlineModelAdmin):
+class QuestionTabInline(nested.NestedStackedInline, SummernoteInlineModelAdmin):
     """
     Allow editing of QuestionTab objects straight from the Question form.
     """
@@ -165,10 +163,11 @@ class QuestionTabInline(SortableStackedInline, SummernoteInlineModelAdmin):
     exclude = ["id"]
     model = models.QuestionTab
     extra = 0  # don't display extra question tabs to add, let the user click
+    sortable_field_name = "display_order"
 
 
 @admin.register(models.Question)
-class QuestionAdmin(SortableAdminMixin, admin.ModelAdmin):  # type: ignore
+class QuestionAdmin(nested.NestedModelAdmin):
     exclude = ["id"]
     form = QuestionForm
     list_display = ["title", "slug", "image_preview", "get_initiatives", "display_order"]
@@ -176,6 +175,7 @@ class QuestionAdmin(SortableAdminMixin, admin.ModelAdmin):  # type: ignore
     autocomplete_fields = ["initiatives"]
     inlines = [QuestionTabInline, LayerGroupOnQuestionInline]
     actions = ["duplicate_object"]
+    sortable_field_name = "display_order"  # Enable drag-and-drop for Questions in the list view
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
 
     def image_preview(self, obj):
@@ -204,7 +204,7 @@ class QuestionAdmin(SortableAdminMixin, admin.ModelAdmin):  # type: ignore
 
 
 @admin.register(models.LayerGroupOnQuestion)
-class LayerGroupOnQuestionAdmin(SortableAdminBase, admin.ModelAdmin):  # type: ignore
+class LayerGroupOnQuestionAdmin(nested.NestedModelAdmin):
     """
     Admin page for the layer groups on questions.
     """
@@ -212,6 +212,7 @@ class LayerGroupOnQuestionAdmin(SortableAdminBase, admin.ModelAdmin):  # type: i
     exclude = ["id"]
     search_fields = ["group_name"]
     inlines = [LayerOnLayerGroupInline]
+    sortable_field_name = "display_order"
 
 
 @admin.register(models.Page)
