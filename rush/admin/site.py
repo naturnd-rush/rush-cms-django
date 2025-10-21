@@ -1,6 +1,11 @@
 from uuid import uuid4
 
-from adminsortable2.admin import SortableAdminMixin, SortableStackedInline
+from adminsortable2.admin import (
+    SortableAdminBase,
+    SortableAdminMixin,
+    SortableStackedInline,
+    SortableTabularInline,
+)
 from django import forms
 from django.contrib import admin
 from django.db import models
@@ -12,12 +17,22 @@ from rush import models
 from rush.admin import utils
 
 
-class LayerOnQuestionStackedInline(admin.StackedInline):
-    verbose_name_plural = "Layers on this Question"
-    model = models.LayerOnQuestion
+class LayerGroupOnQuestionInline(SortableTabularInline, admin.TabularInline):
+    verbose_name_plural = "Layer Groups"
+    model = models.LayerGroupOnQuestion
     extra = 0
     exclude = ["id"]
-    autocomplete_fields = ["layer", "layer_group"]
+
+
+class LayerOnLayerGroupInline(SortableTabularInline, admin.TabularInline):
+    verbose_name_plural = "Layers"
+    model = models.LayerOnLayerGroup
+    extra = 0
+    exclude = ["id"]
+    autocomplete_fields = [
+        "layer",
+        # "layer_group",
+    ]
 
 
 class InitiativeForm(forms.ModelForm):
@@ -159,7 +174,7 @@ class QuestionAdmin(SortableAdminMixin, admin.ModelAdmin):  # type: ignore
     list_display = ["title", "slug", "image_preview", "get_initiatives", "display_order"]
     prepopulated_fields = {"slug": ("title",)}
     autocomplete_fields = ["initiatives"]
-    inlines = [QuestionTabInline, LayerOnQuestionStackedInline]
+    inlines = [QuestionTabInline, LayerGroupOnQuestionInline]
     actions = ["duplicate_object"]
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
 
@@ -188,14 +203,15 @@ class QuestionAdmin(SortableAdminMixin, admin.ModelAdmin):  # type: ignore
         self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
 
 
-@admin.register(models.LayerGroup)
-class LayerGroupTitleAdmin(admin.ModelAdmin):
+@admin.register(models.LayerGroupOnQuestion)
+class LayerGroupOnQuestionAdmin(SortableAdminBase, admin.ModelAdmin):  # type: ignore
     """
-    Admin page for the Layer group titles.
+    Admin page for the layer groups on questions.
     """
 
     exclude = ["id"]
     search_fields = ["group_name"]
+    inlines = [LayerOnLayerGroupInline]
 
 
 @admin.register(models.Page)

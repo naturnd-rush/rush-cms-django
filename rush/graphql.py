@@ -120,21 +120,21 @@ class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
 
 class LayerGroupType(DjangoObjectType):
     class Meta:
-        model = models.LayerGroup
+        model = models.LayerGroupOnQuestion
         fields = ["id", "group_name", "group_description", "layers"]
 
     layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
 
     def resolve_layers(self, info):
-        if isinstance(self, models.LayerGroup):
-            return models.Layer.objects.filter(layeronquestion__layer_group=self).distinct()
+        if isinstance(self, models.LayerGroupOnQuestion):
+            return models.Layer.objects.filter(layeronlayergroup__layer_group_on_question=self).distinct()
         raise ValueError("Expected LayerGroup object while resolving query!")
 
 
 class LayerOnQuestionType(DjangoObjectType):
     class Meta:
-        model = models.LayerOnQuestion
-        fields = ["layer", "question", "active_by_default", "layer_group"]
+        model = models.LayerOnLayerGroup
+        fields = ["layer", "layer_group_on_question", "active_by_default", "display_order"]
 
 
 class QuestionTabType(DjangoObjectType):
@@ -164,7 +164,7 @@ class QuestionType(DjangoObjectType):
     layers_on_question = graphene.List(LayerOnQuestionType)
 
     def resolve_layers_on_question(self, info):
-        return models.LayerOnQuestion.objects.filter(question=self)
+        return models.LayerOnLayerGroup.objects.filter(layer_group_on_question__question=self)
 
 
 class PageType(DjangoObjectType):
@@ -205,7 +205,7 @@ class Query(graphene.ObjectType):
         return models.Layer.objects.get(pk=id)
 
     def resolve_layer_group(self, info, question_id):
-        return models.LayerGroup.objects.filter(layeronquestion__question__id=question_id).distinct()
+        return models.LayerGroupOnQuestion.objects.filter(layeronquestion__question__id=question_id).distinct()
 
     def resolve_all_questions(self, info):
         return models.Question.objects.all()
