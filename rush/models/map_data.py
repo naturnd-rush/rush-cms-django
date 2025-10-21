@@ -1,16 +1,24 @@
 import json
+import sys
 import uuid
 
 import django.db.models as models
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.core.validators import URLValidator
+from storages.backends.s3 import S3Storage
 
 from rush.models.validators import validate_tiff
 from rush.storage import BackblazeStorageFactory
 
 
-def get_raster_storage():
-    """Get storage for raster image files (GeoTIFF)."""
+def get_raster_storage() -> S3Storage | FileSystemStorage:
+    """
+    Get storage for raster image files (GeoTIFF).
+    """
+    if settings.DEBUG or "pytest" in sys.modules:
+        # Don't try to connect to Backblaze in a dev environment or during tests
+        return FileSystemStorage(location=f"{settings.MEDIA_ROOT}/debug_raster_image_storage")
     return BackblazeStorageFactory.create_from_bucket_name(
         settings.BACKBLAZE_RASTER_BUCKET_NAME,
         validate_visibility=BackblazeStorageFactory.Visibility.PUBLIC,
