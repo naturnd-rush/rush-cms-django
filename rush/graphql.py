@@ -118,23 +118,38 @@ class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
         fields = ["id", "name", "description", "map_data"]
 
 
-class LayerGroupType(DjangoObjectType):
-    class Meta:
-        model = models.LayerGroupOnQuestion
-        fields = ["id", "group_name", "group_description", "layers"]
+class LayerOnLayerGroupType(DjangoObjectType):
 
-    layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
-
-    def resolve_layers(self, info):
-        if isinstance(self, models.LayerGroupOnQuestion):
-            return models.Layer.objects.filter(layeronlayergroup__layer_group_on_question=self).distinct()
-        raise ValueError("Expected LayerGroup object while resolving query!")
-
-
-class LayerOnQuestionType(DjangoObjectType):
     class Meta:
         model = models.LayerOnLayerGroup
-        fields = ["layer", "layer_group_on_question", "active_by_default", "display_order"]
+        fields = [
+            "active_by_default",
+            "display_order",
+        ]
+
+    layer_id = graphene.String()
+
+    def resolve_layer_id(self, info):
+        if isinstance(self, models.LayerOnLayerGroup):
+            return str(self.layer.id)
+        raise ValueError("Expected LayerOnLayerGroup object while resolving query!")
+
+
+class LayerGroupOnQuestionType(DjangoObjectType):
+    class Meta:
+        model = models.LayerGroupOnQuestion
+        fields = [
+            "group_name",
+            "group_description",
+            "display_order",
+        ]
+
+    layers_on_layer_group = graphene.List(LayerOnLayerGroupType)
+
+    def resolve_layers_on_layer_group(self, info):
+        if isinstance(self, models.LayerGroupOnQuestion):
+            return models.LayerOnLayerGroup.objects.filter(layer_group_on_question=self).distinct()
+        raise ValueError("Expected LayerGroupOnQuestion object while resolving query!")
 
 
 class QuestionTabType(DjangoObjectType):
@@ -158,13 +173,22 @@ class InitiativeType(DjangoObjectType):
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
-        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs", "slug", "display_order"]
+        fields = [
+            "id",
+            "title",
+            "subtitle",
+            "image",
+            "initiatives",
+            "tabs",
+            "slug",
+            "display_order",
+        ]
 
     # Link one half of the many-to-many through table in the graphql schema
-    layers_on_question = graphene.List(LayerOnQuestionType)
+    layer_groups_on_question = graphene.List(LayerGroupOnQuestionType)
 
-    def resolve_layers_on_question(self, info):
-        return models.LayerOnLayerGroup.objects.filter(layer_group_on_question__question=self)
+    def resolve_layer_groups_on_question(self, info):
+        return models.LayerGroupOnQuestion.objects.filter(question=self)
 
 
 class PageType(DjangoObjectType):
@@ -177,8 +201,6 @@ class Query(graphene.ObjectType):
 
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
-
-    layer_group = graphene.List(LayerGroupType, question_id=graphene.UUID(required=True))
 
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
