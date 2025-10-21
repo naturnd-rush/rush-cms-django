@@ -1,23 +1,20 @@
 from uuid import uuid4
 
+import adminsortable2.admin as sortable_admin
+import nested_admin.forms as nested_forms
+import nested_admin.nested as nested_admin
 from django import forms
 from django.contrib import admin
 from django.db import models
 from django.urls import reverse
 from django.utils.html import format_html_join
 from django_summernote.admin import SummernoteInlineModelAdmin, SummernoteModelAdmin
-from nested_admin.forms import SortableHiddenMixin
-from nested_admin.nested import (
-    NestedModelAdmin,
-    NestedStackedInline,
-    NestedTabularInline,
-)
 
 from rush import models
 from rush.admin import utils
 
 
-class LayerOnLayerGroupInline(SortableHiddenMixin, NestedTabularInline):
+class LayerOnLayerGroupInline(nested_forms.SortableHiddenMixin, nested_admin.NestedTabularInline):
     verbose_name_plural = "Layers"
     model = models.LayerOnLayerGroup
     extra = 0
@@ -29,7 +26,7 @@ class LayerOnLayerGroupInline(SortableHiddenMixin, NestedTabularInline):
     sortable_field_name = "display_order"
 
 
-class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
+class LayerGroupOnQuestionInline(nested_forms.SortableHiddenMixin, nested_admin.NestedTabularInline):
     verbose_name_plural = "Layer Groups"
     model = models.LayerGroupOnQuestion
     extra = 0
@@ -153,7 +150,7 @@ class QuestionForm(forms.ModelForm):
 
 
 @admin.register(models.QuestionTab)
-class QuestionTabAdmin(NestedModelAdmin, SummernoteModelAdmin):
+class QuestionTabAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     exclude = ["id"]
     summernote_fields = ["content"]
     list_display = ["title", "content_preview"]
@@ -161,11 +158,7 @@ class QuestionTabAdmin(NestedModelAdmin, SummernoteModelAdmin):
     sortable_field_name = "display_order"
 
 
-class QuestionTabInline(
-    SortableHiddenMixin,
-    NestedStackedInline,
-    SummernoteInlineModelAdmin,
-):
+class QuestionTabInline(sortable_admin.SortableTabularInline, admin.TabularInline):
     """
     Allow editing of QuestionTab objects straight from the Question form.
     """
@@ -174,10 +167,11 @@ class QuestionTabInline(
     model = models.QuestionTab
     extra = 0  # don't display extra question tabs to add, let the user click
     sortable_field_name = "display_order"
+    sortable_options = []
 
 
 @admin.register(models.Question)
-class QuestionAdmin(NestedModelAdmin):
+class QuestionAdmin(sortable_admin.SortableAdminMixin, nested_admin.NestedModelAdmin):  # type: ignore
     exclude = ["id"]
     form = QuestionForm
     list_display = ["title", "slug", "image_preview", "get_initiatives", "display_order"]
@@ -214,7 +208,7 @@ class QuestionAdmin(NestedModelAdmin):
 
 
 @admin.register(models.LayerGroupOnQuestion)
-class LayerGroupOnQuestionAdmin(NestedModelAdmin):
+class LayerGroupOnQuestionAdmin(nested_admin.NestedModelAdmin):
     """
     Admin page for the layer groups on questions.
     """
