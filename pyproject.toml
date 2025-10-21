@@ -25,7 +25,7 @@ django-cors-headers = "^4.9.0"
 django-storages = "^1.14.6"
 boto3 = "^1.40.52"
 django-admin-sortable2 = "^2.2.8"
-django-nested-admin = "^4.1.4"
+django-nested-admin = "^4.1.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"

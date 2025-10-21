@@ -1,18 +1,23 @@
 from uuid import uuid4
 
-import nested_admin.nested as nested
 from django import forms
 from django.contrib import admin
 from django.db import models
 from django.urls import reverse
 from django.utils.html import format_html_join
 from django_summernote.admin import SummernoteInlineModelAdmin, SummernoteModelAdmin
+from nested_admin.forms import SortableHiddenMixin
+from nested_admin.nested import (
+    NestedModelAdmin,
+    NestedStackedInline,
+    NestedTabularInline,
+)
 
 from rush import models
 from rush.admin import utils
 
 
-class LayerOnLayerGroupInline(nested.NestedTabularInline):
+class LayerOnLayerGroupInline(SortableHiddenMixin, NestedTabularInline):
     verbose_name_plural = "Layers"
     model = models.LayerOnLayerGroup
     extra = 0
@@ -24,7 +29,7 @@ class LayerOnLayerGroupInline(nested.NestedTabularInline):
     sortable_field_name = "display_order"
 
 
-class LayerGroupOnQuestionInline(nested.NestedTabularInline):
+class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
     verbose_name_plural = "Layer Groups"
     model = models.LayerGroupOnQuestion
     extra = 0
@@ -148,14 +153,19 @@ class QuestionForm(forms.ModelForm):
 
 
 @admin.register(models.QuestionTab)
-class QuestionTabAdmin(SummernoteModelAdmin):
+class QuestionTabAdmin(NestedModelAdmin, SummernoteModelAdmin):
     exclude = ["id"]
     summernote_fields = ["content"]
     list_display = ["title", "content_preview"]
     content_preview = utils.truncate_admin_text_from("content")
+    sortable_field_name = "display_order"
 
 
-class QuestionTabInline(nested.NestedStackedInline, SummernoteInlineModelAdmin):
+class QuestionTabInline(
+    SortableHiddenMixin,
+    NestedStackedInline,
+    SummernoteInlineModelAdmin,
+):
     """
     Allow editing of QuestionTab objects straight from the Question form.
     """
@@ -167,7 +177,7 @@ class QuestionTabInline(nested.NestedStackedInline, SummernoteInlineModelAdmin):
 
 
 @admin.register(models.Question)
-class QuestionAdmin(nested.NestedModelAdmin):
+class QuestionAdmin(NestedModelAdmin):
     exclude = ["id"]
     form = QuestionForm
     list_display = ["title", "slug", "image_preview", "get_initiatives", "display_order"]
@@ -204,7 +214,7 @@ class QuestionAdmin(nested.NestedModelAdmin):
 
 
 @admin.register(models.LayerGroupOnQuestion)
-class LayerGroupOnQuestionAdmin(nested.NestedModelAdmin):
+class LayerGroupOnQuestionAdmin(NestedModelAdmin):
     """
     Admin page for the layer groups on questions.
     """
