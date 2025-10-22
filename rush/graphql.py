@@ -155,7 +155,7 @@ class LayerGroupOnQuestionType(DjangoObjectType):
 class QuestionTabType(DjangoObjectType):
     class Meta:
         model = models.QuestionTab
-        fields = ["id", "title", "content", "display_order"]
+        fields = ["id", "title", "content", "display_order", "slug"]
 
 
 class InitiativeTagType(DjangoObjectType):
@@ -206,6 +206,11 @@ class Query(graphene.ObjectType):
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
     question_by_slug = graphene.Field(QuestionType, slug=graphene.String(required=True))
     question_tab_by_id = graphene.Field(QuestionTabType, id=graphene.UUID(required=True))
+    question_tab_by_slug = graphene.Field(
+        QuestionTabType,
+        question_slug=graphene.String(required=True),
+        question_tab_slug=graphene.String(required=True),
+    )
 
     all_map_datas = graphene.List(MapDataWithoutGeoJsonType)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
@@ -237,6 +242,9 @@ class Query(graphene.ObjectType):
 
     def resolve_question_by_slug(self, info, slug: str):
         return models.Question.objects.get(slug=slug)
+
+    def resolve_question_tab_by_slug(self, info, question_slug: str, question_tab_slug: str):
+        return models.QuestionTab.objects.filter(slug=question_tab_slug, question__slug=question_slug).first()
 
     def resolve_question_tab_by_id(self, info, id):
         return models.QuestionTab.objects.get(pk=id)

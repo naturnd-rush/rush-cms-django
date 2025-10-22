@@ -1,7 +1,8 @@
 import uuid
 
-from django.core.exceptions import ValidationError
 from django.db import models
+
+from rush.models.question import DuplicateSlug
 
 
 class Question(models.Model):
@@ -12,13 +13,6 @@ class Question(models.Model):
     class Meta:
         ordering = ["display_order"]
 
-    class DuplicateSlug(ValidationError):
-        """
-        The slug on this instance is duplicated by another Question in the database.
-        """
-
-        ...
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=255)
@@ -27,15 +21,6 @@ class Question(models.Model):
     questions = models.ManyToManyField(to="Layer", related_name="questions")
     slug = models.SlugField(max_length=255, unique=True)
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
-
-    def clean_slug(self):
-        if same_slug_q := Question.objects.exclude(pk=self.id).filter(slug=self.slug).first():
-            raise self.DuplicateSlug(
-                'Question with id "{}" has the same slug as this question "{}"!'.format(
-                    same_slug_q.id,
-                    self.id,
-                )
-            )
 
     def __str__(self):
         return self.title

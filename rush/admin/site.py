@@ -167,7 +167,11 @@ class QuestionTabInline(sortable_admin.SortableTabularInline, SummernoteModelAdm
     model = models.QuestionTab
     extra = 0  # don't display extra question tabs to add, let the user click
     sortable_field_name = "display_order"
-    sortable_options = []
+    prepopulated_fields = {"slug": ("title",)}
+    sortable_options = (
+        # Added for compatibility SortableTabularInline <--> NestedModelAdmin (on QuestionAdmin page.)
+        []
+    )
 
 
 @admin.register(models.Question)
