@@ -20,7 +20,7 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("DJANGO_SECRET_KEY", cast=str)
 DEBUG = config("DJANGO_DEBUG", cast=bool)
-ALLOWED_HOSTS = [host for host in config("DJANGO_ALLOWED_HOSTS", cast=str).split(",") if host != ""]
+ALLOWED_HOSTS = [host for host in str(config("DJANGO_ALLOWED_HOSTS", cast=str)).split(",") if host != ""]
 MEDIA_ROOT = config("DJANGO_MEDIA_ROOT", cast=str)
 STATIC_ROOT = config("DJANGO_STATIC_ROOT", cast=str)
 GDAL_LIBRARY_PATH = config("GDAL_LIBRARY_PATH", cast=str)
@@ -55,12 +55,14 @@ INSTALLED_APPS = [
     # RUSH apps
     "rush",
     # RUSH dependencies
+    "nested_admin",  # Nested inline support for Django admin
+    "logentry_admin",  # Django snippet to add a LogEntry admin page
     "django_summernote",  # Rich text fields + editor
     "graphene_django",  # GraphQL support
-    "simple_history",  # Simple changelog + diff for select models
-    "leaflet",  # Leaflet Django integration
+    "leaflet",  # Leaflet Django integration  # TODO: Not sure if this is actually used.
     "colorfield",  # Django Admin colorpicker UI
     "corsheaders",  # CORS headers for frontend on different origin
+    "adminsortable2",  # Adds drag-and-drop sortable lists on the Django admin-site.
 ]
 
 MIDDLEWARE = [
@@ -72,7 +74,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

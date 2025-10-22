@@ -28,6 +28,7 @@ from rush.graphql import get_schema
 urlpatterns = [
     path("login/", views.rush_login_view),
     path("summernote/", include("django_summernote.urls")),
+    path("_nested_admin/", include("nested_admin.urls")),
     path(
         # TODO: Remove csrf exempt here and add the token to internal graphQL requests!
         "graphql/",

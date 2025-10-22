@@ -1,7 +1,6 @@
 import uuid
 
 import django.db.models as models
-from simple_history.models import HistoricalRecords
 
 
 class Layer(models.Model):
@@ -22,8 +21,6 @@ class Layer(models.Model):
     )
     styles = models.ManyToManyField("Style", through="StylesOnLayer")
     serialized_leaflet_json = models.JSONField(default=dict, null=True, blank=True)
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
