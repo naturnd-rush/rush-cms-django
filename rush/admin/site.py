@@ -8,7 +8,7 @@ from django.contrib import admin
 from django.db import models
 from django.urls import reverse
 from django.utils.html import format_html_join
-from django_summernote.admin import SummernoteInlineModelAdmin, SummernoteModelAdmin
+from django_summernote.admin import SummernoteModelAdmin, SummernoteModelAdminMixin
 
 from rush import models
 from rush.admin import utils
@@ -158,7 +158,7 @@ class QuestionTabAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
     sortable_field_name = "display_order"
 
 
-class QuestionTabInline(sortable_admin.SortableTabularInline, admin.TabularInline):
+class QuestionTabInline(sortable_admin.SortableTabularInline, SummernoteModelAdminMixin, admin.TabularInline):
     """
     Allow editing of QuestionTab objects straight from the Question form.
     """
