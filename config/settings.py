@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "rush",
     # RUSH dependencies
     "nested_admin",  # Nested inline support for Django admin
+    "logentry_admin",  # Django snippet to add a LogEntry admin page
     "django_summernote",  # Rich text fields + editor
     "graphene_django",  # GraphQL support
     "leaflet",  # Leaflet Django integration  # TODO: Not sure if this is actually used.
