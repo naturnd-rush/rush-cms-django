@@ -2,8 +2,6 @@ import uuid
 
 from django.db import models
 
-from rush.models.question import DuplicateSlug
-
 
 class Question(models.Model):
     """

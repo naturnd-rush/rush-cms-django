@@ -2,7 +2,7 @@ import uuid
 
 from django.db import models
 
-from rush.models.question import DuplicateSlug, Question
+from rush.models.question import Question
 
 
 class QuestionTab(models.Model):
