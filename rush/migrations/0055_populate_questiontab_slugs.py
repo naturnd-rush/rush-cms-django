@@ -25,13 +25,11 @@ def populate_slugs(apps, schema_editor):
     for tab in question_tabs:
         if not tab.slug:
             tab.slug = slugify(tab.title)
-            # Check if this slug already exists for this question
-            existing = QuestionTabModel.objects.filter(
-                slug=tab.slug, question=tab.question
-            ).exclude(pk=tab.pk).exists()
-            if existing:
-                print(f"WARNING: Duplicate slug found on QuestionTab '{tab.id}', generating a random slug...")
-                tab.slug = f"{tab.slug}-{uuid4().hex[:8]}"
+            try:
+                tab.full_clean()
+            except ValidationError as e:
+                print(f"WARNING: Duplicate slug found on question-tab '{tab.id}', generating a random slug...", e)
+                tab.slug = f"{tab.slug}{uuid4().hex}"
             tab.save()
 
 
