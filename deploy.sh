@@ -26,3 +26,4 @@ $(which python) manage.py collectstatic --noinput
 
 # Restart Gunicorn
 sudo systemctl restart gunicorn.service
+echo "Successfully deployed!"
