@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import uuid4
 
 import adminsortable2.admin as sortable_admin
@@ -6,6 +7,7 @@ import nested_admin.nested as nested_admin
 from django import forms
 from django.contrib import admin
 from django.db import models
+from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.html import format_html_join
 from django_summernote.admin import SummernoteModelAdmin, SummernoteModelAdminMixin
@@ -33,6 +35,17 @@ class LayerGroupOnQuestionInline(nested_forms.SortableHiddenMixin, nested_admin.
     exclude = ["id"]
     inlines = [LayerOnLayerGroupInline]
     sortable_field_name = "display_order"
+
+    def get_fields(self, request, obj=None):
+        """
+        Only superusers should be able to see and edit the hidden field `group_type`.
+        Group type defines special behaviour for `LayerGroupOnQuestion` that should
+        not be exposed to regular staff users.
+        """
+        fields = super().get_fields(request, obj)
+        if not request.user.is_superuser:
+            fields = [x for x in fields if x != "group_type"]
+        return fields
 
 
 class InitiativeForm(forms.ModelForm):
