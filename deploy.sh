@@ -17,7 +17,7 @@ echo "Using Python: $(which python)"
 # Make sure poetry uses this Python
 POETRY="/home/deploy/.local/bin/poetry"
 echo "Using Poetry env: $($POETRY env info --path)..."
-$POETRY lock --no-interaction --no-root
+$POETRY lock --no-interaction
 $POETRY install --no-interaction --no-root
 
 # Migrate Django and collect static

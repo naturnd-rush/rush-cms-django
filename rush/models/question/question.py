@@ -1,7 +1,8 @@
 import uuid
 
-from django.core.exceptions import ValidationError
 from django.db import models
+
+from rush.models.question import DuplicateSlug
 
 
 class Question(models.Model):
@@ -11,13 +12,6 @@ class Question(models.Model):
 
     class Meta:
         ordering = ["display_order"]
-
-    class DuplicateSlug(ValidationError):
-        """
-        The slug on this instance is duplicated by another Question in the database.
-        """
-
-        ...
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     title = models.CharField(max_length=255)
