@@ -7,23 +7,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("rush", "0049_fix_database_state"),
+        ("rush", "0049a_populate_layergrouponquestion_question"),
     ]
 
     operations = [
-        # The question field was already removed/renamed in the database manually
-        # We only need to update Django's migration state
-        migrations.SeparateDatabaseAndState(
-            state_operations=[
-                migrations.RemoveField(
-                    model_name="layeronlayergroup",
-                    name="question",
-                ),
-            ],
-            database_operations=[
-                # Database doesn't have this field anymore - it was renamed to layer_group_on_question_id
-            ],
+        # Make the question field non-null now that it's populated
+        migrations.AlterField(
+            model_name="layergrouponquestion",
+            name="question",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                to="rush.question",
+            ),
         ),
+        # Remove the question field from LayerOnLayerGroup since it's now on LayerGroupOnQuestion
+        migrations.RemoveField(
+            model_name="layeronlayergroup",
+            name="question",
+        ),
+        # Ensure the layer_group_on_question field is properly configured
         migrations.AlterField(
             model_name="layeronlayergroup",
             name="layer_group_on_question",

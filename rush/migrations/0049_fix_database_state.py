@@ -12,22 +12,16 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # The RenameModel in 0048 should have preserved the question field,
-        # but Django's migration state doesn't know about it.
-        # This tells Django the field exists without touching the database.
-        migrations.SeparateDatabaseAndState(
-            state_operations=[
-                migrations.AddField(
-                    model_name="layergrouponquestion",
-                    name="question",
-                    field=models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to="rush.question",
-                    ),
-                ),
-            ],
-            database_operations=[
-                # Database already has this field from the rename
-            ],
+        # The RenameModel in 0048 renamed LayerGroup to LayerGroupOnQuestion,
+        # but LayerGroup never had a question field. We need to add it.
+        migrations.AddField(
+            model_name="layergrouponquestion",
+            name="question",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                to="rush.question",
+                default=None,  # Will be populated in next step
+                null=True,  # Allow null temporarily
+            ),
         ),
     ]
