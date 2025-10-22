@@ -149,13 +149,13 @@ class QuestionForm(forms.ModelForm):
             self.fields["image"].help_text = utils.image_html(self.instance.image.url)
 
 
-@admin.register(models.QuestionTab)
-class QuestionTabAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
-    exclude = ["id"]
-    summernote_fields = ["content"]
-    list_display = ["title", "content_preview"]
-    content_preview = utils.truncate_admin_text_from("content")
-    sortable_field_name = "display_order"
+# @admin.register(models.QuestionTab)
+# class QuestionTabAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
+#     exclude = ["id"]
+#     summernote_fields = ["content"]
+#     list_display = ["title", "content_preview"]
+#     content_preview = utils.truncate_admin_text_from("content")
+#     sortable_field_name = "display_order"
 
 
 class QuestionTabInline(sortable_admin.SortableTabularInline, SummernoteModelAdminMixin, admin.TabularInline):
@@ -167,7 +167,11 @@ class QuestionTabInline(sortable_admin.SortableTabularInline, SummernoteModelAdm
     model = models.QuestionTab
     extra = 0  # don't display extra question tabs to add, let the user click
     sortable_field_name = "display_order"
-    sortable_options = []
+    prepopulated_fields = {"slug": ("title",)}
+    sortable_options = (
+        # Added for compatibility SortableTabularInline <--> NestedModelAdmin (on QuestionAdmin page.)
+        []
+    )
 
 
 @admin.register(models.Question)
@@ -207,16 +211,16 @@ class QuestionAdmin(sortable_admin.SortableAdminMixin, nested_admin.NestedModelA
         self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
 
 
-@admin.register(models.LayerGroupOnQuestion)
-class LayerGroupOnQuestionAdmin(nested_admin.NestedModelAdmin):
-    """
-    Admin page for the layer groups on questions.
-    """
+# @admin.register(models.LayerGroupOnQuestion)
+# class LayerGroupOnQuestionAdmin(nested_admin.NestedModelAdmin):
+#     """
+#     Admin page for the layer groups on questions.
+#     """
 
-    exclude = ["id"]
-    search_fields = ["group_name"]
-    inlines = [LayerOnLayerGroupInline]
-    sortable_field_name = "display_order"
+#     exclude = ["id"]
+#     search_fields = ["group_name"]
+#     inlines = [LayerOnLayerGroupInline]
+#     sortable_field_name = "display_order"
 
 
 @admin.register(models.Page)
