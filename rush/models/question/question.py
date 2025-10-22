@@ -28,14 +28,5 @@ class Question(models.Model):
     slug = models.SlugField(max_length=255, unique=True)
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 
-    def clean_slug(self):
-        if same_slug_q := Question.objects.exclude(pk=self.id).filter(slug=self.slug).first():
-            raise self.DuplicateSlug(
-                'Question with id "{}" has the same slug as this question "{}"!'.format(
-                    same_slug_q.id,
-                    self.id,
-                )
-            )
-
     def __str__(self):
         return self.title
