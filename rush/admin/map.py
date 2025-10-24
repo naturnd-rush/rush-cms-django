@@ -128,6 +128,15 @@ class LayerAdmin(SummernoteModelAdmin):
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]
     search_fields = ["name"]
+    list_display = ["name", "map_data"]
+    list_select_related = ["map_data"]
+
+    def get_queryset(self, request):
+        """
+        Optimize queryset with select_related to avoid N+1 queries.
+        """
+        qs = super().get_queryset(request)
+        return qs.select_related("map_data")
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         """Handles both GET (load form) and POST (save form) requests"""
