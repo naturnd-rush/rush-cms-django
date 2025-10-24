@@ -1,11 +1,13 @@
 import json
 import sys
 import uuid
+from typing import Iterable
 
 import django.db.models as models
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.core.validators import URLValidator
+from silk.profiling.dynamic import silk_profile
 from storages.backends.s3 import S3Storage
 
 from rush.models.validators import validate_tiff
@@ -79,6 +81,17 @@ class MapData(models.Model):
         except self.NoGeoJsonData:
             return False
 
+    @silk_profile("MapData save")
+    def save(
+        self,
+        force_insert=False,
+        force_update=False,
+        using: str | None = None,
+        update_fields: Iterable[str] | None = None,
+    ) -> None:
+        return super().save(force_insert, force_update, using, update_fields)
+
+    @silk_profile("MapData get_raw_geojson_data")
     def get_raw_geojson_data(self) -> str:
         """
         Get the raw GeoJSON data from this MapData object, or raise `NoGeoJsonData` if none exists.
