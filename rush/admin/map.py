@@ -6,11 +6,13 @@ from typing import Any, List
 from django import forms
 from django.contrib import admin
 from django.forms.utils import flatatt
+from django.http import HttpRequest
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin
 from django_summernote.widgets import SummernoteWidgetBase
+from silk.profiling.dynamic import silk_profile
 
 from rush import models
 from rush.admin import utils
@@ -73,6 +75,10 @@ class StyleOnLayerInline(admin.TabularInline):
         "style"
     ]
 
+    def get_formset(self, request, obj=None, **kwargs):
+        """Profile inline formset creation"""
+        return super().get_formset(request, obj, **kwargs)
+
 
 class MapDataChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, obj) -> str:
@@ -95,6 +101,7 @@ class LayerForm(forms.ModelForm):
     serialized_leaflet_json = forms.CharField(widget=forms.HiddenInput(), required=False)
     map_data = MapDataChoiceField(queryset=models.MapData.objects.all())
 
+    @silk_profile(name="LayerForm clean_serialized_leaflet_json")
     def clean_serialized_leaflet_json(self):
         """
         Prevent double-serialization of submitted GeoJSON data.
@@ -122,6 +129,23 @@ class LayerAdmin(SummernoteModelAdmin):
     autocomplete_fields = ["map_data"]
     search_fields = ["name"]
 
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        """Handles both GET (load form) and POST (save form) requests"""
+        # Dynamic profile name based on request method
+        profile_name = f"LayerAdmin changeform_view ({request.method})"
+        with silk_profile(name=profile_name):
+            return super().changeform_view(request, object_id, form_url, extra_context)
+
+    @silk_profile(name="LayerAdmin save_model")
+    def save_model(self, request: HttpRequest, obj: Any, form: forms.ModelForm, change: bool) -> None:
+        return super().save_model(request, obj, form, change)
+
+    @silk_profile(name="LayerAdmin get_form")
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        """Profile form instantiation"""
+        return super().get_form(request, obj, change, **kwargs)
+
+    @silk_profile(name="LayerAdmin render_change_form")
     def render_change_form(self, request, context, *args, **kwargs):
         map_preview_html = mark_safe(
             '<div id="map-preview" style="height: 600px; margin-bottom: 1em;"></div>'
@@ -134,6 +158,16 @@ class LayerAdmin(SummernoteModelAdmin):
             logger.exception("Failed to inject map preview.")
         finally:
             return super().render_change_form(request, context, *args, **kwargs)
+
+    @silk_profile(name="LayerAdmin save_formset")
+    def save_formset(self, request, form, formset, change):
+        """Profile saving inline formsets (StylesOnLayer)"""
+        return super().save_formset(request, form, formset, change)
+
+    @silk_profile(name="LayerAdmin get_inline_instances")
+    def get_inline_instances(self, request, obj=None):
+        """Profile loading inline forms"""
+        return super().get_inline_instances(request, obj)
 
 
 @dataclass
@@ -214,6 +248,7 @@ class MapDataAdminForm(forms.ModelForm):
             "provider_state": "Data Type",
         }
 
+    @silk_profile(name="MapDataForm get_initial_for_field")
     def get_initial_for_field(self, field, field_name):
         if field_name == "_geojson":
             if self.instance and isinstance(self.instance, models.MapData):
@@ -222,6 +257,7 @@ class MapDataAdminForm(forms.ModelForm):
                     return {}
         return super().get_initial_for_field(field, field_name)
 
+    @silk_profile(name="MapDataForm __init__")
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -245,6 +281,7 @@ class MapDataAdminForm(forms.ModelForm):
             if value != models.MapData.ProviderState.UNSET
         ]
 
+    @silk_profile(name="MapDataForm clean")
     def clean(self) -> dict[str, Any]:
         cleaned_data = super().clean()
         provider = mdaf_config.get_provider(cleaned_data["provider_state"])
@@ -285,7 +322,40 @@ class MapDataAdmin(admin.ModelAdmin):
     list_display = ["name", "provider_state"]
     search_fields = ["name"]
 
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        """Handles both GET (load form) and POST (save form) requests"""
+        # Dynamic profile name based on request method
+        profile_name = f"MapDataAdmin changeform_view ({request.method})"
+        with silk_profile(name=profile_name):
+            return super().changeform_view(request, object_id, form_url, extra_context)
+
+    @silk_profile(name="MapDataAdmin save")
+    def save_model(self, request: HttpRequest, obj: Any, form: forms.ModelForm, change: bool) -> None:
+        return super().save_model(request, obj, form, change)
+
+    @silk_profile(name="MapDataAdmin get_form")
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        """Profile form instantiation"""
+        return super().get_form(request, obj, change, **kwargs)
+
+    @silk_profile(name="MapDataAdmin log_change")
+    def log_change(self, request, object, message):
+        """Skip expensive change message for large JSON fields"""
+        # Don't construct detailed change message, just log the action
+        from django.contrib.admin.models import CHANGE, LogEntry
+        from django.contrib.contenttypes.models import ContentType
+
+        return LogEntry.objects.log_action(
+            user_id=request.user.pk,
+            content_type_id=ContentType.objects.get_for_model(object).pk,
+            object_id=object.pk,
+            object_repr=str(object)[:200],
+            action_flag=CHANGE,
+            change_message="Modified",  # Simple message instead of detailed diff
+        )
+
     @staticmethod
+    @silk_profile(name="MapDataAdmin _get_geojson_str")
     def _get_geojson_str(context) -> str:
         if map_data := context.get("original"):
             if isinstance(map_data, models.MapData):
@@ -295,6 +365,7 @@ class MapDataAdmin(admin.ModelAdmin):
                     pass
         return "{}"
 
+    @silk_profile(name="MapDataAdmin render_change_form")
     def render_change_form(self, request, context, *args, **kwargs):
         """
         Inject initial GeoJSON data into page so we can render an initial
