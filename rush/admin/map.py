@@ -99,7 +99,9 @@ class LayerForm(forms.ModelForm):
         ...
 
     serialized_leaflet_json = forms.CharField(widget=forms.HiddenInput(), required=False)
-    map_data = MapDataChoiceField(queryset=models.MapData.objects.all())
+    # Defer loading the large _geojson field to improve form rendering performance
+    # Only load id, name, and provider_state which are needed for the dropdown
+    map_data = MapDataChoiceField(queryset=models.MapData.objects.only("id", "name", "provider_state"))
 
     @silk_profile(name="LayerForm clean_serialized_leaflet_json")
     def clean_serialized_leaflet_json(self):
