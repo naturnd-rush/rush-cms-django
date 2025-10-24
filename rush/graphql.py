@@ -62,7 +62,7 @@ class StylesOnLayersType(DjangoObjectType):
         fields = [
             "id",
             "legend_description",
-            "legend_order",
+            "display_order",
             "style",
             "layer",
         ]
