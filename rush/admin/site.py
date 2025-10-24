@@ -1,4 +1,3 @@
-from typing import Any
 from uuid import uuid4
 
 import adminsortable2.admin as sortable_admin
@@ -7,7 +6,6 @@ import nested_admin.nested as nested_admin
 from django import forms
 from django.contrib import admin
 from django.db import models
-from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.html import format_html_join
 from django_summernote.admin import SummernoteModelAdmin, SummernoteModelAdminMixin

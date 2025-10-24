@@ -3,6 +3,7 @@ import logging
 from dataclasses import asdict, dataclass
 from typing import Any, List
 
+import adminsortable2.admin as sortable_admin
 from django import forms
 from django.contrib import admin
 from django.forms.utils import flatatt
@@ -58,19 +59,25 @@ class SummernoteWidget(SummernoteWidgetBase):
 class StylesOnLayerInlineForm(forms.ModelForm):
     class Meta:
         model = models.StylesOnLayer
-        fields = ["style", "feature_mapping", "legend_description", "legend_order", "popup"]
+        fields = [
+            "style",
+            "feature_mapping",
+            "legend_description",
+            "popup",
+        ]
         widgets = {
             "popup": SummernoteWidget(),
             "feature_mapping": forms.Textarea(attrs={"rows": 1, "cols": 50}),
         }
 
 
-class StyleOnLayerInline(admin.TabularInline):
+class StyleOnLayerInline(sortable_admin.SortableTabularInline, admin.TabularInline):
     form = StylesOnLayerInlineForm
     verbose_name_plural = "Styles applied to this Layer"
     model = models.StylesOnLayer
     extra = 0
     exclude = ["id"]
+    sortable_field_name = "display_order"
     autocomplete_fields = [
         # uses the searchable textbox in the admin form to add/remove Styles
         "style"
@@ -126,7 +133,7 @@ class LayerForm(forms.ModelForm):
 
 
 @admin.register(models.Layer)
-class LayerAdmin(SummernoteModelAdmin):
+class LayerAdmin(sortable_admin.SortableAdminBase, SummernoteModelAdmin):  # type: ignore
     form = LayerForm
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]
@@ -350,18 +357,19 @@ class MapDataAdmin(admin.ModelAdmin):
 
     @silk_profile(name="MapDataAdmin get_form")
     def get_form(self, request, obj=None, change=False, **kwargs):
-        """Profile form instantiation"""
         return super().get_form(request, obj, change, **kwargs)
 
     @silk_profile(name="MapDataAdmin log_change")
     def log_change(self, request, object, message):
-        """Skip expensive change message for large JSON fields"""
+        """
+        Skip expensive change message for large JSON fields.
+        """
         # Don't construct detailed change message, just log the action
         from django.contrib.admin.models import CHANGE, LogEntry
         from django.contrib.contenttypes.models import ContentType
 
         return LogEntry.objects.log_action(
-            user_id=request.user.pk,
+            user_id=request.user.pk,  # type: ignore
             content_type_id=ContentType.objects.get_for_model(object).pk,
             object_id=object.pk,
             object_repr=str(object)[:200],
