@@ -16,6 +16,7 @@ from silk.profiling.dynamic import silk_profile
 
 from rush import models
 from rush.admin import utils
+from rush.admin.utils import truncate_admin_text_from
 
 logger = logging.getLogger(__name__)
 
@@ -130,15 +131,13 @@ class LayerAdmin(SummernoteModelAdmin):
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]
     search_fields = ["name"]
-    list_display = ["name", "map_data"]
-    list_select_related = ["map_data"]
+    list_display = ["name", "description_preview"]
+    description_preview = truncate_admin_text_from("description")
 
     def get_queryset(self, request):
-        """
-        Optimize queryset with select_related to avoid N+1 queries.
-        """
         qs = super().get_queryset(request)
-        return qs.select_related("map_data")
+        # avoid fetching map_data when listing Layers
+        return qs.defer("map_data")
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         """Handles both GET (load form) and POST (save form) requests"""
@@ -332,6 +331,11 @@ class MapDataAdmin(admin.ModelAdmin):
     exclude = ["id"]
     list_display = ["name", "provider_state"]
     search_fields = ["name"]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # avoid fetching map_data and geotiff data when listing all MapDatas
+        return qs.defer("_geojson", "geotiff")
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         """Handles both GET (load form) and POST (save form) requests"""
