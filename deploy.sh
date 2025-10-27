@@ -1,8 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
 cd /srv/rush-cms-django
-git pull origin main
-poetry lock
-poetry install
-#poetry run python manage.py makemigrations <-- migrations should always be added by git
-poetry run python manage.py migrate
-poetry run python manage.py collectstatic --noinput
+echo "Pulling repository to $(pwd)..."
+sudo git pull origin main
+
+# Source the project venv
+VENV="/srv/rush-cms-django/.venv"
+if [ ! -f "$VENV/bin/activate" ]; then
+    echo "ERROR: Venv not found at $VENV"
+    exit 1
+fi
+source "$VENV/bin/activate"
+echo "Using Python: $(which python)"
+
+# Make sure poetry uses this Python
+POETRY="/home/deploy/.local/bin/poetry"
+echo "Using Poetry env: $($POETRY env info --path)..."
+$POETRY install --no-interaction --no-root
+
+# Migrate Django and collect static
+$(which python) manage.py migrate
+$(which python) manage.py collectstatic --noinput
+
+# Restart Gunicorn
 sudo systemctl restart gunicorn.service

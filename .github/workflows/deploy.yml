@@ -29,7 +29,7 @@ jobs:
           status=$(echo "$response" | jq -r '.success')
           echo "status=$status" >> $GITHUB_OUTPUT
 
-      - name: Check response
+      - name: Check response # Gives a nice lil "x" if the pipeline fails
         run: |
           if [ "${{ steps.request.outputs.status }}" != true ]; then
             echo "Deployment failed with status=${{ steps.request.outputs.status }}"
