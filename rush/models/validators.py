@@ -1,5 +1,6 @@
 import mimetypes
 import re
+from typing import Tuple
 
 from django.core.exceptions import ValidationError
 from django.db.models.fields.files import FieldFile
@@ -51,16 +52,23 @@ class UnknownFileType(BaseInvalidFileType):
         super().__init__(message=msg, *args, **kwargs)
 
 
+def _validate_filetype(file: FieldFile, *allowed_mimetypes: str) -> None:
+    """
+    Raise a validation-error if the file's extension isn't in the provided list of mimetypes.
+    """
+    mime_type, _ = mimetypes.guess_type(file.name)
+    if not mime_type:
+        raise UnknownFileType(file.name)
+    if mime_type not in allowed_mimetypes:
+        raise UnsupportedFileType(mime_type, [x for x in allowed_mimetypes])
+
+
 def validate_image_or_svg(file: FieldFile):
     """
     Raise a validation-error if then file isn't a PNG, JPEG, or SVG.
     """
     allowed = ["image/png", "image/jpeg", "image/svg+xml"]
-    mime_type, _ = mimetypes.guess_type(file.name)
-    if not mime_type:
-        raise UnknownFileType(file.name)
-    if mime_type not in allowed:
-        raise UnsupportedFileType(mime_type, allowed)
+    return _validate_filetype(file, *allowed)
 
 
 def validate_image(file: FieldFile):
@@ -68,11 +76,15 @@ def validate_image(file: FieldFile):
     Raise a validation-error if then file isn't a PNG or JPEG.
     """
     allowed = ["image/png", "image/jpeg"]
-    mime_type, _ = mimetypes.guess_type(file.name)
-    if not mime_type:
-        raise UnknownFileType(file.name)
-    if mime_type not in allowed:
-        raise UnsupportedFileType(mime_type, allowed)
+    return _validate_filetype(file, *allowed)
+
+
+def validate_svg(file: FieldFile):
+    """
+    Raise a validation-error if then file isn't an SVG file.
+    """
+    allowed = ["image/svg+xml"]
+    return _validate_filetype(file, *allowed)
 
 
 def validate_tiff(file: FieldFile):
@@ -80,11 +92,7 @@ def validate_tiff(file: FieldFile):
     Raise a validation-error if then file isn't a TIFF file (https://en.wikipedia.org/wiki/TIFF).
     """
     allowed = ["image/tiff", "image/tiff-fx"]
-    mime_type, _ = mimetypes.guess_type(file.name)
-    if not mime_type:
-        raise UnknownFileType(file.name)
-    if mime_type not in allowed:
-        raise UnsupportedFileType(mime_type, allowed)
+    return _validate_filetype(file, *allowed)
 
 
 def validate_only_integers_and_whitespace(value):
