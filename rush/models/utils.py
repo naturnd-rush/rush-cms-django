@@ -4,7 +4,7 @@ from django.core.files.base import ContentFile
 from django.db.models.fields.files import FieldFile
 from PIL import Image
 
-from rush.models.validators import BaseInvalidFileType, validate_image
+from rush.models.validators import UnsupportedFileType, validate_image
 
 
 class CompressionFailed(Exception):
@@ -25,7 +25,7 @@ def compress_image(image: FieldFile, pixel_width=128) -> ContentFile:
 
     try:
         validate_image(image)
-    except BaseInvalidFileType as e:
+    except UnsupportedFileType as e:
         raise CompressionFailed(reason=e.message_str) from e
 
     # Resize image

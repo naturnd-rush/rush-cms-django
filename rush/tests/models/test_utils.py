@@ -6,11 +6,20 @@ from rush.models.utils import *
 from rush.tests.models.helpers import FakeFile
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     "file, raises, err_msg",
     [
-        (FakeFile("not_an_image.zyx"), True, 'Unknown file type: ".zyx".'),
-        (FakeFile("not_an_image.svg"), True, 'Unsupported file type "image/svg'),
+        (
+            FakeFile("not_an_image.zyx"),
+            True,
+            'Unsupported file type "UNKNOWN" from "not_an_image.zyx". Please upload one of: PNG, JPEG.',
+        ),
+        (
+            FakeFile("not_an_image.svg"),
+            True,
+            'Unsupported file type "SVG" from "not_an_image.svg". Please upload one of: PNG, JPEG.',
+        ),
         (FakeFile("image.png"), False, ""),
         (FakeFile("image.jpg"), False, ""),
         (FakeFile("image.jpeg"), False, ""),
