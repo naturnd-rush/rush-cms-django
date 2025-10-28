@@ -26,17 +26,22 @@ from rush import views
 from rush.graphql import get_schema
 
 urlpatterns = [
-    path("admin/login/", views.rush_login_view),
-    path("admin/", admin.site.urls),
+    path("login/", views.rush_login_view),
     path("summernote/", include("django_summernote.urls")),
+    path("_nested_admin/", include("nested_admin.urls")),
     path(
         # TODO: Remove csrf exempt here and add the token to internal graphQL requests!
         "graphql/",
         csrf_exempt(GraphQLView.as_view(graphiql=True, schema=get_schema())),
     ),
-    # path("github/deploy/", views.deploy_webhook_handler),
 ]
 
 # Serve media files during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG or settings.ENABLE_SILK_PROFILING:
+    urlpatterns += [path("silk/", include("silk.urls", namespace="silk"))]
+
+# Add admin urls at the end so others can resolve before this "catch all" (base url)
+urlpatterns += [path("", admin.site.urls)]

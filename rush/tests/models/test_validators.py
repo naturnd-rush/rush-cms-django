@@ -42,7 +42,7 @@ def test_validate_image_or_svg(file: Mock, raises: bool, err_msg: str):
     PNG, JPEG, and SVG all allowed.
     """
     if raises:
-        with pytest.raises(InvalidFileType, match=err_msg):
+        with pytest.raises(BaseInvalidFileType, match=err_msg):
             validate_image_or_svg(file)
     else:
         validate_image_or_svg(file)
@@ -61,7 +61,7 @@ def test_validate_image(file: Mock, raises: bool, err_msg: str):
     Should raise validation error when mimetype is not PNG, JPEG.
     """
     if raises:
-        with pytest.raises(InvalidFileType, match=err_msg):
+        with pytest.raises(BaseInvalidFileType, match=err_msg):
             validate_image(file)
     else:
         validate_image(file)
