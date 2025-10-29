@@ -43,9 +43,9 @@ def test_validate_image_or_svg(file: Mock, raises: bool, err_msg: str):
     """
     if raises:
         with pytest.raises(BaseInvalidFileType, match=err_msg):
-            validate_image_or_svg(file)
+            validate_image_svg_webp(file)
     else:
-        validate_image_or_svg(file)
+        validate_image_svg_webp(file)
 
 
 @pytest.mark.parametrize(

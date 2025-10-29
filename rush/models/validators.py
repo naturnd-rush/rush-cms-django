@@ -51,11 +51,11 @@ class UnknownFileType(BaseInvalidFileType):
         super().__init__(message=msg, *args, **kwargs)
 
 
-def validate_image_or_svg(file: FieldFile):
+def validate_image_svg_webp(file: FieldFile):
     """
     Raise a validation-error if then file isn't a PNG, JPEG, or SVG.
     """
-    allowed = ["image/png", "image/jpeg", "image/svg+xml"]
+    allowed = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"]
     mime_type, _ = mimetypes.guess_type(file.name)
     if not mime_type:
         raise UnknownFileType(file.name)

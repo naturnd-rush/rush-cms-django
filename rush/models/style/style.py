@@ -8,7 +8,7 @@ from django.dispatch import receiver
 
 from rush.models import utils
 from rush.models.validators import (
-    validate_image_or_svg,
+    validate_image_svg_webp,
     validate_only_integers_and_whitespace,
 )
 
@@ -126,9 +126,10 @@ class Style(models.Model):
         upload_to="marker_icons/",
         null=True,
         blank=True,
-        validators=[validate_image_or_svg],
+        validators=[validate_image_svg_webp],
         help_text="The image that will appear at each point this style is applied to. Accepts PNG, JPEG, and SVG files.",
     )
+    is_marker_icon_compressed = models.BooleanField(default=False)
     marker_icon_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
@@ -151,11 +152,21 @@ class Style(models.Model):
 
 @receiver(pre_save, sender=Style)
 def compress_marker_icon(sender, instance: Style, **kwargs):
+    if db_instance := Style.objects.filter(pk=instance.id).first():
+        if instance.marker_icon != db_instance.marker_icon:
+            # Mark file as needing compression if it has changed at all
+            instance.is_marker_icon_compressed = False
+    if instance.is_marker_icon_compressed:
+        # Skip compression if marker-icon is already compressed.
+        return
     if image := instance.marker_icon:
         try:
-            compressed = utils.compress_image(image)
+            compressed = utils.compress_image(image, pixel_width=256)
             # save = False avoids double-saving for efficiency and just
             # assigns the compressed image value to the marker_icon field
             image.save(compressed.name, compressed, save=False)
+            instance.is_marker_icon_compressed = True
+            instance.full_clean()
+            instance.save()
         except utils.CompressionFailed:
             pass
