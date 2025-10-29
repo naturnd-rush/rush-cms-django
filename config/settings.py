@@ -20,9 +20,7 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config("DJANGO_SECRET_KEY", cast=str)
 DEBUG = config("DJANGO_DEBUG", cast=bool)
-ALLOWED_HOSTS = [
-    host for host in config("DJANGO_ALLOWED_HOSTS", cast=str).split(",") if host != ""
-]
+ALLOWED_HOSTS = [host for host in str(config("DJANGO_ALLOWED_HOSTS", cast=str)).split(",") if host != ""]
 MEDIA_ROOT = config("DJANGO_MEDIA_ROOT", cast=str)
 STATIC_ROOT = config("DJANGO_STATIC_ROOT", cast=str)
 GDAL_LIBRARY_PATH = config("GDAL_LIBRARY_PATH", cast=str)
@@ -45,6 +43,33 @@ DEPLOY_NGINX_CONFIG_PATH = config("DEPLOY_NGINX_CONFIG_PATH", cast=str)
 DEPLOY_NGINX_ENABLED_PATH = config("DEPLOY_NGINX_ENABLED_PATH", cast=str)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
 
+ENABLE_SILK_PROFILING = config("ENABLE_SILK_PROFILING", cast=bool)
+if ENABLE_SILK_PROFILING:
+    SILKY_PYTHON_PROFILER = True  # enables Python-level profiling
+    SILKY_PYTHON_PROFILER_BINARY = False  # False = more readable text output
+    SILKY_PYTHON_PROFILER_RESULT_PATH = BASE_DIR / "profiles"  # Save profiles to disk
+    SILKY_META = True  # optional, adds extra metadata
+
+    # Control what gets profiled
+    SILKY_INTERCEPT_PERCENT = 100  # Profile 100% of requests (default is 100)
+    SILKY_MAX_RECORDED_REQUESTS = 10000  # Keep more history
+    SILKY_MAX_RECORDED_REQUESTS_CHECK_PERCENT = 10  # How often to check
+
+    # More detailed profiling
+    SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME = True  # More descriptive filenames
+    SILKY_ANALYZE_QUERIES = True  # Analyze SQL queries in detail
+
+    # Fix for "Another profiling tool is already active" error
+    # This catches and ignores the error when concurrent requests try to profile
+    SILKY_PYTHON_PROFILER_FUNC = None  # Use default profiler
+    SILKY_IGNORE_PATHS = []  # Don't ignore any paths
+
+
+FILE_UPLOAD_HANDLERS = [
+    # Forces file-uploads to write to disk as the buffer instead of memory.
+    "django.core.files.uploadhandler.TemporaryFileUploadHandler",
+]
+
 # Application definition
 INSTALLED_APPS = [
     # default django apps
@@ -57,15 +82,19 @@ INSTALLED_APPS = [
     # RUSH apps
     "rush",
     # RUSH dependencies
+    "nested_admin",  # Nested inline support for Django admin
+    "logentry_admin",  # Django snippet to add a LogEntry admin page
     "django_summernote",  # Rich text fields + editor
     "graphene_django",  # GraphQL support
-    "simple_history",  # Simple changelog + diff for select models
-    "leaflet",  # Leaflet Django integration
+    "leaflet",  # Leaflet Django integration  # TODO: Not sure if this is actually used.
     "colorfield",  # Django Admin colorpicker UI
     "corsheaders",  # CORS headers for frontend on different origin
+    "adminsortable2",  # Adds drag-and-drop sortable lists on the Django admin-site.
+    "silk",  # Django Request Profiling
 ]
 
 MIDDLEWARE = [
+    "silk.middleware.SilkyMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -74,7 +103,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -181,10 +209,18 @@ LEAFLET_CONFIG = {
 }
 
 # CORS configuration
-CORS_ORIGIN_ALLOW_ALL = DEBUG # Development
-CORS_ALLOWED_ORIGINS = [
-    host for host in config("DJANGO_ALLOWED_ORIGINS", cast=str).split(",") if host != ""
-]
+CORS_ORIGIN_ALLOW_ALL = DEBUG  # Development
+CORS_ALLOWED_ORIGINS = [x for x in str(config("DJANGO_ALLOWED_ORIGINS", cast=str)).split(",") if x != ""]
 CORS_ALLOWED_ORIGIN_REGEXES = [
-    host for host in config("DJANGO_ALLOWED_ORIGIN_REGEXES", cast=str).split(",") if host != ""
+    x for x in str(config("DJANGO_ALLOWED_ORIGIN_REGEXES", cast=str)).split(",") if x != ""
 ]
+CSRF_TRUSTED_ORIGINS = [x for x in str(config("DJANGO_CSRF_TRUSTED_ORIGINS", cast=str)).split(",") if x != ""]
+X_FRAME_OPTIONS = "SAMEORIGIN"  # Need cross-origin here for Summernote X-frame injection
+
+
+# Backblaze configuration for raster images
+BACKBLAZE_RASTER_BUCKET_NAME = "rush-webmap-raster"
+BACKBLAZE_ENDPOINT_URL = "https://s3.us-east-005.backblazeb2.com"
+BACKBLAZE_REGION_NAME = "us-east-005"  # Matching the above URL
+BACKBLAZE_APP_KEY_ID = str(config("BACKBLAZE_APP_KEY_ID", cast=str))
+BACKBLAZE_APP_KEY = str(config("BACKBLAZE_APP_KEY", cast=str))

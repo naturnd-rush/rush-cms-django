@@ -3,18 +3,21 @@ import logging
 from dataclasses import asdict, dataclass
 from typing import Any, List
 
+import adminsortable2.admin as sortable_admin
 from django import forms
 from django.contrib import admin
 from django.forms.utils import flatatt
+from django.http import HttpRequest
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin
 from django_summernote.widgets import SummernoteWidgetBase
-from simple_history.admin import SimpleHistoryAdmin
+from silk.profiling.dynamic import silk_profile
 
 from rush import models
 from rush.admin import utils
+from rush.admin.utils import truncate_admin_text_from
 
 logger = logging.getLogger(__name__)
 
@@ -56,23 +59,33 @@ class SummernoteWidget(SummernoteWidgetBase):
 class StylesOnLayerInlineForm(forms.ModelForm):
     class Meta:
         model = models.StylesOnLayer
-        fields = ["style", "feature_mapping", "legend_description", "legend_order", "popup"]
+        fields = [
+            "style",
+            "feature_mapping",
+            "legend_description",
+            "popup",
+        ]
         widgets = {
             "popup": SummernoteWidget(),
             "feature_mapping": forms.Textarea(attrs={"rows": 1, "cols": 50}),
         }
 
 
-class StyleOnLayerInline(admin.TabularInline):
+class StyleOnLayerInline(sortable_admin.SortableTabularInline, admin.TabularInline):
     form = StylesOnLayerInlineForm
     verbose_name_plural = "Styles applied to this Layer"
     model = models.StylesOnLayer
     extra = 0
     exclude = ["id"]
+    sortable_field_name = "display_order"
     autocomplete_fields = [
         # uses the searchable textbox in the admin form to add/remove Styles
         "style"
     ]
+
+    def get_formset(self, request, obj=None, **kwargs):
+        """Profile inline formset creation"""
+        return super().get_formset(request, obj, **kwargs)
 
 
 class MapDataChoiceField(forms.ModelChoiceField):
@@ -84,8 +97,41 @@ class MapDataChoiceField(forms.ModelChoiceField):
 
 
 class LayerForm(forms.ModelForm):
-    serialized_leaflet_json = forms.CharField(widget=forms.HiddenInput())
-    map_data = MapDataChoiceField(queryset=models.MapData.objects.all())
+
+    class LeafletSerializationFail(Exception):
+        """
+        Something went wrong while trying to serialize the leaflet
+        JSON before saving it to the Layer model.
+        """
+
+        ...
+
+    serialized_leaflet_json = forms.CharField(widget=forms.HiddenInput(), required=False)
+    map_data = MapDataChoiceField(
+        # Defer loading the large _geojson field to improve form rendering performance
+        # Only load id, name, and provider_state which are needed for the dropdown
+        queryset=models.MapData.objects.only(
+            "id",
+            "name",
+            "provider_state",
+        ).order_by("name")
+    )
+
+    @silk_profile(name="LayerForm clean_serialized_leaflet_json")
+    def clean_serialized_leaflet_json(self):
+        """
+        Prevent double-serialization of submitted GeoJSON data.
+        """
+        try:
+            map_data: models.MapData = self.cleaned_data["map_data"]
+            if map_data.provider_state == models.MapData.ProviderState.GEOJSON:
+                data = self.cleaned_data["serialized_leaflet_json"]
+                # The json.loads here avoids double-serialization. We need it because
+                # the data is serialized pre-transit to the server, and then again (mistakenly)
+                # by Django's JSONField.
+                return json.loads(data)
+        except Exception as e:
+            raise self.LeafletSerializationFail from e
 
     class Meta:
         model = models.Layer
@@ -93,12 +139,36 @@ class LayerForm(forms.ModelForm):
 
 
 @admin.register(models.Layer)
-class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
+class LayerAdmin(sortable_admin.SortableAdminBase, SummernoteModelAdmin):  # type: ignore
     form = LayerForm
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]
     search_fields = ["name"]
+    list_display = ["name", "description_preview"]
+    description_preview = truncate_admin_text_from("description")
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # avoid fetching map_data when listing Layers
+        return qs.defer("map_data", "serialized_leaflet_json")
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        """Handles both GET (load form) and POST (save form) requests"""
+        # Dynamic profile name based on request method
+        profile_name = f"LayerAdmin changeform_view ({request.method})"
+        with silk_profile(name=profile_name):
+            return super().changeform_view(request, object_id, form_url, extra_context)
+
+    @silk_profile(name="LayerAdmin save_model")
+    def save_model(self, request: HttpRequest, obj: Any, form: forms.ModelForm, change: bool) -> None:
+        return super().save_model(request, obj, form, change)
+
+    @silk_profile(name="LayerAdmin get_form")
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        """Profile form instantiation"""
+        return super().get_form(request, obj, change, **kwargs)
+
+    @silk_profile(name="LayerAdmin render_change_form")
     def render_change_form(self, request, context, *args, **kwargs):
         map_preview_html = mark_safe(
             '<div id="map-preview" style="height: 600px; margin-bottom: 1em;"></div>'
@@ -112,24 +182,15 @@ class LayerAdmin(SummernoteModelAdmin, SimpleHistoryAdmin):
         finally:
             return super().render_change_form(request, context, *args, **kwargs)
 
-    def _inject_serialized_leaflet_json(self, obj, form) -> None:
-        """
-        Takes the serialized leaflet json data from a hidden field on the form and injects it into
-        the model at model save time.
-        """
-        fieldname = "serialized_leaflet_json"
-        data = form.cleaned_data.get(fieldname)
-        if not data:
-            raise forms.ValidationError(f"Error saving {fieldname} data!")
+    @silk_profile(name="LayerAdmin save_formset")
+    def save_formset(self, request, form, formset, change):
+        """Profile saving inline formsets (StylesOnLayer)"""
+        return super().save_formset(request, form, formset, change)
 
-        # Avoid double-serialization
-        parsed = json.loads(data)
-
-        setattr(obj, fieldname, parsed)
-
-    def save_model(self, request, obj, form, change):
-        self._inject_serialized_leaflet_json(obj, form)
-        super().save_model(request, obj, form, change)
+    @silk_profile(name="LayerAdmin get_inline_instances")
+    def get_inline_instances(self, request, obj=None):
+        """Profile loading inline forms"""
+        return super().get_inline_instances(request, obj)
 
 
 @dataclass
@@ -187,6 +248,11 @@ mdaf_config = MapDataAdminFormConfig(
             ],
             map_preview=False,
         ),
+        MapDataAdminFormConfig.Provider(
+            state=models.MapData.ProviderState.GEOTIFF,
+            fields=[MapDataAdminFormConfig.Field("geotiff", required=True)],
+            map_preview=False,
+        ),
     ]
 )
 
@@ -196,10 +262,16 @@ class MapDataAdminForm(forms.ModelForm):
     For submitting `MapData` info.
     """
 
+    # provider_state = forms.ChoiceField(choices=models.MapData.ProviderState.choices, label="Data Type")
+
     class Meta:
         model = models.MapData
         fields = ["id", "name", "provider_state", *[field.fieldname for field in mdaf_config.get_fields()]]
+        labels = {
+            "provider_state": "Data Type",
+        }
 
+    @silk_profile(name="MapDataForm get_initial_for_field")
     def get_initial_for_field(self, field, field_name):
         if field_name == "_geojson":
             if self.instance and isinstance(self.instance, models.MapData):
@@ -208,6 +280,7 @@ class MapDataAdminForm(forms.ModelForm):
                     return {}
         return super().get_initial_for_field(field, field_name)
 
+    @silk_profile(name="MapDataForm __init__")
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -231,6 +304,7 @@ class MapDataAdminForm(forms.ModelForm):
             if value != models.MapData.ProviderState.UNSET
         ]
 
+    @silk_profile(name="MapDataForm clean")
     def clean(self) -> dict[str, Any]:
         cleaned_data = super().clean()
         provider = mdaf_config.get_provider(cleaned_data["provider_state"])
@@ -265,13 +339,52 @@ class MapDataAdminForm(forms.ModelForm):
 
 
 @admin.register(models.MapData)
-class MapDataAdmin(SimpleHistoryAdmin):
+class MapDataAdmin(admin.ModelAdmin):
     form = MapDataAdminForm
     exclude = ["id"]
     list_display = ["name", "provider_state"]
     search_fields = ["name"]
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # avoid fetching map_data and geotiff data when listing all MapDatas
+        return qs.defer("_geojson", "geotiff")
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        """Handles both GET (load form) and POST (save form) requests"""
+        # Dynamic profile name based on request method
+        profile_name = f"MapDataAdmin changeform_view ({request.method})"
+        with silk_profile(name=profile_name):
+            return super().changeform_view(request, object_id, form_url, extra_context)
+
+    @silk_profile(name="MapDataAdmin save")
+    def save_model(self, request: HttpRequest, obj: Any, form: forms.ModelForm, change: bool) -> None:
+        return super().save_model(request, obj, form, change)
+
+    @silk_profile(name="MapDataAdmin get_form")
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        return super().get_form(request, obj, change, **kwargs)
+
+    @silk_profile(name="MapDataAdmin log_change")
+    def log_change(self, request, object, message):
+        """
+        Skip expensive change message for large JSON fields.
+        """
+        # Don't construct detailed change message, just log the action
+        from django.contrib.admin.models import CHANGE, LogEntry
+        from django.contrib.contenttypes.models import ContentType
+
+        return LogEntry.objects.log_action(
+            user_id=request.user.pk,  # type: ignore
+            content_type_id=ContentType.objects.get_for_model(object).pk,
+            object_id=object.pk,
+            object_repr=str(object)[:200],
+            action_flag=CHANGE,
+            change_message="Modified",  # Simple message instead of detailed diff
+        )
+
     @staticmethod
+    @silk_profile(name="MapDataAdmin _get_geojson_str")
     def _get_geojson_str(context) -> str:
         if map_data := context.get("original"):
             if isinstance(map_data, models.MapData):
@@ -281,6 +394,7 @@ class MapDataAdmin(SimpleHistoryAdmin):
                     pass
         return "{}"
 
+    @silk_profile(name="MapDataAdmin render_change_form")
     def render_change_form(self, request, context, *args, **kwargs):
         """
         Inject initial GeoJSON data into page so we can render an initial
@@ -338,7 +452,7 @@ class StyleForm(forms.ModelForm):
 
 
 @admin.register(models.Style)
-class StyleAdmin(SimpleHistoryAdmin):
+class StyleAdmin(admin.ModelAdmin):
     form = StyleForm
     readonly_fields = ["style_preview"]
     exclude = ["id"]

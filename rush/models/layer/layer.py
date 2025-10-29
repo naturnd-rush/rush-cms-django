@@ -1,7 +1,6 @@
 import uuid
 
 import django.db.models as models
-from simple_history.models import HistoricalRecords
 
 
 class Layer(models.Model):
@@ -17,12 +16,11 @@ class Layer(models.Model):
     map_data = models.ForeignKey(
         to="MapData",
         # MapData deletion should fail if a Layer references it.
+        # TODO: Check if this actually works or if I got it backwards...
         on_delete=models.PROTECT,
     )
     styles = models.ManyToManyField("Style", through="StylesOnLayer")
-    serialized_leaflet_json = models.JSONField(default=dict)
-
-    history = HistoricalRecords()
+    serialized_leaflet_json = models.JSONField(default=dict, null=True, blank=True)
 
     def __str__(self):
         return self.name

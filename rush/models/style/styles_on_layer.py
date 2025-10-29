@@ -9,6 +9,9 @@ class StylesOnLayer(models.Model):
     reuse styles on other Layers.
     """
 
+    class Meta:
+        ordering = ["display_order"]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
 
     style = models.ForeignKey("Style", on_delete=models.CASCADE)
@@ -19,10 +22,7 @@ class StylesOnLayer(models.Model):
         default="E.g., 'Grassland', '0-25%', or '>3 Tree Protection Score'.",
         help_text="A short description of what this style represents on the map.",
     )
-    legend_order = models.IntegerField(
-        default=0,
-        help_text="Optional ordering for the styles to be put in the legend. If you want this style to be at the top of the legend, compared to other styles on this layer, use a lower number. Without setting this field there is no guarantee of the order of these styles in the legend!",
-    )
+    display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 
     # Some expression that will be matched against a GeoJSON feature's properties
     # to decide whether this style will be applied to any given feature on the map.

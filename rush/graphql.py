@@ -1,10 +1,7 @@
-import re
-
 import graphene
 from graphene_django.types import DjangoObjectType
 
 from rush import models
-from rush.context_processors import base_media_url
 
 """
 GraphQL Schema for RUSH models. This file defines what data GraphQL
@@ -18,36 +15,45 @@ class MapDataType(DjangoObjectType):
         fields = [
             "id",
             "name",
-            "dropdown_name",
             "provider_state",
             "geojson",
             "map_link",
             "campaign_link",
+            "geotiff_link",
         ]
 
     geojson = graphene.String()
-    dropdown_name = graphene.String()
 
     def resolve_geojson(self, info):
         if self.has_geojson_data():  # type: ignore
             return self.get_raw_geojson_data()  # type: ignore
         return None
 
-    def resolve_dropdown_name(self, info):
-        return str(self)
+    geotiff_link = graphene.String()
+
+    def resolve_geotiff_link(self, info):
+        if isinstance(self, models.MapData):
+            if self.geotiff:
+                return self.geotiff.url
+            return None
+        raise ValueError("Expected API object to be an instance of MapData!")
 
 
-class MapDataWithoutGeoJsonType(MapDataType):
+class MapDataWithoutGeoJsonType(DjangoObjectType):
     class Meta:  # type: ignore
         model = models.MapData
-        fields = [
-            "id",
-            "name",
-            "dropdown_name",
-            "provider_state",
-            "map_link",
-            "campaign_link",
-        ]
+        fields = [x for x in MapDataType._meta.fields if x != "geojson"]
+
+    # Still need this resolved and filed definition here because inheritance of
+    # mapDataType in this class keeps geojson accessible for some reason...
+    geotiff_link = graphene.String()
+
+    def resolve_geotiff_link(self, info):
+        if isinstance(self, models.MapData):
+            if self.geotiff:
+                return self.geotiff.url
+            return None
+        raise ValueError("Expected API object to be an instance of MapData!")
 
 
 class StylesOnLayersType(DjangoObjectType):
@@ -56,60 +62,10 @@ class StylesOnLayersType(DjangoObjectType):
         fields = [
             "id",
             "legend_description",
-            "legend_order",
-            # "legend_patch",
+            "display_order",
             "style",
             "layer",
         ]
-
-    # legend_patch = graphene.String()
-
-    # def resolve_legend_patch(self, info):
-    #     """
-    #     Render a little legend patch for the style.
-    #     """
-    #     if not isinstance(self, models.StylesOnLayer):
-    #         raise ValueError("Expected StylesOnLayer object while resolving query!")
-
-    #     # Three scenarios:
-    #     # 1.) Style has only a marker icon;
-    #     # 2.) Style has only a polygon / line; and,
-    #     # 3.) Style has both marker icon and polygon / line.
-    #     style: models.Style = self.style
-    #     svg_html_id = "-".join(re.sub(r"[^A-Za-z]", "", self.legend_description).lower().split(" "))
-
-    #     if style.draw_marker and not style.draw_fill and not style.draw_stroke:
-    #         # Scenario 1: Only Marker Icon
-    #         request = info.context  # apparently this is where graphql puts the request
-    #         marker_url = f"{base_media_url(request)['BASE_MEDIA_URL']}{str(style.marker_icon)}"
-    #         marker_icon = (
-    #             '<svg width="45" height="27" fill="none" xmlns="http://www.w3.org/2000/svg">'
-    #             + "<img "
-    #             + f'src="{marker_url}" '
-    #             + 'width="40px" '
-    #             + 'height="40px" '
-    #             'style="'
-    #             + "position: absolute;"
-    #             + "left: 22.5px;"
-    #             + "top: 22.5px;"
-    #             + f"opacity: {style.marker_icon_opacity}"
-    #             + '"'
-    #             + "/>"
-    #             + "</svg>"
-    #         )
-    #         print(marker_icon)
-    #         return marker_icon
-
-    #     elif not style.draw_marker and (style.draw_fill or style.draw_stroke):
-    #         # Scenario 2: Only Polygon / Line
-    #         ...
-
-    #     elif style.draw_marker and (style.draw_fill or style.draw_stroke):
-    #         # Scenario 3: Both Marker Icon and Polygon / Line
-    #         ...
-
-    #     else:
-    #         raise ValueError("Unexpected combination of style data!")
 
 
 class StyleType(DjangoObjectType):
@@ -139,7 +95,7 @@ class StyleType(DjangoObjectType):
 class LayerType(DjangoObjectType):
     class Meta:
         model = models.Layer
-        fields = ["id", "name", "description", "styles_on_layer", "serialized_leaflet_json"]
+        fields = ["id", "name", "map_data", "description", "styles_on_layer", "serialized_leaflet_json"]
 
     styles_on_layer = graphene.List(StylesOnLayersType)
 
@@ -149,40 +105,57 @@ class LayerType(DjangoObjectType):
         raise ValueError("Expected Layer object while resolving query!")
 
 
-class LayerTypeWithoutSerializedLeafletJSON(LayerType):
+class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
     """
     Defensive type to prevent people from querying serializedLeafletJSON from allLayers, which
     would be too computationally expensive and probably isn't needed by any API client.
     """
 
+    map_data = graphene.Field(MapDataWithoutGeoJsonType)
+
     class Meta:  # type: ignore
         model = models.Layer
-        fields = ["id", "name", "description", "styles_on_layer"]
+        fields = ["id", "name", "description", "map_data"]
 
 
-class LayerGroupType(DjangoObjectType):
+class LayerOnLayerGroupType(DjangoObjectType):
+
     class Meta:
-        model = models.LayerGroup
-        fields = ["id", "group_name", "group_description", "layers"]
+        model = models.LayerOnLayerGroup
+        fields = [
+            "active_by_default",
+            "display_order",
+        ]
 
-    layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
+    layer_id = graphene.String()
 
-    def resolve_layers(self, info):
-        if isinstance(self, models.LayerGroup):
-            return models.Layer.objects.filter(layeronquestion__layer_group=self).distinct()
-        raise ValueError("Expected LayerGroup object while resolving query!")
+    def resolve_layer_id(self, info):
+        if isinstance(self, models.LayerOnLayerGroup):
+            return str(self.layer.id)
+        raise ValueError("Expected LayerOnLayerGroup object while resolving query!")
 
 
-class LayerOnQuestionType(DjangoObjectType):
+class LayerGroupOnQuestionType(DjangoObjectType):
     class Meta:
-        model = models.LayerOnQuestion
-        fields = ["layer", "question", "active_by_default", "layer_group"]
+        model = models.LayerGroupOnQuestion
+        fields = [
+            "group_name",
+            "group_description",
+            "display_order",
+        ]
+
+    layers_on_layer_group = graphene.List(LayerOnLayerGroupType)
+
+    def resolve_layers_on_layer_group(self, info):
+        if isinstance(self, models.LayerGroupOnQuestion):
+            return models.LayerOnLayerGroup.objects.filter(layer_group_on_question=self).distinct()
+        raise ValueError("Expected LayerGroupOnQuestion object while resolving query!")
 
 
 class QuestionTabType(DjangoObjectType):
     class Meta:
         model = models.QuestionTab
-        fields = ["id", "title", "content"]
+        fields = ["id", "title", "content", "display_order", "slug"]
 
 
 class InitiativeTagType(DjangoObjectType):
@@ -194,19 +167,28 @@ class InitiativeTagType(DjangoObjectType):
 class InitiativeType(DjangoObjectType):
     class Meta:
         model = models.Initiative
-        fields = ["id", "title", "image", "content", "tags"]
+        fields = ["id", "title", "link", "image", "content", "tags"]
 
 
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
-        fields = ["id", "title", "subtitle", "image", "initiatives", "tabs","slug"] #slug field added
+        fields = [
+            "id",
+            "title",
+            "subtitle",
+            "image",
+            "initiatives",
+            "tabs",
+            "slug",
+            "display_order",
+        ]
 
     # Link one half of the many-to-many through table in the graphql schema
-    layers_on_question = graphene.List(LayerOnQuestionType)
+    layer_groups_on_question = graphene.List(LayerGroupOnQuestionType)
 
-    def resolve_layers_on_question(self, info):
-        return models.LayerOnQuestion.objects.filter(question=self)
+    def resolve_layer_groups_on_question(self, info):
+        return models.LayerGroupOnQuestion.objects.filter(question=self)
 
 
 class PageType(DjangoObjectType):
@@ -220,12 +202,15 @@ class Query(graphene.ObjectType):
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
 
-    layer_group = graphene.List(LayerGroupType, question_id=graphene.UUID(required=True))
-
     all_questions = graphene.List(QuestionType)
     question = graphene.Field(QuestionType, id=graphene.UUID(required=True))
     question_by_slug = graphene.Field(QuestionType, slug=graphene.String(required=True))
     question_tab_by_id = graphene.Field(QuestionTabType, id=graphene.UUID(required=True))
+    question_tab_by_slug = graphene.Field(
+        QuestionTabType,
+        question_slug=graphene.String(required=True),
+        question_tab_slug=graphene.String(required=True),
+    )
 
     all_map_datas = graphene.List(MapDataWithoutGeoJsonType)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
@@ -247,7 +232,7 @@ class Query(graphene.ObjectType):
         return models.Layer.objects.get(pk=id)
 
     def resolve_layer_group(self, info, question_id):
-        return models.LayerGroup.objects.filter(layeronquestion__question__id=question_id).distinct()
+        return models.LayerGroupOnQuestion.objects.filter(layeronquestion__question__id=question_id).distinct()
 
     def resolve_all_questions(self, info):
         return models.Question.objects.all()
@@ -255,13 +240,18 @@ class Query(graphene.ObjectType):
     def resolve_question(self, info, id):
         return models.Question.objects.get(pk=id)
 
-<<<<<<< HEAD
     def resolve_question_by_slug(self, info, slug: str):
         return models.Question.objects.get(slug=slug)
-=======
     def resolve_question_tab_by_id(self, info, id):
         return models.QuestionTab.objects.get(pk=id)
->>>>>>> main
+    def resolve_question_by_slug(self, info, slug: str):
+        return models.Question.objects.get(slug=slug)
+
+    def resolve_question_tab_by_slug(self, info, question_slug: str, question_tab_slug: str):
+        return models.QuestionTab.objects.filter(slug=question_tab_slug, question__slug=question_slug).first()
+
+    def resolve_question_tab_by_id(self, info, id):
+        return models.QuestionTab.objects.get(pk=id)
 
     def resolve_all_map_datas(self, info):
         return models.MapData.objects.all()

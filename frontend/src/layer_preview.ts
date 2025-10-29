@@ -772,6 +772,7 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
             //showSpinnerAfter(1, mapPreviewState);
             getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
         } else {
+            // Hide map preview and styles on layers when we are not dealing with GEOJSON map data for this layer...
             hideMapPreviewAndStyles();
         }
     };
