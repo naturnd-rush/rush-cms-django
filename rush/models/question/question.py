@@ -26,19 +26,3 @@ class Question(models.Model):
     def __str__(self):
         return self.title
 
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            base_slug = slugify(self.title)
-            slug = base_slug
-            counter = 1
-
-            # Ensure unique slug by adding numbers if duplicate exists
-            while Question.objects.filter(slug=slug).exclude(pk=self.pk).exists():
-                slug = f"{base_slug}-{counter}"
-                counter += 1
-
-            self.slug = slug
-        super().save(*args, **kwargs)
-
-    def get_absolute_url(self):
-        return f"/questions/{self.slug}/"

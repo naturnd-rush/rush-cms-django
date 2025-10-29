@@ -2,16 +2,7 @@ from django.contrib import messages
 from django.contrib.admin.forms import AdminAuthenticationForm
 from django.contrib.auth import authenticate, login
 from django.shortcuts import redirect, render
-try:
-    # django-ratelimit exposes the decorator at ratelimit.decorators.ratelimit
-    from ratelimit.decorators import ratelimit
-except ImportError as e:
-    raise ImportError(
-        "Failed to import 'ratelimit' decorator. Make sure 'django-ratelimit' is installed "
-        "(pip install django-ratelimit). If you have a package named 'ratelimit' installed, "
-        "remove it to avoid name collision."
-    ) from e
-
+from ratelimit.decorators import ratelimit
 
 
 @ratelimit(key="ip", rate="10/m", method="POST", block=True)

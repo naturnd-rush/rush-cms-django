@@ -242,10 +242,6 @@ class Query(graphene.ObjectType):
 
     def resolve_question_by_slug(self, info, slug: str):
         return models.Question.objects.get(slug=slug)
-    def resolve_question_tab_by_id(self, info, id):
-        return models.QuestionTab.objects.get(pk=id)
-    def resolve_question_by_slug(self, info, slug: str):
-        return models.Question.objects.get(slug=slug)
 
     def resolve_question_tab_by_slug(self, info, question_slug: str, question_tab_slug: str):
         return models.QuestionTab.objects.filter(slug=question_tab_slug, question__slug=question_slug).first()
