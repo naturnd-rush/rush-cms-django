@@ -31,7 +31,7 @@ def compress_style_marker_icons(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("rush", "0061_alter_question_image copy"),
+        ("rush", "0061_alter_question_image"),
     ]
 
     operations = [
