@@ -2,7 +2,6 @@ import uuid
 from typing import Any, Dict
 
 import django.db.models as models
-from simple_history.models import HistoricalRecords
 
 from rush.logger import get_logger
 from rush.models.base import BaseModel
@@ -23,12 +22,11 @@ class Layer(BaseModel):
     map_data = models.ForeignKey(
         to="MapData",
         # MapData deletion should fail if a Layer references it.
+        # TODO: Check if this actually works or if I got it backwards...
         on_delete=models.PROTECT,
     )
     styles = models.ManyToManyField("Style", through="StylesOnLayer")
-    serialized_leaflet_json = models.JSONField(default=dict)
-
-    history = HistoricalRecords()
+    serialized_leaflet_json = models.JSONField(default=dict, null=True, blank=True)
 
     def __str__(self):
         return self.name

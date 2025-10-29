@@ -5,7 +5,6 @@ import django.db.models as models
 from colorfield.fields import ColorField
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
-from simple_history.models import HistoricalRecords
 
 from rush.models import utils
 from rush.models.base import BaseModel
@@ -146,8 +145,6 @@ class Style(BaseModel):
     )
 
     # TODO: Add _hover style and _active style recursive foreign keys.
-
-    history = HistoricalRecords()
 
     def __str__(self):
         return self.name
