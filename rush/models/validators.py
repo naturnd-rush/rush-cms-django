@@ -53,7 +53,7 @@ class UnknownFileType(BaseInvalidFileType):
 
 def validate_image_svg_webp(file: FieldFile):
     """
-    Raise a validation-error if then file isn't a PNG, JPEG, or SVG.
+    Raise a validation-error if then file isn't a PNG, JPEG, SVG, or WEBP.
     """
     allowed = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"]
     mime_type, _ = mimetypes.guess_type(file.name)
@@ -63,11 +63,11 @@ def validate_image_svg_webp(file: FieldFile):
         raise UnsupportedFileType(mime_type, allowed)
 
 
-def validate_image(file: FieldFile):
+def validate_image_webp(file: FieldFile):
     """
-    Raise a validation-error if then file isn't a PNG or JPEG.
+    Raise a validation-error if then file isn't a PNG, JPEG, or WEBP.
     """
-    allowed = ["image/png", "image/jpeg"]
+    allowed = ["image/png", "image/jpeg", "image/webp"]
     mime_type, _ = mimetypes.guess_type(file.name)
     if not mime_type:
         raise UnknownFileType(file.name)
