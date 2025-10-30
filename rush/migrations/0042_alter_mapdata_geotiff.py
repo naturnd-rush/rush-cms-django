@@ -3,7 +3,6 @@
 from django.db import migrations, models
 
 import rush.models.map_data
-import rush.models.validators
 
 
 class Migration(migrations.Migration):

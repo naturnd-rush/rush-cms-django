@@ -3,8 +3,6 @@
 import storages.backends.s3
 from django.db import migrations, models
 
-import rush.models.validators
-
 
 class Migration(migrations.Migration):
 
