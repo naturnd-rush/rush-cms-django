@@ -33,14 +33,31 @@ def invalid_file(
 @pytest.mark.parametrize(
     "file, raises, err_msg, valid_names, invalid_names",
     [
+        valid_file("test.svg", valid_names=[]),  # No valid list should always pass
         valid_file("test.svg", valid_names=["SVG"]),
-        valid_file("test.SVG", valid_names=["SVG"]),
+        valid_file("test.SVG", valid_names=["SVG"]),  # Uppercase file extension should also pass
         valid_file("test.svg", valid_names=["SVG", "TIFF"]),
         invalid_file("test.html5", "The mimetype of file 'test.html5' could not be parsed"),
         invalid_file("test.html", "The mimetype of file 'test.html' is currently not supported"),
         invalid_file("test.svg", "The mimetype SVG is invalid", valid_names=["TIFF"]),
-        invalid_file("test.svg", "The mimetype SVG is invalid", valid_names=[]),
         invalid_file("test.svg", "The mimetype SVG is invalid", valid_names=["SVG"], invalid_names=["SVG"]),
+        valid_file(
+            "test.svg",
+            # Unsupported mimetypes shouldn't have an effect on validation.
+            valid_names=["SVG", "FOOBAR"],
+            invalid_names=["BAZ"],
+        ),
+        invalid_file(
+            "test.svg",
+            "The mimetype SVG is invalid",
+            # Even though the mimetype isn't real, it's still the only valid one.
+            valid_names=["FOOBAR"],
+        ),
+        valid_file(
+            "test.svg",
+            # A fake invalid mimetype means we should pass
+            invalid_names=["FOOBAR"],
+        ),
     ],
 )
 def test_validate_filetype(

@@ -38,8 +38,14 @@ class GuessedMimeType:
         but is currently unsupported by the RUSH app.
         """
 
-        def __init__(self, filename: str):
-            super().__init__("The mimetype of file '{}' is currently not supported.".format(filename))
+        def __init__(self, filename: str, valid: List["MimeType"], invalid: List["MimeType"]):
+            super().__init__(
+                "The mimetype of file '{}' is currently not supported. Allowed types: {}. Disallowed types: {}.".format(
+                    filename,
+                    [x.human_name for x in valid],
+                    [x.human_name for x in invalid],
+                )
+            )
 
     class Invalid(BaseValidationError):
         """
@@ -47,19 +53,13 @@ class GuessedMimeType:
         invalid type for the file at validation-time.
         """
 
-        def __init__(
-            self,
-            mimetype: "MimeType",
-            filename: str,
-            valid: List["MimeType"],
-            invalid: List["MimeType"],
-        ):
+        def __init__(self, mimetype: "MimeType", filename: str, valid: List["MimeType"], invalid: List["MimeType"]):
             super().__init__(
                 "The mimetype {} is invalid for file {}. Allowed types: {}. Disallowed types: {}.".format(
                     mimetype.human_name,
                     filename,
-                    valid,
-                    invalid,
+                    [x.human_name for x in valid],
+                    [x.human_name for x in invalid],
                 )
             )
 
@@ -71,13 +71,18 @@ class GuessedMimeType:
         """
         Raise a validation-error if this mimetype isn't a member of `valid`, or is a member of `invalid`.
         """
+        valid = [] if valid is None else valid
+        invalid = [] if invalid is None else invalid
         if self.guessed == MimeType.UNKNOWN():
             raise self.Unknown(self.filename)
         elif self.guessed == MimeType.UNSUPPORTED():
-            raise self.Unsupported(self.filename)
-        valid = [] if valid is None else valid
-        invalid = [] if invalid is None else invalid
-        if self.guessed not in valid or self.guessed in invalid:
+            raise self.Unsupported(self.filename, valid, invalid)
+        elif valid != [] and self.guessed not in valid or self.guessed in invalid:
+            # when valid list is not empty, guessed must be in there
+            raise self.Invalid(self.guessed, self.filename, valid, invalid)
+        elif valid == [] and self.guessed in invalid:
+            # when valid list is empty, guessed doesn't need to be in there, it only
+            # needs to be missing from the invalid list.
             raise self.Invalid(self.guessed, self.filename, valid, invalid)
 
 

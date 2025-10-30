@@ -9,12 +9,6 @@ from rush.models import MimeType
 
 class FiletypeValidator:
     """
-    Django validator for file fields that validates mimetypes against database.
-
-    Uses human-readable mimetype names (e.g., "PNG", "JPEG", "SVG") which are
-    resolved at runtime using MimeType.by_name(). This allows the validator to
-    be serialized in migrations while still using database-driven validation.
-
     Args:
         valid_names: List of human-readable mimetype names that are allowed.
         invalid_names: List of human-readable mimetype names that are not allowed.
