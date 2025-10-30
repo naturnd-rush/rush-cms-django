@@ -8,7 +8,6 @@ import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
 
-import rush.models.validators
 from rush.models.validators import validate_only_integers_and_whitespace
 
 
@@ -234,7 +233,6 @@ class Migration(migrations.Migration):
                         help_text="The image that will appear at each point this style is applied to.",
                         null=True,
                         upload_to="marker_icons/",
-                        validators=[rush.models.validators.validate_image_svg_webp],
                     ),
                 ),
                 (
@@ -492,7 +490,6 @@ class Migration(migrations.Migration):
                         help_text="The image that will appear at each point this style is applied to.",
                         max_length=100,
                         null=True,
-                        validators=[rush.models.validators.validate_image_svg_webp],
                     ),
                 ),
                 (

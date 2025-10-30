@@ -2,8 +2,6 @@
 
 from django.db import migrations, models
 
-import rush.models.validators
-
 
 class Migration(migrations.Migration):
 
@@ -20,7 +18,6 @@ class Migration(migrations.Migration):
                 help_text="The image that will appear at each point this style is applied to. Accepts PNG, JPEG, and SVG files.",
                 max_length=100,
                 null=True,
-                validators=[rush.models.validators.validate_image_svg_webp],
             ),
         ),
         migrations.AlterField(
@@ -31,7 +28,6 @@ class Migration(migrations.Migration):
                 help_text="The image that will appear at each point this style is applied to. Accepts PNG, JPEG, and SVG files.",
                 null=True,
                 upload_to="marker_icons/",
-                validators=[rush.models.validators.validate_image_svg_webp],
             ),
         ),
     ]

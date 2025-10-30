@@ -6,11 +6,8 @@ from colorfield.fields import ColorField
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
-from rush.models import utils
-from rush.models.validators import (
-    validate_image_svg_webp,
-    validate_only_integers_and_whitespace,
-)
+from rush.models import MimeType, utils
+from rush.models.validators import validate_only_integers_and_whitespace
 
 
 class LineCap(models.TextChoices):
@@ -126,7 +123,16 @@ class Style(models.Model):
         upload_to="marker_icons/",
         null=True,
         blank=True,
-        validators=[validate_image_svg_webp],
+        validators=[
+            lambda file: MimeType.guess(file.name).validate(
+                valid=[
+                    MimeType.SVG(),
+                    MimeType.JPEG(),
+                    MimeType.PNG(),
+                    MimeType.WEBP(),
+                ]
+            )
+        ],
         help_text="The image that will appear at each point this style is applied to. Accepts PNG, JPEG, and SVG files.",
     )
     is_marker_icon_compressed = models.BooleanField(default=False)

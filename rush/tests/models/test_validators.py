@@ -1,74 +1,85 @@
+from typing import Callable
 from unittest.mock import Mock
 
 import pytest
 from django.core.exceptions import ValidationError
 
+from rush.models import GuessedMimeType, MimeType
 from rush.models.validators import *
 from rush.tests.models.helpers import FakeFile
 
 
-def valid_file(name: str) -> tuple[Mock, bool, str]:
-    return (FakeFile(name), False, "")
+def valid_file(
+    name: str,
+    valid=None,
+    invalid=None,
+) -> tuple[Mock, bool, str, List[MimeType] | None, List[MimeType] | None]:
+    valid = [] if valid is None else valid
+    invalid = [] if invalid is None else invalid
+    return (FakeFile(name), False, "", valid, invalid)
 
 
-def invalid_file(name: str, err_msg: str) -> tuple[Mock, bool, str]:
-    return (FakeFile(name), True, err_msg)
-
-
-def image_test_params():
-    return [
-        # Test lower-case file types
-        valid_file("test.png"),
-        valid_file("test.jpg"),
-        valid_file("test.jpeg"),
-        valid_file("test.webp"),
-        # Test upper-case file types
-        valid_file("test.PNG"),
-        valid_file("test.JPG"),
-        valid_file("test.JPEG"),
-        valid_file("test.WEBP"),
-        # Test recognizable, but unsupported file types
-        invalid_file("test.html", 'Unsupported file type "text/html"'),
-        invalid_file("test.css", 'Unsupported file type "text/css"'),
-        # Test unknown file type
-        invalid_file("test.html5", 'Unknown file type: ".html5".'),
-    ]
+def invalid_file(
+    name: str,
+    err_msg: str,
+    valid=None,
+    invalid=None,
+) -> tuple[Mock, bool, str, List[MimeType] | None, List[MimeType] | None]:
+    valid = [] if valid is None else valid
+    invalid = [] if invalid is None else invalid
+    return (FakeFile(name), True, err_msg, valid, invalid)
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "file, raises, err_msg",
-    [*image_test_params(), valid_file("test.svg"), valid_file("test.SVG")],
+    "file, raises, err_msg, valid, invalid",
+    [
+        valid_file("test.svg", valid=[MimeType.SVG]),
+        valid_file("test.SVG", valid=[MimeType.SVG]),
+        valid_file("test.svg", valid=[MimeType.SVG, MimeType.TIFF]),
+        invalid_file(
+            "test.html5",
+            "The mimetype of file 'test.html5' could not be parsed",
+        ),
+        invalid_file(
+            "test.html",
+            "The mimetype of file 'test.html' is currently not supported",
+        ),
+        invalid_file(
+            "test.svg",
+            "The mimetype SVG is invalid",
+            valid=[MimeType.TIFF],
+        ),
+        invalid_file(
+            "test.svg",
+            "The mimetype SVG is invalid",
+            valid=[],
+        ),
+        invalid_file(
+            "test.svg",
+            "The mimetype SVG is invalid",
+            valid=[MimeType.SVG],
+            invalid=[MimeType.SVG],
+        ),
+    ],
 )
-def test_validate_image_svg_webp(file: Mock, raises: bool, err_msg: str):
+def test_validate_filetype(
+    file: Mock,
+    raises: bool,
+    err_msg: str,
+    valid: List[Callable[[], MimeType]],
+    invalid: List[Callable[[], MimeType]],
+):
     """
     PNG, JPEG, and SVG all allowed.
     """
+    fn = validate_filetype([x() for x in valid], [x() for x in invalid])
     if raises:
-        with pytest.raises(BaseInvalidFileType, match=err_msg):
-            validate_image_svg_webp(file)
+        with pytest.raises(GuessedMimeType.BaseValidationError, match=err_msg):
+            fn(file)
     else:
-        validate_image_svg_webp(file)
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    "file, raises, err_msg",
-    [
-        *image_test_params(),
-        invalid_file("test.svg", 'Unsupported file type "SVG" from "test.svg". Please upload one of: PNG, JPEG.'),
-        invalid_file("test.SVG", 'Unsupported file type "SVG" from "test.SVG". Please upload one of: PNG, JPEG.'),
-    ],
-)
-def test_validate_image_webp(file: Mock, raises: bool, err_msg: str):
-    """
-    Should raise validation error when mimetype is not PNG, JPEG.
-    """
-    if raises:
-        with pytest.raises(BaseInvalidFileType, match=err_msg):
-            validate_image_webp(file)
-    else:
-        validate_image_webp(file)
+        # Shouldn't raise
+        fn(file)
 
 
 @pytest.mark.parametrize(
