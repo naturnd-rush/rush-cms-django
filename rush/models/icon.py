@@ -3,7 +3,7 @@ import uuid
 from django.db import models
 
 from rush.models import MimeType
-from rush.models.validators import validate_filetype
+from rush.models.validators import FiletypeValidator
 
 
 class Icon(models.Model):
@@ -15,16 +15,7 @@ class Icon(models.Model):
     mime_type = models.ForeignKey(to=MimeType, on_delete=models.DO_NOTHING)
     file = models.FileField(
         upload_to="icons/",
-        validators=[
-            validate_filetype(
-                valid=[
-                    MimeType.PNG(),
-                    MimeType.JPEG(),
-                    MimeType.SVG(),
-                    MimeType.WEBP(),
-                ]
-            )
-        ],
+        validators=[FiletypeValidator(valid_names=["PNG", "JPEG", "SVG", "WEBP"])],
     )
 
     def clean_file(self):

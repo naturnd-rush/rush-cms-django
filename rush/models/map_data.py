@@ -11,7 +11,7 @@ from silk.profiling.dynamic import silk_profile
 from storages.backends.s3 import S3Storage
 
 from rush.models import MimeType
-from rush.models.validators import validate_filetype
+from rush.models.validators import FiletypeValidator
 from rush.storage import BackblazeStorageFactory
 
 
@@ -71,7 +71,7 @@ class MapData(models.Model):
         null=True,
         blank=True,
         storage=get_raster_storage,
-        validators=[validate_filetype(valid=[MimeType.TIFF()])],
+        validators=[FiletypeValidator(valid_names=["TIFF"])],
         help_text="A GeoTIFF file to upload. It may take up to a couple minutes to upload depending on the file size.",
     )
 

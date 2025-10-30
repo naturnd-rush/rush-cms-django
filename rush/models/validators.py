@@ -7,19 +7,55 @@ from django.db.models.fields.files import FieldFile
 from rush.models import MimeType
 
 
-def validate_filetype(
-    valid: List[MimeType] | None = None,
-    invalid: List[MimeType] | None = None,
-):
+class FiletypeValidator:
     """
-    Return a django-validator for a file-field that raises a validation-error if the
-    file's guessed mimetype is not a member of `valid`, or is a member of `invalid`.
+    Django validator for file fields that validates mimetypes against database.
+
+    Uses human-readable mimetype names (e.g., "PNG", "JPEG", "SVG") which are
+    resolved at runtime using MimeType.by_name(). This allows the validator to
+    be serialized in migrations while still using database-driven validation.
+
+    Args:
+        valid_names: List of human-readable mimetype names that are allowed.
+        invalid_names: List of human-readable mimetype names that are not allowed.
     """
 
-    def _validate(file: FieldFile):
-        MimeType.guess(file.name).validate(valid, invalid)
+    def __init__(
+        self,
+        valid_names: List[str] | None = None,
+        invalid_names: List[str] | None = None,
+    ):
+        self.valid_names = valid_names
+        self.invalid_names = invalid_names
 
-    return _validate
+    def __call__(self, file: FieldFile):
+        # Resolve names to MimeType instances at runtime
+        valid_types = None
+        invalid_types = None
+
+        if self.valid_names:
+            valid_types = [MimeType.by_name(name) for name in self.valid_names]
+
+        if self.invalid_names:
+            invalid_types = [MimeType.by_name(name) for name in self.invalid_names]
+
+        # Use existing validation logic
+        MimeType.guess(file.name).validate(valid_types, invalid_types)
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, FiletypeValidator)
+            and self.valid_names == other.valid_names
+            and self.invalid_names == other.invalid_names
+        )
+
+    def deconstruct(self):
+        """Required for migration serialization."""
+        return (
+            "rush.models.validators.FiletypeValidator",
+            [],
+            {"valid_names": self.valid_names, "invalid_names": self.invalid_names},
+        )
 
 
 def validate_only_integers_and_whitespace(value):

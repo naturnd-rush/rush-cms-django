@@ -4,7 +4,8 @@ from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
-from rush.models import MimeType, utils
+from rush.models import utils
+from rush.models.validators import FiletypeValidator
 
 
 class Question(models.Model):
@@ -22,16 +23,7 @@ class Question(models.Model):
         upload_to="question_images/",
         null=True,
         blank=True,
-        validators=[
-            lambda file: MimeType.guess(file.name).validate(
-                valid=[
-                    MimeType.SVG(),
-                    MimeType.JPEG(),
-                    MimeType.PNG(),
-                    MimeType.WEBP(),
-                ]
-            )
-        ],
+        validators=[FiletypeValidator(valid_names=["SVG", "JPEG", "PNG", "WEBP"])],
     )
     is_image_compressed = models.BooleanField(default=False)
     initiatives = models.ManyToManyField(to="Initiative", blank=True)

@@ -1,85 +1,65 @@
-from typing import Callable
 from unittest.mock import Mock
 
 import pytest
 from django.core.exceptions import ValidationError
 
-from rush.models import GuessedMimeType, MimeType
+from rush.models import GuessedMimeType
 from rush.models.validators import *
 from rush.tests.models.helpers import FakeFile
 
 
 def valid_file(
     name: str,
-    valid=None,
-    invalid=None,
-) -> tuple[Mock, bool, str, List[MimeType] | None, List[MimeType] | None]:
-    valid = [] if valid is None else valid
-    invalid = [] if invalid is None else invalid
-    return (FakeFile(name), False, "", valid, invalid)
+    valid_names=None,
+    invalid_names=None,
+) -> tuple[Mock, bool, str, List[str] | None, List[str] | None]:
+    valid_names = [] if valid_names is None else valid_names
+    invalid_names = [] if invalid_names is None else invalid_names
+    return (FakeFile(name), False, "", valid_names, invalid_names)
 
 
 def invalid_file(
     name: str,
     err_msg: str,
-    valid=None,
-    invalid=None,
-) -> tuple[Mock, bool, str, List[MimeType] | None, List[MimeType] | None]:
-    valid = [] if valid is None else valid
-    invalid = [] if invalid is None else invalid
-    return (FakeFile(name), True, err_msg, valid, invalid)
+    valid_names=None,
+    invalid_names=None,
+) -> tuple[Mock, bool, str, List[str] | None, List[str] | None]:
+    valid_names = [] if valid_names is None else valid_names
+    invalid_names = [] if invalid_names is None else invalid_names
+    return (FakeFile(name), True, err_msg, valid_names, invalid_names)
 
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "file, raises, err_msg, valid, invalid",
+    "file, raises, err_msg, valid_names, invalid_names",
     [
-        valid_file("test.svg", valid=[MimeType.SVG]),
-        valid_file("test.SVG", valid=[MimeType.SVG]),
-        valid_file("test.svg", valid=[MimeType.SVG, MimeType.TIFF]),
-        invalid_file(
-            "test.html5",
-            "The mimetype of file 'test.html5' could not be parsed",
-        ),
-        invalid_file(
-            "test.html",
-            "The mimetype of file 'test.html' is currently not supported",
-        ),
-        invalid_file(
-            "test.svg",
-            "The mimetype SVG is invalid",
-            valid=[MimeType.TIFF],
-        ),
-        invalid_file(
-            "test.svg",
-            "The mimetype SVG is invalid",
-            valid=[],
-        ),
-        invalid_file(
-            "test.svg",
-            "The mimetype SVG is invalid",
-            valid=[MimeType.SVG],
-            invalid=[MimeType.SVG],
-        ),
+        valid_file("test.svg", valid_names=["SVG"]),
+        valid_file("test.SVG", valid_names=["SVG"]),
+        valid_file("test.svg", valid_names=["SVG", "TIFF"]),
+        invalid_file("test.html5", "The mimetype of file 'test.html5' could not be parsed"),
+        invalid_file("test.html", "The mimetype of file 'test.html' is currently not supported"),
+        invalid_file("test.svg", "The mimetype SVG is invalid", valid_names=["TIFF"]),
+        invalid_file("test.svg", "The mimetype SVG is invalid", valid_names=[]),
+        invalid_file("test.svg", "The mimetype SVG is invalid", valid_names=["SVG"], invalid_names=["SVG"]),
     ],
 )
 def test_validate_filetype(
     file: Mock,
     raises: bool,
     err_msg: str,
-    valid: List[Callable[[], MimeType]],
-    invalid: List[Callable[[], MimeType]],
+    valid_names: List[str],
+    invalid_names: List[str],
 ):
     """
-    PNG, JPEG, and SVG all allowed.
+    Test FiletypeValidator with human-readable mimetype names.
     """
-    fn = validate_filetype([x() for x in valid], [x() for x in invalid])
+    validator = FiletypeValidator(valid_names=valid_names, invalid_names=invalid_names)
     if raises:
         with pytest.raises(GuessedMimeType.BaseValidationError, match=err_msg):
-            fn(file)
+            validator(file)
     else:
         # Shouldn't raise
-        fn(file)
+        validator(file)
 
 
 @pytest.mark.parametrize(

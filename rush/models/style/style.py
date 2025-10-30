@@ -6,8 +6,11 @@ from colorfield.fields import ColorField
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
-from rush.models import MimeType, utils
-from rush.models.validators import validate_only_integers_and_whitespace
+from rush.models import utils
+from rush.models.validators import (
+    FiletypeValidator,
+    validate_only_integers_and_whitespace,
+)
 
 
 class LineCap(models.TextChoices):
@@ -124,16 +127,9 @@ class Style(models.Model):
         null=True,
         blank=True,
         validators=[
-            lambda file: MimeType.guess(file.name).validate(
-                valid=[
-                    MimeType.SVG(),
-                    MimeType.JPEG(),
-                    MimeType.PNG(),
-                    MimeType.WEBP(),
-                ]
-            )
+            FiletypeValidator(valid_names=["SVG", "JPEG", "PNG", "WEBP"])
         ],
-        help_text="The image that will appear at each point this style is applied to. Accepts PNG, JPEG, and SVG files.",
+        help_text="The image that will appear at each point this style is applied to. Accepts PNG, JPEG, SVG, and WEBP files.",
     )
     is_marker_icon_compressed = models.BooleanField(default=False)
     marker_icon_opacity = models.DecimalField(

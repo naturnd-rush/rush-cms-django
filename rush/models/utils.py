@@ -5,7 +5,7 @@ from django.db.models.fields.files import FieldFile
 from PIL import Image
 
 from rush.models import MimeType
-from rush.models.validators import validate_filetype
+from rush.models.validators import FiletypeValidator
 
 
 class CompressionFailed(Exception):
@@ -24,11 +24,11 @@ def compress_image(image: FieldFile, pixel_width=128) -> ContentFile:
 
     try:
 
-        validate_filetype(
-            valid=[
-                MimeType.WEBP(),
-                MimeType.JPEG(),
-                MimeType.PNG(),
+        FiletypeValidator(
+            valid_names=[
+                "WEBP",
+                "JPEG",
+                "PNG",
                 # NOTE: SVGs/TIFFs should not be compressed
             ]
         )(image)

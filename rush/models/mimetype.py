@@ -105,24 +105,15 @@ class MimeType(models.Model):
         return [x.strip() for x in vals]
 
     @classmethod
-    def SVG(cls) -> "MimeType":
-        return cls.objects.get(human_name="SVG")
-
-    @classmethod
-    def PNG(cls) -> "MimeType":
-        return cls.objects.get(human_name="PNG")
-
-    @classmethod
-    def JPEG(cls) -> "MimeType":
-        return cls.objects.get(human_name="JPEG")
-
-    @classmethod
-    def TIFF(cls) -> "MimeType":
-        return cls.objects.get(human_name="TIFF")
-
-    @classmethod
-    def WEBP(cls) -> "MimeType":
-        return cls.objects.get(human_name="WEBP")
+    def by_name(cls, mimetype_human_name: str) -> "MimeType":
+        """
+        Get a mimetype by it's human-readable name. Return the
+        UNSUPPORTED mimetype if the name could not be found.
+        """
+        try:
+            return cls.objects.get(human_name=mimetype_human_name)
+        except cls.DoesNotExist:
+            return cls.UNSUPPORTED()
 
     @classmethod
     def UNKNOWN(cls) -> "MimeType":
