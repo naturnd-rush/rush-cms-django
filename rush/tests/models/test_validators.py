@@ -21,10 +21,12 @@ def image_test_params():
         valid_file("test.png"),
         valid_file("test.jpg"),
         valid_file("test.jpeg"),
+        valid_file("test.webp"),
         # Test upper-case file types
         valid_file("test.PNG"),
         valid_file("test.JPG"),
         valid_file("test.JPEG"),
+        valid_file("test.WEBP"),
         # Test recognizable, but unsupported file types
         invalid_file("test.html", 'Unsupported file type "text/html"'),
         invalid_file("test.css", 'Unsupported file type "text/css"'),
@@ -37,7 +39,7 @@ def image_test_params():
     "file, raises, err_msg",
     [*image_test_params(), valid_file("test.svg"), valid_file("test.SVG")],
 )
-def test_validate_image_or_svg(file: Mock, raises: bool, err_msg: str):
+def test_validate_image_svg_webp(file: Mock, raises: bool, err_msg: str):
     """
     PNG, JPEG, and SVG all allowed.
     """
@@ -56,15 +58,15 @@ def test_validate_image_or_svg(file: Mock, raises: bool, err_msg: str):
         invalid_file("test.SVG", 'Unsupported file type "image/svg\\+xml"'),
     ],
 )
-def test_validate_image(file: Mock, raises: bool, err_msg: str):
+def test_validate_image_webp(file: Mock, raises: bool, err_msg: str):
     """
     Should raise validation error when mimetype is not PNG, JPEG.
     """
     if raises:
         with pytest.raises(BaseInvalidFileType, match=err_msg):
-            validate_image(file)
+            validate_image_webp(file)
     else:
-        validate_image(file)
+        validate_image_webp(file)
 
 
 @pytest.mark.parametrize(
