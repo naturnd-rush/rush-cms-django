@@ -32,4 +32,4 @@ def test_compress_image(file, raises, err_msg):
             output = compress_image(file)
             assert isinstance(output, ContentFile)
             assert output.name.startswith("compressed_")
-            assert output.name.endswith(".png")  # always gets compressed as PNG
+            assert output.name.endswith(".webp")  # always gets compressed as WEBP

@@ -35,6 +35,7 @@ def get_test_svg(name: str) -> SimpleUploadedFile:
 
 def create_style_kwargs() -> dict[str, Any]:
     return {
+        "name": "Test Style",
         "draw_stroke": True,
         "draw_fill": True,
         "draw_marker": True,
@@ -46,9 +47,9 @@ def create_style_kwargs() -> dict[str, Any]:
 @pytest.mark.parametrize(
     "image, save_name",
     [
-        (get_test_image("test_image.png"), "compressed_test_image.png"),
-        (get_test_image("test_image.jpg"), "compressed_test_image.png"),
-        (get_test_image("test_image.jpeg"), "compressed_test_image.png"),
+        (get_test_image("test_image.png"), "compressed_test_image.webp"),
+        (get_test_image("test_image.jpg"), "compressed_test_image.webp"),
+        (get_test_image("test_image.jpeg"), "compressed_test_image.webp"),
     ],
 )
 def test_create_style_compresses_marker_icon_images(image, save_name: str):
