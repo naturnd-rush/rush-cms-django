@@ -89,7 +89,12 @@ class MapData(models.Model):
         using: str | None = None,
         update_fields: Iterable[str] | None = None,
     ) -> None:
-        return super().save(force_insert, force_update, using, update_fields)
+        return super().save(
+            force_insert=force_insert,
+            force_update=force_update,
+            update_fields=update_fields,
+            using=using,
+        )
 
     @silk_profile("MapData get_raw_geojson_data")
     def get_raw_geojson_data(self) -> str:

@@ -51,7 +51,5 @@ def compress_image(sender, instance: Question, **kwargs):
             # assigns the compressed image value to the marker_icon field
             image.save(compressed.name, compressed, save=False)
             instance.is_image_compressed = True
-            instance.full_clean()
-            instance.save()
         except utils.CompressionFailed:
             pass

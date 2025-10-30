@@ -166,7 +166,5 @@ def compress_marker_icon(sender, instance: Style, **kwargs):
             # assigns the compressed image value to the marker_icon field
             image.save(compressed.name, compressed, save=False)
             instance.is_marker_icon_compressed = True
-            instance.full_clean()
-            instance.save()
         except utils.CompressionFailed:
             pass
