@@ -14,6 +14,11 @@ def populate_webp(apps, schema_editor):
     MimeTypeModel.objects.create(human_name="WEBP", _values="image/webp")
 
 
+def depopulate_webp(apps, schema_editor):
+    MimeTypeModel: MimeType = apps.get_model("rush", "MimeType")
+    MimeTypeModel.objects.filter(human_name="WEBP", _values="image/webp").delete()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -21,5 +26,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(code=populate_webp, reverse_code=migrations.RunPython.noop),
+        migrations.RunPython(code=populate_webp, reverse_code=depopulate_webp),
     ]

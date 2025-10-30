@@ -1,2 +1,3 @@
 # We need to import admin models here so Django picks them up...
 from rush.admin import map, site
+from rush.admin.question import QuestionAdmin
