@@ -13,12 +13,14 @@ class MimeType(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["_values"],
-                name="unique_mimetype_value",
+                condition=models.Q(is_valid=True),
+                name="unique_mimetype_value_when_valid",
             ),
         ]
 
     human_name = models.CharField(max_length=255)
     _values = models.CharField(max_length=255)
+    is_valid = models.BooleanField(default=True)
 
     @property
     def values(self) -> List[str]:
@@ -44,6 +46,10 @@ class MimeType(models.Model):
     @classmethod
     def UNKNOWN(cls) -> "MimeType":
         return cls.objects.get(human_name="UNKNOWN")
+
+    @classmethod
+    def UNSUPPORTED(cls) -> "MimeType":
+        return cls.objects.get(human_name="UNSUPPORTED")
 
     @classmethod
     def guess_type(cls, filename: str) -> "MimeType":

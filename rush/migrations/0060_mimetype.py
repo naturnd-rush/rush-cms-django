@@ -14,7 +14,8 @@ def populate_svg_png_tiff_jpeg(apps, schema_editor):
     MimeTypeModel.objects.create(human_name="PNG", _values="image/png")
     MimeTypeModel.objects.create(human_name="JPEG", _values="image/jpeg")
     MimeTypeModel.objects.create(human_name="TIFF", _values="image/tiff,image/tiff-fx")
-    MimeTypeModel.objects.create(human_name="UNKNOWN", _values="")
+    MimeTypeModel.objects.create(human_name="UNKNOWN", _values="", is_valid=False)
+    MimeTypeModel.objects.create(human_name="UNSUPPORTED", _values="", is_valid=False)
 
 
 class Migration(migrations.Migration):
@@ -38,9 +39,16 @@ class Migration(migrations.Migration):
                 ),
                 ("human_name", models.CharField(max_length=255)),
                 ("_values", models.CharField(max_length=255)),
+                ("is_valid", models.BooleanField(default=True)),
             ],
             options={
-                "constraints": [models.UniqueConstraint(fields=("_values",), name="unique_mimetype_value")],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("_values",),
+                        name="unique_mimetype_value",
+                        condition=models.Q(is_valid=True),
+                    )
+                ],
             },
         ),
         migrations.RunPython(code=populate_svg_png_tiff_jpeg, reverse_code=migrations.RunPython.noop),
