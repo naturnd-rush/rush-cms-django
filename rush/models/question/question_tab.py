@@ -20,6 +20,7 @@ class QuestionTab(models.Model):
         ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
+    icon = models.ForeignKey(to="Icon", on_delete=models.DO_NOTHING)
     title = models.CharField(max_length=255)
     content = models.TextField()
     question = models.ForeignKey(
