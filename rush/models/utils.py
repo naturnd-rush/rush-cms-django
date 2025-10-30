@@ -4,7 +4,7 @@ from django.core.files.base import ContentFile
 from django.db.models.fields.files import FieldFile
 from PIL import Image
 
-from rush.models.validators import UnsupportedFileType, validate_image
+from rush.models import MimeType
 
 
 class CompressionFailed(Exception):
@@ -23,10 +23,10 @@ def compress_image(image: FieldFile, pixel_width=128) -> ContentFile:
     The returned ContentFile can be manually assigned to a model's FieldFile.
     """
 
-    try:
-        validate_image(image)
-    except UnsupportedFileType as e:
-        raise CompressionFailed(reason=e.message_str) from e
+    # try:
+    #     validate_image_webp(image)
+    # except BaseInvalidFileType as e:
+    #     raise CompressionFailed(reason=e.message_str) from e
 
     # Resize image
     img = Image.open(image)
@@ -38,11 +38,16 @@ def compress_image(image: FieldFile, pixel_width=128) -> ContentFile:
 
     # Save to in-memory buffer
     img_io = BytesIO()
-    img.save(img_io, format="PNG", optimize=True, compress_level=9)
+    img.save(
+        img_io,
+        format="WEBP",
+        lossless=False,
+        quality=90,  # 85-95 is visually lossless for most images
+        method=6,  # 0-6, where 6 is the most compressed but takes longer
+    )
 
-    # Generate a new name (optional – could be based on original)
     original_name = image.name
-    compressed_name = f"compressed_{original_name.split('/')[-1].rsplit('.', 1)[0]}.png"
+    compressed_name = f"compressed_{original_name.split('/')[-1].rsplit('.', 1)[0]}.webp"
 
     # Return a ContentFile with name
     return ContentFile(img_io.getvalue(), name=compressed_name)

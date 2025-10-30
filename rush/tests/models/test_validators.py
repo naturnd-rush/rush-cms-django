@@ -21,23 +21,17 @@ def image_test_params():
         valid_file("test.png"),
         valid_file("test.jpg"),
         valid_file("test.jpeg"),
+        valid_file("test.webp"),
         # Test upper-case file types
         valid_file("test.PNG"),
         valid_file("test.JPG"),
         valid_file("test.JPEG"),
-        # Test bogus file types, and mime types we haven't added yet.
-        invalid_file(
-            "test.html",
-            'Unsupported file type "UNKNOWN" from "test.html". Please upload one of: PNG, JPEG.',
-        ),
-        invalid_file(
-            "test.css",
-            'Unsupported file type "UNKNOWN" from "test.css". Please upload one of: PNG, JPEG.',
-        ),
-        invalid_file(
-            "test.html5",
-            'Unsupported file type "UNKNOWN" from "test.html5". Please upload one of: PNG, JPEG.',
-        ),
+        valid_file("test.WEBP"),
+        # Test recognizable, but unsupported file types
+        invalid_file("test.html", 'Unsupported file type "text/html"'),
+        invalid_file("test.css", 'Unsupported file type "text/css"'),
+        # Test unknown file type
+        invalid_file("test.html5", 'Unknown file type: ".html5".'),
     ]
 
 
@@ -46,15 +40,15 @@ def image_test_params():
     "file, raises, err_msg",
     [*image_test_params(), valid_file("test.svg"), valid_file("test.SVG")],
 )
-def test_validate_image_or_svg(file: Mock, raises: bool, err_msg: str):
+def test_validate_image_svg_webp(file: Mock, raises: bool, err_msg: str):
     """
     PNG, JPEG, and SVG all allowed.
     """
     if raises:
-        with pytest.raises(UnsupportedFileType, match=err_msg):
-            validate_image_or_svg(file)
+        with pytest.raises(BaseInvalidFileType, match=err_msg):
+            validate_image_svg_webp(file)
     else:
-        validate_image_or_svg(file)
+        validate_image_svg_webp(file)
 
 
 @pytest.mark.django_db
@@ -66,15 +60,15 @@ def test_validate_image_or_svg(file: Mock, raises: bool, err_msg: str):
         invalid_file("test.SVG", 'Unsupported file type "SVG" from "test.SVG". Please upload one of: PNG, JPEG.'),
     ],
 )
-def test_validate_image(file: Mock, raises: bool, err_msg: str):
+def test_validate_image_webp(file: Mock, raises: bool, err_msg: str):
     """
     Should raise validation error when mimetype is not PNG, JPEG.
     """
     if raises:
-        with pytest.raises(UnsupportedFileType, match=err_msg):
-            validate_image(file)
+        with pytest.raises(BaseInvalidFileType, match=err_msg):
+            validate_image_webp(file)
     else:
-        validate_image(file)
+        validate_image_webp(file)
 
 
 @pytest.mark.parametrize(

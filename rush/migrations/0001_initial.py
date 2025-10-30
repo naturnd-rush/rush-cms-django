@@ -234,7 +234,7 @@ class Migration(migrations.Migration):
                         help_text="The image that will appear at each point this style is applied to.",
                         null=True,
                         upload_to="marker_icons/",
-                        validators=[rush.models.validators.validate_image_or_svg],
+                        validators=[rush.models.validators.validate_image_svg_webp],
                     ),
                 ),
                 (
@@ -492,7 +492,7 @@ class Migration(migrations.Migration):
                         help_text="The image that will appear at each point this style is applied to.",
                         max_length=100,
                         null=True,
-                        validators=[rush.models.validators.validate_image_or_svg],
+                        validators=[rush.models.validators.validate_image_svg_webp],
                     ),
                 ),
                 (
