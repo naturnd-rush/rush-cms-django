@@ -4,8 +4,10 @@ from django.contrib.auth import authenticate, login
 from django.shortcuts import redirect, render
 from django_ratelimit.decorators import ratelimit
 
-@ratelimit(key="ip", rate="10/m", method="POST", block=True)
-@ratelimit(key="ip", rate="500/d", method="POST", block=True)
+from rush.utils import get_client_ip
+
+@ratelimit(key=get_client_ip, rate="10/m", method="POST", block=True)
+@ratelimit(key=get_client_ip, rate="500/d", method="POST", block=True)
 def rush_login_view(request):
     """
     GET --> Render the RUSH Admin login page.
