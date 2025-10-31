@@ -1,9 +1,5 @@
-from typing import Any
-
 from adminsortable2.admin import SortableTabularInline
 from django.contrib.admin import TabularInline
-from django.forms.models import BaseInlineFormSet
-from django.http import HttpRequest
 from django_summernote.admin import SummernoteModelAdminMixin
 
 from rush.admin.question.forms import QuestionTabForm
@@ -28,8 +24,5 @@ class QuestionTabInline(SortableTabularInline, SummernoteModelAdminMixin, Tabula
 
     def get_formset(self, request, obj=None, **kwargs):
         formset_class = super().get_formset(request, obj, **kwargs)
-
-        # Attach request
-        formset_class.form.request = request
-
+        formset_class.form.request = request  # type: ignore
         return formset_class

@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Any, List
 
-from django.conf import settings
 from django.db.models import Model
 from django.forms import Select
 from django.template import Context, Engine
@@ -74,44 +73,77 @@ class TiledForeignKeyWidget(Select):
             "display_choices": self.display_choices,
         }
         template_str = """
-            <div class="tiled-foreignkey-widget">
+        <div class="tiled-foreignkey-widget">
 
+            {% for choice in display_choices %}
+                <div class="tile {{ choice.selected_str }}" data-value="{{ choice.id }}">
+                    <img src="{{ choice.base_media_url }}{{ choice.thumbnail_url }}" alt="">
+                </div>
+            {% endfor %}
+
+            <!-- Hidden select -->
+            <select name="{{ name }}" class="tiled-fk-select" style="display:none;">
                 {% for choice in display_choices %}
-                    <div class="tile {{ choice.selected_str }}" data-value="{{ choice.id }}">
-                        <image src={{ choice.base_media_url }}{{ choice.thumbnail_url }} />
-                    </div>
+                    <option value="{{ choice.id }}" {{ choice.selected_str }}></option>
                 {% endfor %}
+            </select>
 
-                <!-- Hidden select to hold the actual value -->
-                <select name="{{ name }}" style="display:none;">
-                    {% for choice in display_choices %}
-                        <option value="{{ choice.id }}" {{ choice.selected_str }}></option>
-                    {% endfor %}
-                </select>
+        </div>
 
-            </div>
-
-            <script type="module">
-                // JS module for tile selection
-                document.querySelectorAll('.tiled-foreignkey-widget').forEach(widget => {
-                    widget.querySelectorAll('.tile').forEach(tile => {
+        <script type="module">
+            document.querySelectorAll('.tiled-foreignkey-widget').forEach(widget => {
+                widget.querySelectorAll('.tile').forEach(tile => {
                     tile.addEventListener('click', () => {
-                        // Remove previous selection
                         widget.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
                         tile.classList.add('selected');
-                        // Set value in hidden select
-                        widget.querySelector('select').value = tile.dataset.value;
-                    });
+                        widget.querySelector('.tiled-fk-select').value = tile.dataset.value;
                     });
                 });
-            </script>
+            });
+        </script>
 
-            <style>
-                .tiled-foreignkey-widget { display: flex; flex-wrap: wrap; gap: 8px; }
-                .tiled-foreignkey-widget .tile { border: 1px solid #ccc; padding: 4px; cursor: pointer; text-align: center; width: 64px; }
-                .tiled-foreignkey-widget .tile.selected { border-color: blue; }
-                .tiled-foreignkey-widget img { width: 100%; height: auto; display: block; }
-            </style>
+        <style>
+            .tiled-foreignkey-widget {
+                display: flex;
+                flex-wrap: wrap;
+                width: 340px; /* controls 5 tiles per row */
+                gap: 10px;
+                justify-content: left;
+                margin-top: 8px;
+            }
+
+            .tiled-foreignkey-widget .tile {
+                width: 60px;
+                height: 60px;
+                border: 2px solid #ddd;
+                border-radius: 6px;
+                box-sizing: border-box;
+                cursor: pointer;
+                display: flex;
+                padding: 4px;
+                justify-content: center;
+                align-items: center;
+                background: #fafafa;
+                transition: border 0.18s ease, box-shadow 0.18s ease;
+            }
+
+            .tiled-foreignkey-widget .tile:hover {
+                border-color: #4285f4;
+                box-shadow: 0 0 4px rgba(66,133,244,0.4);
+            }
+
+            .tiled-foreignkey-widget .tile.selected {
+                border-color: #1e65d6;
+                background: #e8f0fe;
+                box-shadow: 0 0 0 2px rgba(30,101,214,0.3);
+            }
+
+            .tiled-foreignkey-widget img {
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+        </style>
         """
         engine = Engine()
         template = engine.from_string(template_str)
