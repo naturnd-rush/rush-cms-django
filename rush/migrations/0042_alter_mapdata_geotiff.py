@@ -3,7 +3,6 @@
 from django.db import migrations, models
 
 import rush.models.map_data
-import rush.models.validators
 
 
 class Migration(migrations.Migration):
@@ -22,7 +21,6 @@ class Migration(migrations.Migration):
                 null=True,
                 storage=rush.models.map_data.get_raster_storage,
                 upload_to="",
-                validators=[rush.models.validators.validate_tiff],
             ),
         ),
     ]

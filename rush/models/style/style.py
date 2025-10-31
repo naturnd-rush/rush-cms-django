@@ -8,7 +8,7 @@ from django.dispatch import receiver
 
 from rush.models import utils
 from rush.models.validators import (
-    validate_image_svg_webp,
+    FiletypeValidator,
     validate_only_integers_and_whitespace,
 )
 
@@ -126,8 +126,10 @@ class Style(models.Model):
         upload_to="marker_icons/",
         null=True,
         blank=True,
-        validators=[validate_image_svg_webp],
-        help_text="The image that will appear at each point this style is applied to. Accepts PNG, JPEG, and SVG files.",
+        validators=[
+            FiletypeValidator(valid_names=["SVG", "JPEG", "PNG", "WEBP"])
+        ],
+        help_text="The image that will appear at each point this style is applied to. Accepts PNG, JPEG, SVG, and WEBP files.",
     )
     is_marker_icon_compressed = models.BooleanField(default=False)
     marker_icon_opacity = models.DecimalField(

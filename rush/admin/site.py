@@ -14,38 +14,6 @@ from rush import models
 from rush.admin import utils
 
 
-class LayerOnLayerGroupInline(nested_forms.SortableHiddenMixin, nested_admin.NestedTabularInline):
-    verbose_name_plural = "Layers"
-    model = models.LayerOnLayerGroup
-    extra = 0
-    exclude = ["id"]
-    autocomplete_fields = [
-        "layer",
-        # "layer_group",
-    ]
-    sortable_field_name = "display_order"
-
-
-class LayerGroupOnQuestionInline(nested_forms.SortableHiddenMixin, nested_admin.NestedTabularInline):
-    verbose_name_plural = "Layer Groups"
-    model = models.LayerGroupOnQuestion
-    extra = 0
-    exclude = ["id"]
-    inlines = [LayerOnLayerGroupInline]
-    sortable_field_name = "display_order"
-
-    def get_fields(self, request, obj=None):
-        """
-        Only superusers should be able to see and edit the hidden field `group_type`.
-        Group type defines special behaviour for `LayerGroupOnQuestion` that should
-        not be exposed to regular staff users.
-        """
-        fields = super().get_fields(request, obj)
-        if not request.user.is_superuser:
-            fields = [x for x in fields if x != "group_type"]
-        return fields
-
-
 class InitiativeForm(forms.ModelForm):
     """
     Override the default add/change page for the Initiative model admin.
@@ -135,31 +103,6 @@ class InitiativeTagAdmin(SummernoteModelAdmin):
         # return "No Initiatives"
 
 
-class QuestionForm(forms.ModelForm):
-    """
-    Override the default add/change page for the Question model admin.
-    """
-
-    class Meta:
-        model = models.Question
-        fields = [
-            "title",
-            "slug",
-            "subtitle",
-            "image",
-            "initiatives",
-        ]
-
-    def __init__(self, *args, **kwargs):
-        """
-        Inject image HTML in "image" field help text.
-        TODO: Maybe delete this whole form and inject JS for preview using readonly_fields?
-        """
-        super().__init__(*args, **kwargs)
-        if self.instance and self.instance.image:
-            self.fields["image"].help_text = utils.image_html(self.instance.image.url)
-
-
 # @admin.register(models.QuestionTab)
 # class QuestionTabAdmin(nested_admin.NestedModelAdmin, SummernoteModelAdmin):
 #     exclude = ["id"]
@@ -167,59 +110,6 @@ class QuestionForm(forms.ModelForm):
 #     list_display = ["title", "content_preview"]
 #     content_preview = utils.truncate_admin_text_from("content")
 #     sortable_field_name = "display_order"
-
-
-class QuestionTabInline(sortable_admin.SortableTabularInline, SummernoteModelAdminMixin, admin.TabularInline):
-    """
-    Allow editing of QuestionTab objects straight from the Question form.
-    """
-
-    exclude = ["id"]
-    model = models.QuestionTab
-    extra = 0  # don't display extra question tabs to add, let the user click
-    sortable_field_name = "display_order"
-    prepopulated_fields = {"slug": ("title",)}
-    sortable_options = (
-        # Added for compatibility SortableTabularInline <--> NestedModelAdmin (on QuestionAdmin page.)
-        []
-    )
-
-
-@admin.register(models.Question)
-class QuestionAdmin(sortable_admin.SortableAdminMixin, nested_admin.NestedModelAdmin):  # type: ignore
-    exclude = ["id"]
-    form = QuestionForm
-    list_display = ["title", "slug", "image_preview", "get_initiatives", "display_order"]
-    prepopulated_fields = {"slug": ("title",)}
-    autocomplete_fields = ["initiatives"]
-    inlines = [QuestionTabInline, LayerGroupOnQuestionInline]
-    actions = ["duplicate_object"]
-    sortable_field_name = "display_order"  # Enable drag-and-drop for Questions in the list view
-    # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
-
-    def image_preview(self, obj):
-        """
-        Image preview inline.
-        """
-        if obj.image:
-            return utils.image_html(obj.image.url)
-        return "No image"
-
-    @admin.display(description="Initiatives")
-    def get_initiatives(self, obj):
-        if obj.initiatives.count() > 0:
-            return ", ".join([initiative.title for initiative in obj.initiatives.all()])
-        return "No Initiatives"
-
-    @admin.action(description="Duplicate selected items")
-    def duplicate_object(self, request, queryset):
-        for obj in queryset:
-            obj.pk = None  # Clear primary key (should auto-generate)
-            obj.id = None  # Clear id (should auto-generate)
-            obj.slug = f"{obj.slug}-copy-{uuid4().hex}"  # Avoid unique constraint violations
-            obj.save()
-
-        self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
 
 
 # @admin.register(models.LayerGroupOnQuestion)

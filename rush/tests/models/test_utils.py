@@ -6,17 +6,20 @@ from rush.models.utils import *
 from rush.tests.models.helpers import FakeFile
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize(
-    "file, raises, err_msg",
+    "file, raises",
     [
-        (FakeFile("not_an_image.zyx"), True, 'Unknown file type: ".zyx".'),
-        (FakeFile("not_an_image.svg"), True, 'Unsupported file type "image/svg'),
-        (FakeFile("image.png"), False, ""),
-        (FakeFile("image.jpg"), False, ""),
-        (FakeFile("image.jpeg"), False, ""),
+        (FakeFile("image.png"), False),
+        (FakeFile("image.jpg"), False),
+        (FakeFile("image.jpeg"), False),
+        (FakeFile("image.webp"), False),
+        (FakeFile("not_an_image.zyx"), True),
+        (FakeFile("not_an_image.svg"), True),
+        (FakeFile("not_an_image.tiff"), True),
     ],
 )
-def test_compress_image(file, raises, err_msg):
+def test_compress_image(file, raises):
 
     with patch("rush.models.utils.Image.open") as mock_open:
 
@@ -26,7 +29,7 @@ def test_compress_image(file, raises, err_msg):
         mock_open.return_value = mock_image
 
         if raises:
-            with pytest.raises(CompressionFailed, match=err_msg):
+            with pytest.raises(CompressionFailed):
                 compress_image(file)
         else:
             output = compress_image(file)
