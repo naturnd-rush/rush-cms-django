@@ -383,24 +383,18 @@ class MapDataAdmin(admin.ModelAdmin):
             change_message="Modified",  # Simple message instead of detailed diff
         )
 
-    @staticmethod
-    @silk_profile(name="MapDataAdmin _get_geojson_str")
-    def _get_geojson_str(context) -> str:
-        if map_data := context.get("original"):
-            if isinstance(map_data, models.MapData):
-                try:
-                    return map_data.get_raw_geojson_data()
-                except models.MapData.NoGeoJsonData:
-                    pass
-        return "{}"
-
     @silk_profile(name="MapDataAdmin render_change_form")
     def render_change_form(self, request, context, *args, **kwargs):
         """
         Inject initial GeoJSON data into page so we can render an initial
         `MapData` preview in the change form.
         """
-        geojson = self._get_geojson_str(context)
+        geojson = None
+        if map_data := context.get("original"):
+            if isinstance(map_data, models.MapData):
+                if raw_geojson := map_data.geojson:
+                    geojson = raw_geojson
+        geojson = "{}" if geojson is None else geojson
         context["map_data_admin_form_config"] = mark_safe(json.dumps(asdict(mdaf_config)))
         context["initial_geojson_data"] = mark_safe(geojson)
         return super().render_change_form(request, context, *args, **kwargs)

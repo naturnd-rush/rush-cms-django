@@ -24,20 +24,20 @@ class MapDataType(DjangoObjectType):
         ]
 
     geojson = graphene.String()
-
-    def resolve_geojson(self, info):
-        if self.has_geojson_data():  # type: ignore
-            return self.get_raw_geojson_data()  # type: ignore
-        return None
-
     geotiff_link = graphene.String()
 
+    def resolve_geojson(self, info):
+        if not isinstance(self, models.MapData):
+            raise ValueError("Expected object to be of type MapData when resolving query.")
+        return self.geojson
+
     def resolve_geotiff_link(self, info):
-        if isinstance(self, models.MapData):
-            if self.geotiff:
-                return self.geotiff.url
+        if not isinstance(self, models.MapData):
             return None
-        raise ValueError("Expected API object to be an instance of MapData!")
+        if not self.geotiff.name:
+            # .geotiff.name doesn't make a file-existance check, unlike .geotiff.
+            return None
+        return self.geotiff.url
 
 
 class MapDataWithoutGeoJsonType(DjangoObjectType):
