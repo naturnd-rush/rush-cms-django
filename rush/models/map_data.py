@@ -38,13 +38,6 @@ class MapData(models.Model):
         GEOTIFF = "geotiff"  # for raster image data
         OPEN_GREEN_MAP = "open_green_map"
 
-    class NoGeoJsonData(Exception):
-        """
-        There is no GeoJSON data available for this MapData object right now.
-        """
-
-        ...
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     name = models.CharField(max_length=255, unique=True)
     provider_state = models.CharField(max_length=255, choices=ProviderState.choices, default=ProviderState.UNSET)
@@ -75,37 +68,18 @@ class MapData(models.Model):
         help_text="A GeoTIFF file to upload. It may take up to a couple minutes to upload depending on the file size.",
     )
 
-    def has_geojson_data(self) -> bool:
-        try:
-            self.get_raw_geojson_data()
-            return True
-        except self.NoGeoJsonData:
-            return False
-
-    @silk_profile("MapData save")
-    def save(
-        self,
-        force_insert=False,
-        force_update=False,
-        using: str | None = None,
-        update_fields: Iterable[str] | None = None,
-    ) -> None:
-        return super().save(
-            force_insert=force_insert,
-            force_update=force_update,
-            update_fields=update_fields,
-            using=using,
-        )
-
-    @silk_profile("MapData get_raw_geojson_data")
-    def get_raw_geojson_data(self) -> str:
+    @property
+    def geojson(self) -> str | None:
         """
-        Get the raw GeoJSON data from this MapData object, or raise `NoGeoJsonData` if none exists.
+        Get the geojson from this map data object. Return `None` if the
+        provider state doesn't support a geojson-representation.
         """
+
         if self.provider_state == self.ProviderState.GEOJSON and self._geojson:
             return json.dumps(self._geojson)
+
         # NOTE: Other ProviderState's may be supported in the future.
-        raise self.NoGeoJsonData
+        return None
 
     def __str__(self):
         # Don't change me. Breaks graphql API getMapDataByName for clients.
