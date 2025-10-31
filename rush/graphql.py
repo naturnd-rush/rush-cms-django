@@ -1,4 +1,5 @@
 import graphene
+from django.conf import settings
 from graphene_django.types import DjangoObjectType
 
 from rush import models
@@ -153,9 +154,23 @@ class LayerGroupOnQuestionType(DjangoObjectType):
 
 
 class QuestionTabType(DjangoObjectType):
+
     class Meta:
         model = models.QuestionTab
-        fields = ["id", "title", "content", "display_order", "slug"]
+        fields = ["id", "title", "content", "display_order", "slug", "icon_url"]
+
+    icon_url = graphene.String()
+
+    def resolve_icon_url(self, info):
+        if isinstance(self, models.QuestionTab):
+            url = str(self.icon.file.url)
+            if url.startswith(settings.MEDIA_URL):
+                # HACK: For some reason that I cannot figure out, the media
+                # url gets appended to the start of this file field, but not
+                # any others that I have observed. This is a hacky fix.
+                return url.removeprefix(settings.MEDIA_URL)
+            return url
+        raise ValueError("Expected QuestionTab object while resolving query!")
 
 
 class InitiativeTagType(DjangoObjectType):
