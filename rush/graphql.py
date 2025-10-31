@@ -1,5 +1,9 @@
+from typing import List
+
 import graphene
 from django.conf import settings
+from django.db.models import QuerySet
+from graphene.types import ResolveInfo
 from graphene_django.types import DjangoObjectType
 
 from rush import models
@@ -96,7 +100,14 @@ class StyleType(DjangoObjectType):
 class LayerType(DjangoObjectType):
     class Meta:
         model = models.Layer
-        fields = ["id", "name", "map_data", "description", "styles_on_layer", "serialized_leaflet_json"]
+        fields = [
+            "id",
+            "name",
+            "map_data",
+            "description",
+            "styles_on_layer",
+            "serialized_leaflet_json",
+        ]
 
     styles_on_layer = graphene.List(StylesOnLayersType)
 
@@ -212,6 +223,50 @@ class PageType(DjangoObjectType):
         fields = ["id", "title", "content", "background_image"]
 
 
+def get_requested_fields(info: ResolveInfo) -> List[str]:
+    """
+    Get the graphene fields being resolved at this stage of the request.
+    NOTE: Fields are returned in Graphql-style camelCase, e.g., "fieldName".
+    """
+    selection_set = info.field_nodes[0].selection_set
+    if selection_set is None:
+        return []
+    requested_fields = []
+    for field in selection_set.selections:
+        print(field)
+        name = getattr(field, "name", None)
+        value = getattr(name, "value", None)
+        if value is not None:
+            requested_fields.append(value)
+    return requested_fields
+
+
+def optimized_map_data_resolve_qs(info: ResolveInfo) -> QuerySet[models.MapData]:
+    """
+    Defer expensive map-data fields when they're not requested to speed up loading times.
+    """
+    queryset = models.MapData.objects.all()
+    requested_fields = get_requested_fields(info)
+    if "geojson" not in requested_fields:
+        queryset = queryset.defer("_geojson")
+    return queryset.all()
+
+
+def optimized_layer_resolve_qs(info: ResolveInfo) -> QuerySet[models.Layer]:
+    """
+    Defer expensive map-data fields when they're not requested to speed up loading times.
+    """
+    queryset = models.Layer.objects.all()
+    requested_fields = get_requested_fields(info)
+    if "serializedLeafletJson" not in requested_fields:
+        # We know we won't be accessing serialized_leaflet_json
+        queryset = queryset.defer("serialized_leaflet_json")
+    # This will always send another request when accessing _geojson, but
+    # it will speed up queries that don't access _geojson significantly.
+    queryset = queryset.select_related("map_data").defer("map_data___geojson")
+    return queryset.all()
+
+
 class Query(graphene.ObjectType):
 
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
@@ -241,10 +296,10 @@ class Query(graphene.ObjectType):
     page = graphene.Field(PageType, id=graphene.UUID(required=True))
 
     def resolve_all_layers(self, info):
-        return models.Layer.objects.all()
+        return optimized_layer_resolve_qs(info).all()
 
     def resolve_layer(self, info, id):
-        return models.Layer.objects.get(pk=id)
+        return optimized_layer_resolve_qs(info).get(pk=id)
 
     def resolve_layer_group(self, info, question_id):
         return models.LayerGroupOnQuestion.objects.filter(layeronquestion__question__id=question_id).distinct()
@@ -265,13 +320,13 @@ class Query(graphene.ObjectType):
         return models.QuestionTab.objects.get(pk=id)
 
     def resolve_all_map_datas(self, info):
-        return models.MapData.objects.all()
+        return optimized_map_data_resolve_qs(info).all()
 
     def resolve_map_data(self, info, id):
-        return models.MapData.objects.get(pk=id)
+        return optimized_map_data_resolve_qs(info).get(pk=id)
 
     def resolve_map_data_by_dropdown_name(self, info, dropdownName: str):
-        return models.MapData.objects.get(name=dropdownName.split("(")[0].strip())
+        optimized_map_data_resolve_qs(info).get(name=dropdownName.split("(")[0].strip())
 
     def resolve_all_styles_on_layers(self, info):
         return models.StylesOnLayer.objects.all()
