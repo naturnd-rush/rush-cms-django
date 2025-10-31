@@ -21,6 +21,7 @@ class Icon(models.Model):
         validators=[FiletypeValidator(valid_names=["PNG", "JPEG", "SVG", "WEBP"])],
     )
     is_file_compressed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.file.name

@@ -81,6 +81,11 @@ class TiledForeignKeyWidget(Select):
                 </div>
             {% endfor %}
 
+            <!-- Upload new tile -->
+            <div class="tile upload-tile" data-action="upload">
+                <span class="plus-icon">+</span>
+            </div>
+
             <!-- Hidden select -->
             <select name="{{ name }}" class="tiled-fk-select" style="display:none;">
                 {% for choice in display_choices %}
@@ -90,14 +95,146 @@ class TiledForeignKeyWidget(Select):
 
         </div>
 
+        <!-- Upload Modal -->
+        <div class="upload-modal" style="display:none;">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <h3>Upload New Icon</h3>
+                <input type="file" class="icon-file-input" accept=".svg,.png,.webp,.jpg,.jpeg">
+                <div class="preview-container" style="display:none;">
+                    <img class="preview-image" src="" alt="Preview">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="upload-btn">Upload</button>
+                    <button type="button" class="cancel-btn">Cancel</button>
+                </div>
+                <div class="upload-status"></div>
+            </div>
+        </div>
+
         <script type="module">
-            document.querySelectorAll('.tiled-foreignkey-widget').forEach(widget => {
-                widget.querySelectorAll('.tile').forEach(tile => {
+            document.querySelectorAll('.tiled-foreignkey-widget:not([data-initialized])').forEach(widget => {
+                widget.setAttribute('data-initialized', 'true');
+                const modal = widget.parentElement.querySelector('.upload-modal');
+                const fileInput = modal.querySelector('.icon-file-input');
+                const previewContainer = modal.querySelector('.preview-container');
+                const previewImage = modal.querySelector('.preview-image');
+                const uploadBtn = modal.querySelector('.upload-btn');
+                const cancelBtn = modal.querySelector('.cancel-btn');
+                const uploadStatus = modal.querySelector('.upload-status');
+
+                // Handle tile selection
+                widget.querySelectorAll('.tile:not(.upload-tile)').forEach(tile => {
                     tile.addEventListener('click', () => {
                         widget.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
                         tile.classList.add('selected');
                         widget.querySelector('.tiled-fk-select').value = tile.dataset.value;
                     });
+                });
+
+                // Handle upload tile click
+                widget.querySelector('.upload-tile').addEventListener('click', () => {
+                    modal.style.display = 'block';
+                });
+
+                // Handle file selection for preview
+                fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            previewImage.src = e.target.result;
+                            previewContainer.style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+
+                // Handle cancel button
+                cancelBtn.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                    fileInput.value = '';
+                    previewContainer.style.display = 'none';
+                    uploadStatus.textContent = '';
+                });
+
+                // Handle upload button
+                uploadBtn.addEventListener('click', async () => {
+                    const file = fileInput.files[0];
+                    if (!file) {
+                        uploadStatus.textContent = 'Please select a file';
+                        return;
+                    }
+
+                    // Prevent multiple clicks
+                    if (uploadBtn.disabled) {
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    // Get CSRF token
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+                    uploadStatus.textContent = 'Uploading...';
+                    uploadBtn.disabled = true;
+                    cancelBtn.disabled = true;
+
+                    try {
+                        const response = await fetch('/rush/icon/ajax-upload/', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrfToken,
+                            },
+                            body: formData
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            // Add new tile to the widget
+                            const newTile = document.createElement('div');
+                            newTile.className = 'tile selected';
+                            newTile.dataset.value = data.id;
+                            newTile.innerHTML = `<img src="${data.url}" alt="">`;
+
+                            // Insert before upload tile
+                            const uploadTile = widget.querySelector('.upload-tile');
+                            widget.insertBefore(newTile, uploadTile);
+
+                            // Add to select options
+                            const select = widget.querySelector('.tiled-fk-select');
+                            const option = document.createElement('option');
+                            option.value = data.id;
+                            option.selected = true;
+                            select.appendChild(option);
+
+                            // Deselect other tiles
+                            widget.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
+                            newTile.classList.add('selected');
+
+                            // Add click handler to new tile
+                            newTile.addEventListener('click', () => {
+                                widget.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
+                                newTile.classList.add('selected');
+                                select.value = newTile.dataset.value;
+                            });
+
+                            // Close modal
+                            modal.style.display = 'none';
+                            fileInput.value = '';
+                            previewContainer.style.display = 'none';
+                            uploadStatus.textContent = '';
+                        } else {
+                            uploadStatus.textContent = 'Error: ' + (data.error || 'Upload failed');
+                        }
+                    } catch (error) {
+                        uploadStatus.textContent = 'Error: ' + error.message;
+                    } finally {
+                        uploadBtn.disabled = false;
+                        cancelBtn.disabled = false;
+                    }
                 });
             });
         </script>
@@ -142,6 +279,126 @@ class TiledForeignKeyWidget(Select):
                 width: 100%;
                 height: auto;
                 object-fit: contain;
+            }
+
+            /* Upload tile styles */
+            .tiled-foreignkey-widget .upload-tile {
+                border: 2px dashed #aaa;
+                background: #f5f5f5;
+            }
+
+            .tiled-foreignkey-widget .upload-tile:hover {
+                border-color: #4285f4;
+                background: #e8f0fe;
+            }
+
+            .tiled-foreignkey-widget .plus-icon {
+                font-size: 32px;
+                color: #666;
+                font-weight: 300;
+            }
+
+            /* Modal styles */
+            .upload-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 10000;
+            }
+
+            .upload-modal .modal-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+            }
+
+            .upload-modal .modal-content {
+                position: relative;
+                background: white;
+                margin: 100px auto;
+                padding: 30px;
+                width: 500px;
+                max-width: 90%;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            }
+
+            .upload-modal h3 {
+                margin-top: 0;
+                margin-bottom: 20px;
+                font-size: 20px;
+            }
+
+            .upload-modal .icon-file-input {
+                display: block;
+                margin-bottom: 15px;
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+
+            .upload-modal .preview-container {
+                margin-bottom: 15px;
+                padding: 15px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                text-align: center;
+                background: #fafafa;
+            }
+
+            .upload-modal .preview-image {
+                max-width: 200px;
+                max-height: 200px;
+            }
+
+            .upload-modal .modal-actions {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+
+            .upload-modal button {
+                padding: 10px 20px;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+            }
+
+            .upload-modal .upload-btn {
+                background: #4285f4;
+                color: white;
+                flex: 1;
+            }
+
+            .upload-modal .upload-btn:hover {
+                background: #357ae8;
+            }
+
+            .upload-modal .upload-btn:disabled {
+                background: #ccc;
+                cursor: not-allowed;
+            }
+
+            .upload-modal .cancel-btn {
+                background: #f1f1f1;
+                color: #333;
+            }
+
+            .upload-modal .cancel-btn:hover {
+                background: #e1e1e1;
+            }
+
+            .upload-modal .upload-status {
+                color: #d32f2f;
+                font-size: 14px;
+                min-height: 20px;
             }
         </style>
         """
