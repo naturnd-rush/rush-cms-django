@@ -19,18 +19,22 @@ class IconAdmin(ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path("ajax-upload/", self.admin_site.admin_view(self.ajax_upload_view), name="icon_ajax_upload"),
+            path(
+                "ajax-upload/",
+                self.admin_site.admin_view(self.ajax_upload_view),
+                name="icon_ajax_upload",
+            ),
         ]
         return custom_urls + urls
 
     def ajax_upload_view(self, request):
-        """Handle AJAX icon upload from TiledForeignKeyWidget"""
+        """
+        Handle AJAX icon upload from TiledForeignKeyWidget.
+        """
         if request.method != "POST":
             return JsonResponse({"error": "Method not allowed"}, status=405)
-
         if "file" not in request.FILES:
             return JsonResponse({"error": "No file provided"}, status=400)
-
         try:
             uploaded_file = request.FILES["file"]
             icon = Icon.objects.create(file=uploaded_file)
@@ -40,6 +44,5 @@ class IconAdmin(ModelAdmin):
                     "url": icon.file.url,
                 }
             )
-
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=400)
