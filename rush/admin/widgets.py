@@ -75,16 +75,16 @@ class TiledForeignKeyWidget(Select):
         template_str = """
         <div class="tiled-foreignkey-widget">
 
+            <!-- Upload new tile -->
+            <div class="tile upload-tile" data-action="upload">
+                <span class="plus-icon">+</span>
+            </div>
+
             {% for choice in display_choices %}
                 <div class="tile {{ choice.selected_str }}" data-value="{{ choice.id }}">
                     <img src="{{ choice.base_media_url }}{{ choice.thumbnail_url }}" alt="">
                 </div>
             {% endfor %}
-
-            <!-- Upload new tile -->
-            <div class="tile upload-tile" data-action="upload">
-                <span class="plus-icon">+</span>
-            </div>
 
             <!-- Hidden select -->
             <select name="{{ name }}" class="tiled-fk-select" style="display:none;">
@@ -247,6 +247,9 @@ class TiledForeignKeyWidget(Select):
                 gap: 10px;
                 justify-content: left;
                 margin-top: 8px;
+                max-height: 300px;
+                overflow-y: auto;
+                padding-right: 5px;
             }
 
             .tiled-foreignkey-widget .tile {
