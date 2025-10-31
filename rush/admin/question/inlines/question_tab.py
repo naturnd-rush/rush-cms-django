@@ -1,22 +1,35 @@
-import adminsortable2.admin as sortable_admin
-from django.contrib import admin
-from django.db import models
+from typing import Any
+
+from adminsortable2.admin import SortableTabularInline
+from django.contrib.admin import TabularInline
+from django.forms.models import BaseInlineFormSet
+from django.http import HttpRequest
 from django_summernote.admin import SummernoteModelAdminMixin
 
-from rush import models
+from rush.admin.question.forms import QuestionTabForm
+from rush.models import QuestionTab
 
 
-class QuestionTabInline(sortable_admin.SortableTabularInline, SummernoteModelAdminMixin, admin.TabularInline):
+class QuestionTabInline(SortableTabularInline, SummernoteModelAdminMixin, TabularInline):
     """
     Allow editing of QuestionTab objects straight from the Question form.
     """
 
     exclude = ["id"]
-    model = models.QuestionTab
+    form = QuestionTabForm
+    model = QuestionTab
     extra = 0  # don't display extra question tabs to add, let the user click
     sortable_field_name = "display_order"
     prepopulated_fields = {"slug": ("title",)}
     sortable_options = (
-        # Added for compatibility SortableTabularInline <--> NestedModelAdmin (on QuestionAdmin page.)
+        # Added for compatibility SortableTabularInline <--> NestedModelAdmin (on QuestionAdmin page)
         []
     )
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset_class = super().get_formset(request, obj, **kwargs)
+
+        # Attach request
+        formset_class.form.request = request
+
+        return formset_class
