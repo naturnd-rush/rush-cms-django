@@ -8,6 +8,7 @@ from django.contrib import admin
 from django.db import models
 from django.urls import reverse
 from django.utils.html import format_html_join
+from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin, SummernoteModelAdminMixin
 
 from rush import models
@@ -75,12 +76,32 @@ class InitiativeAdmin(SummernoteModelAdmin):
 @admin.register(models.InitiativeTag)
 class InitiativeTagAdmin(SummernoteModelAdmin):
     exclude = ["id"]
-    list_display = ["name", "tagged_initiatives"]
+    list_display = ["name", "preview", "tagged_initiatives"]
     search_fields = ["name"]
 
     # Reverse relation is readonly in the add/change view for now, we can
     # change this later, but the solution is a little complicated.
     readonly_fields = ["tagged_initiatives"]
+
+    def preview(self, obj: models.InitiativeTag):
+        return mark_safe(
+            f"""
+                <p style='
+                    color: {obj.text_color};
+                    background-color: {obj.background_color};
+                    font-size: 0.75rem;
+                    text-transform: uppercase;
+                    border-radius: 0.125rem;
+                    font-family: "Bitter Variable", serif;
+                    width: fit-content;
+                    padding-left: 0.25rem;
+                    padding-right: 0.25rem;
+                    font-weight: 700;
+                '>
+                    {obj.name}
+                </p>
+            """
+        )
 
     @admin.display(description="Initiatives with this tag")
     def tagged_initiatives(self, obj):
