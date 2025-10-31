@@ -20,6 +20,6 @@ class QuestionTabForm(ModelForm):
                     fk_name="icon",
                     request=getattr(self, "request"),
                 )
-                for icon in Icon.objects.all()
+                for icon in Icon.objects.order_by("-created_at")[:10]
             ],
         )

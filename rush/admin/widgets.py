@@ -243,7 +243,7 @@ class TiledForeignKeyWidget(Select):
             .tiled-foreignkey-widget {
                 display: flex;
                 flex-wrap: wrap;
-                width: 340px; /* controls 5 tiles per row */
+                width: 136px; /* controls 2 tiles per row */
                 gap: 10px;
                 justify-content: left;
                 margin-top: 8px;
