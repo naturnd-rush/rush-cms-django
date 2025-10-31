@@ -126,9 +126,7 @@ class Style(models.Model):
         upload_to="marker_icons/",
         null=True,
         blank=True,
-        validators=[
-            FiletypeValidator(valid_names=["SVG", "JPEG", "PNG", "WEBP"])
-        ],
+        validators=[FiletypeValidator(valid_names=["SVG", "JPEG", "PNG", "WEBP"])],
         help_text="The image that will appear at each point this style is applied to. Accepts PNG, JPEG, SVG, and WEBP files.",
     )
     is_marker_icon_compressed = models.BooleanField(default=False)
