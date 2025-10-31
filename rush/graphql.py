@@ -161,7 +161,7 @@ class QuestionTabType(DjangoObjectType):
 class InitiativeTagType(DjangoObjectType):
     class Meta:
         model = models.InitiativeTag
-        fields = ["id", "name"]
+        fields = ["id", "name", "text_color", "background_color"]
 
 
 class InitiativeType(DjangoObjectType):
