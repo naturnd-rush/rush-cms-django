@@ -32,6 +32,10 @@ DATABASES = {
         "PASSWORD": config("POSTGRES_DATABASE_PASSWORD", cast=str),
         "HOST": config("POSTGRES_DATABASE_HOST", cast=str),
         "PORT": config("POSTGRES_DATABASE_PORT", cast=str),
+        "CONN_MAX_AGE": 600,  # Keep connections alive for 10 minutes
+        "OPTIONS": {
+            "connect_timeout": 10,
+        },
     }
 }
 DEPLOY_DOMAIN_NAME = config("DEPLOY_DOMAIN_NAME", cast=str)
