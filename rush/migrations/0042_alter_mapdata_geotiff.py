@@ -19,7 +19,6 @@ class Migration(migrations.Migration):
                 blank=True,
                 help_text="A GeoTIFF file to upload. It may take up to a couple minutes to upload depending on the file size.",
                 null=True,
-                storage=rush.models.map_data.get_raster_storage,
                 upload_to="",
             ),
         ),

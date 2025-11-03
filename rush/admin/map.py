@@ -250,7 +250,7 @@ mdaf_config = MapDataAdminFormConfig(
         ),
         MapDataAdminFormConfig.Provider(
             state=models.MapData.ProviderState.GEOTIFF,
-            fields=[MapDataAdminFormConfig.Field("geotiff", required=True)],
+            fields=[MapDataAdminFormConfig.Field("s3_geotiff_file_upload", required=True)],
             map_preview=False,
         ),
     ]
@@ -270,6 +270,12 @@ class MapDataAdminForm(forms.ModelForm):
         labels = {
             "provider_state": "Data Type",
         }
+
+    s3_geotiff_file_upload = forms.FileField(
+        required=False,
+        label="Upload GeoTIFF",
+        help_text="A .tif, or .tiff raster map file to upload.",
+    )
 
     @silk_profile(name="MapDataForm get_initial_for_field")
     def get_initial_for_field(self, field, field_name):
@@ -348,7 +354,7 @@ class MapDataAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         # avoid fetching map_data and geotiff data when listing all MapDatas
-        return qs.defer("_geojson", "geotiff")
+        return qs.defer("_geojson")
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         """Handles both GET (load form) and POST (save form) requests"""

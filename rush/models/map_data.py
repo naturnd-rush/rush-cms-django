@@ -1,33 +1,27 @@
 import json
-import sys
 import uuid
 from typing import Iterable
 
 import django.db.models as models
-from django.conf import settings
-from django.core.files.storage import FileSystemStorage
 from django.core.validators import URLValidator
 from silk.profiling.dynamic import silk_profile
-from storages.backends.s3 import S3Storage
 
-from rush.models import MimeType
+from rush.models.s3.s3_file import S3File
 from rush.models.validators import FiletypeValidator
-from rush.storage import BackblazeStorageFactory
 
-
-def get_raster_storage() -> S3Storage | FileSystemStorage:
-    """
-    Get storage for raster image files (GeoTIFF).
-    """
-    if settings.DEBUG or "pytest" in sys.modules:
-        # Don't try to connect to Backblaze in a dev environment or during tests
-        return FileSystemStorage(location=f"{settings.MEDIA_ROOT}/debug_raster_image_storage")
-    return BackblazeStorageFactory.create_from_bucket_name(
-        settings.BACKBLAZE_RASTER_BUCKET_NAME,
-        validate_visibility=BackblazeStorageFactory.Visibility.PUBLIC,
-        persistance=BackblazeStorageFactory.Persistance.HARD_DELETE,
-        duplication=BackblazeStorageFactory.Duplication.LATEST_VERSION_ONLY,
-    )
+# def get_raster_storage() -> S3Storage | FileSystemStorage:
+#     """
+#     Get storage for raster image files (GeoTIFF).
+#     """
+#     if settings.DEBUG or "pytest" in sys.modules:
+#         # Don't try to connect to Backblaze in a dev environment or during tests
+#         return FileSystemStorage(location=f"{settings.MEDIA_ROOT}/debug_raster_image_storage")
+#     return BackblazeStorageFactory.create_from_bucket_name(
+#         settings.BACKBLAZE_RASTER_BUCKET_NAME,
+#         validate_visibility=BackblazeStorageFactory.Visibility.PUBLIC,
+#         persistance=BackblazeStorageFactory.Persistance.HARD_DELETE,
+#         duplication=BackblazeStorageFactory.Duplication.LATEST_VERSION_ONLY,
+#     )
 
 
 class MapData(models.Model):
@@ -68,12 +62,16 @@ class MapData(models.Model):
 
     # Geotiff provider fields
     geotiff = models.FileField(
+        # TODO: Delete me and migrate urls to S3File objects in DONE state.
         null=True,
         blank=True,
-        storage=get_raster_storage,
+        upload_to="tmp_geotiff_upload_spot_new_new_new",
+        # storage=get_raster_storage,
         validators=[FiletypeValidator(valid_names=["TIFF"])],
         help_text="A GeoTIFF file to upload. It may take up to a couple minutes to upload depending on the file size.",
     )
+
+    s3_geotiff = models.ForeignKey(to="S3File", on_delete=models.CASCADE, null=True, blank=True)
 
     def has_geojson_data(self) -> bool:
         try:
