@@ -73,171 +73,46 @@ class TiledForeignKeyWidget(Select):
             "display_choices": self.display_choices,
         }
         template_str = """
-        <div class="tiled-foreignkey-widget">
+        <div class="tiled-foreignkey-widget-container">
+            <div class="tiled-foreignkey-widget">
 
-            <!-- Upload new tile -->
-            <div class="tile upload-tile" data-action="upload">
-                <span class="plus-icon">+</span>
-            </div>
-
-            {% for choice in display_choices %}
-                <div class="tile {{ choice.selected_str }}" data-value="{{ choice.id }}">
-                    <img src="{{ choice.base_media_url }}{{ choice.thumbnail_url }}" alt="">
+                <!-- Upload new tile -->
+                <div class="tile upload-tile" data-action="upload">
+                    <span class="plus-icon">+</span>
                 </div>
-            {% endfor %}
 
-            <!-- Hidden select -->
-            <select name="{{ name }}" class="tiled-fk-select" style="display:none;">
                 {% for choice in display_choices %}
-                    <option value="{{ choice.id }}" {{ choice.selected_str }}></option>
+                    <div class="tile {{ choice.selected_str }}" data-value="{{ choice.id }}">
+                        <img src="{{ choice.base_media_url }}{{ choice.thumbnail_url }}" alt="">
+                    </div>
                 {% endfor %}
-            </select>
 
-        </div>
+                <!-- Hidden select -->
+                <select name="{{ name }}" class="tiled-fk-select" style="display:none;">
+                    {% for choice in display_choices %}
+                        <option value="{{ choice.id }}" {{ choice.selected_str }}></option>
+                    {% endfor %}
+                </select>
 
-        <!-- Upload Modal -->
-        <div class="upload-modal" style="display:none;">
-            <div class="modal-overlay"></div>
-            <div class="modal-content">
-                <h3>Upload New Icon</h3>
-                <input type="file" class="icon-file-input" accept=".svg,.png,.webp,.jpg,.jpeg">
-                <div class="preview-container" style="display:none;">
-                    <img class="preview-image" src="" alt="Preview">
+            </div>
+
+            <!-- Upload Modal -->
+            <div class="upload-modal" style="display:none;">
+                <div class="modal-overlay"></div>
+                <div class="modal-content">
+                    <h3>Upload New Icon</h3>
+                    <input type="file" class="icon-file-input" accept=".svg,.png,.webp,.jpg,.jpeg">
+                    <div class="preview-container" style="display:none;">
+                        <img class="preview-image" src="" alt="Preview">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="upload-btn">Upload</button>
+                        <button type="button" class="cancel-btn">Cancel</button>
+                    </div>
+                    <div class="upload-status"></div>
                 </div>
-                <div class="modal-actions">
-                    <button type="button" class="upload-btn">Upload</button>
-                    <button type="button" class="cancel-btn">Cancel</button>
-                </div>
-                <div class="upload-status"></div>
             </div>
         </div>
-
-        <script type="module">
-            document.querySelectorAll('.tiled-foreignkey-widget:not([data-initialized])').forEach(widget => {
-                widget.setAttribute('data-initialized', 'true');
-                const modal = widget.parentElement.querySelector('.upload-modal');
-                const fileInput = modal.querySelector('.icon-file-input');
-                const previewContainer = modal.querySelector('.preview-container');
-                const previewImage = modal.querySelector('.preview-image');
-                const uploadBtn = modal.querySelector('.upload-btn');
-                const cancelBtn = modal.querySelector('.cancel-btn');
-                const uploadStatus = modal.querySelector('.upload-status');
-
-                // Handle tile selection
-                widget.querySelectorAll('.tile:not(.upload-tile)').forEach(tile => {
-                    tile.addEventListener('click', () => {
-                        widget.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
-                        tile.classList.add('selected');
-                        widget.querySelector('.tiled-fk-select').value = tile.dataset.value;
-                    });
-                });
-
-                // Handle upload tile click
-                widget.querySelector('.upload-tile').addEventListener('click', () => {
-                    modal.style.display = 'block';
-                });
-
-                // Handle file selection for preview
-                fileInput.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            previewImage.src = e.target.result;
-                            previewContainer.style.display = 'block';
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
-
-                // Handle cancel button
-                cancelBtn.addEventListener('click', () => {
-                    modal.style.display = 'none';
-                    fileInput.value = '';
-                    previewContainer.style.display = 'none';
-                    uploadStatus.textContent = '';
-                });
-
-                // Handle upload button
-                uploadBtn.addEventListener('click', async () => {
-                    const file = fileInput.files[0];
-                    if (!file) {
-                        uploadStatus.textContent = 'Please select a file';
-                        return;
-                    }
-
-                    // Prevent multiple clicks
-                    if (uploadBtn.disabled) {
-                        return;
-                    }
-
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    // Get CSRF token
-                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-                    uploadStatus.textContent = 'Uploading...';
-                    uploadBtn.disabled = true;
-                    cancelBtn.disabled = true;
-
-                    try {
-                        const response = await fetch('/rush/icon/ajax-upload/', {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRFToken': csrfToken,
-                            },
-                            body: formData
-                        });
-
-                        const data = await response.json();
-
-                        if (response.ok) {
-                            // Add new tile to the widget
-                            const newTile = document.createElement('div');
-                            newTile.className = 'tile selected';
-                            newTile.dataset.value = data.id;
-                            newTile.innerHTML = `<img src="${data.url}" alt="">`;
-
-                            // Insert before upload tile
-                            const uploadTile = widget.querySelector('.upload-tile');
-                            widget.insertBefore(newTile, uploadTile);
-
-                            // Add to select options
-                            const select = widget.querySelector('.tiled-fk-select');
-                            const option = document.createElement('option');
-                            option.value = data.id;
-                            option.selected = true;
-                            select.appendChild(option);
-
-                            // Deselect other tiles
-                            widget.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
-                            newTile.classList.add('selected');
-
-                            // Add click handler to new tile
-                            newTile.addEventListener('click', () => {
-                                widget.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
-                                newTile.classList.add('selected');
-                                select.value = newTile.dataset.value;
-                            });
-
-                            // Close modal
-                            modal.style.display = 'none';
-                            fileInput.value = '';
-                            previewContainer.style.display = 'none';
-                            uploadStatus.textContent = '';
-                        } else {
-                            uploadStatus.textContent = 'Error: ' + (data.error || 'Upload failed');
-                        }
-                    } catch (error) {
-                        uploadStatus.textContent = 'Error: ' + error.message;
-                    } finally {
-                        uploadBtn.disabled = false;
-                        cancelBtn.disabled = false;
-                    }
-                });
-            });
-        </script>
 
         <style>
             .tiled-foreignkey-widget {
