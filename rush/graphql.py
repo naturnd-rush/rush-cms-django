@@ -2,6 +2,8 @@ from typing import List
 
 import graphene
 from django.conf import settings
+from django.core.cache import cache
+from django.core.cache.utils import make_template_fragment_key
 from django.db.models import Prefetch, QuerySet
 from graphene.types import ResolveInfo
 from graphene_django.types import DjangoObjectType
@@ -113,6 +115,10 @@ class LayerType(DjangoObjectType):
 
     def resolve_styles_on_layer(self, info):
         if isinstance(self, models.Layer):
+            if prefetch_cache := getattr(self, "_prefetched_objects_cache", None):
+                if "stylesonlayer_set" in prefetch_cache:
+                    # use prefetched styles-on-layer if available
+                    return self.stylesonlayer_set.all()  # type: ignore
             return models.StylesOnLayer.objects.filter(layer__id=self.id)
         raise ValueError("Expected Layer object while resolving query!")
 
@@ -279,6 +285,10 @@ def optimized_layer_resolve_qs(info: ResolveInfo) -> QuerySet[models.Layer]:
     # This will always send another request when accessing _geojson, but
     # it will speed up queries that don't access _geojson significantly.
     queryset = queryset.select_related("map_data").defer("map_data___geojson")
+
+    # Styles on a layer are often fetched at the same time.
+    queryset = queryset.prefetch_related("stylesonlayer_set")
+
     return queryset.all()
 
 
@@ -335,7 +345,14 @@ class Query(graphene.ObjectType):
         return optimized_layer_resolve_qs(info).all()
 
     def resolve_layer(self, info, id):
-        return optimized_layer_resolve_qs(info).get(pk=id)
+        cache_key = f"graphql:resolve_layer:{id}"
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+
+        layer = optimized_layer_resolve_qs(info).get(pk=id)
+        cache.set(cache_key, layer, timeout=300)
+        return layer
 
     def resolve_layer_group(self, info, question_id):
         return (

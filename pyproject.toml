@@ -29,6 +29,7 @@ django-admin-sortable2 = "^2.2.8"
 django-nested-admin = "^4.1.5"
 django-logentry-admin = "^1.1.0"
 django-silk = "^5.4.3"
+django-redis = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"
