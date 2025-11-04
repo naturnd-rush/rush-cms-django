@@ -364,7 +364,7 @@ class Query(graphene.ObjectType):
         if "serializedLeafletJson" in requested_fields:
             cache.set(large_key, layer, timeout=300)
         else:
-            cache.set(large_key, layer, timeout=300)
+            cache.set(small_key, layer, timeout=300)
 
         return layer
 
