@@ -2,7 +2,7 @@ from typing import List
 
 import graphene
 from django.conf import settings
-from django.db.models import QuerySet
+from django.db.models import Prefetch, QuerySet
 from graphene.types import ResolveInfo
 from graphene_django.types import DjangoObjectType
 
@@ -282,6 +282,27 @@ def optimized_layer_resolve_qs(info: ResolveInfo) -> QuerySet[models.Layer]:
     return queryset.all()
 
 
+def optimized_question_resolve_qs() -> QuerySet[models.Question]:
+    """
+    Defer the expensive `serialized_leaflet_json` field and prefetch layers + layer-groups.
+    """
+    return models.Question.objects.prefetch_related(
+        Prefetch(
+            # Prefetch layer groups on each question
+            "layer_groups",
+            queryset=models.LayerGroupOnQuestion.objects.prefetch_related(
+                Prefetch(
+                    # Prefetch layer ids on each layer group
+                    "layers",
+                    queryset=models.LayerOnLayerGroup.objects.select_related("layer")
+                    .defer("layer__serialized_leaflet_json")
+                    .order_by("display_order"),
+                )
+            ).order_by("display_order"),
+        )
+    )
+
+
 class Query(graphene.ObjectType):
 
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
@@ -324,29 +345,10 @@ class Query(graphene.ObjectType):
         )
 
     def resolve_all_questions(self, info):
-        from django.db.models import Prefetch
-
-        # Prefetch the nested relationships to avoid N+1 queries
-        layers_on_layer_group_prefetch = Prefetch(
-            "layers",  # related_name from LayerOnLayerGroup to LayerGroupOnQuestion
-            queryset=models.LayerOnLayerGroup.objects.select_related("layer")
-            .defer(
-                "layer__serialized_leaflet_json",
-            )
-            .order_by("display_order"),
-        )
-
-        layer_groups_prefetch = Prefetch(
-            "layer_groups",  # related_name from LayerGroupOnQuestion to Question
-            queryset=models.LayerGroupOnQuestion.objects.prefetch_related(layers_on_layer_group_prefetch).order_by(
-                "display_order"
-            ),
-        )
-
-        return models.Question.objects.prefetch_related(layer_groups_prefetch).all()
+        return optimized_question_resolve_qs().all()
 
     def resolve_question(self, info, id):
-        return models.Question.objects.get(pk=id)
+        return optimized_question_resolve_qs().get(pk=id)
 
     def resolve_question_by_slug(self, info, slug: str):
         return models.Question.objects.get(slug=slug)
