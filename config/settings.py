@@ -233,3 +233,35 @@ BACKBLAZE_ENDPOINT_URL = "https://s3.us-east-005.backblazeb2.com"
 BACKBLAZE_REGION_NAME = "us-east-005"  # Matching the above URL
 BACKBLAZE_APP_KEY_ID = str(config("BACKBLAZE_APP_KEY_ID", cast=str))
 BACKBLAZE_APP_KEY = str(config("BACKBLAZE_APP_KEY", cast=str))
+
+if DEBUG:
+    # In-memory cache for development
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "rush-dev-cache",
+            "OPTIONS": {
+                "MAX_ENTRIES": 1000,
+            },
+        }
+    }
+else:
+    # Use redis on prod
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": "redis://127.0.0.1:6379/1",  # /1 = database 1 (0-15 available)
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "PARSER_CLASS": "redis.connection.HiredisParser",  # Faster parser (optional)
+                "CONNECTION_POOL_KWARGS": {
+                    "max_connections": 50,
+                    "retry_on_timeout": True,
+                },
+                "SOCKET_CONNECT_TIMEOUT": 5,  # seconds
+                "SOCKET_TIMEOUT": 5,  # seconds
+            },
+            "KEY_PREFIX": "rush",  # Prefix all keys to avoid conflicts
+            "TIMEOUT": 300,  # Default cache timeout: 5 minutes (None = never expire)
+        }
+    }
