@@ -345,13 +345,27 @@ class Query(graphene.ObjectType):
         return optimized_layer_resolve_qs(info).all()
 
     def resolve_layer(self, info, id):
-        cache_key = f"graphql:resolve_layer:{id}"
-        cached_data = cache.get(cache_key)
+        """
+        Get a layer and make two types of cache entries:
+        1. A small one for when no serialized-leaflet-json is requested.
+        2. A larger one for when serialized-leaflet-json is requested.
+        """
+        large_key = f"graphql:resolve_layer_LARGE:{id}"
+        small_key = f"graphql:resolve_layer_SMALL:{id}"
+        requested_fields = get_requested_fields(info)
+        if "serializedLeafletJson" in requested_fields:
+            cached_data = cache.get(large_key)
+        else:
+            cached_data = cache.get(small_key)
         if cached_data is not None:
             return cached_data
 
         layer = optimized_layer_resolve_qs(info).get(pk=id)
-        cache.set(cache_key, layer, timeout=300)
+        if "serializedLeafletJson" in requested_fields:
+            cache.set(large_key, layer, timeout=300)
+        else:
+            cache.set(large_key, layer, timeout=300)
+
         return layer
 
     def resolve_layer_group(self, info, question_id):

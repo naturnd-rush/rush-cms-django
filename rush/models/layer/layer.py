@@ -1,6 +1,9 @@
 import uuid
 
 import django.db.models as models
+from django.core.cache import cache
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
 
 
 class Layer(models.Model):
@@ -24,3 +27,13 @@ class Layer(models.Model):
 
     def __str__(self):
         return self.name
+
+
+@receiver([post_save, post_delete], sender=Layer)
+def invalidate_layer_cache_entry(sender, instance, **kwargs):
+    """
+    Invalidate layer cache entries when layers are changed or deleted.
+    """
+    large_key = f"graphql:resolve_layer_LARGE:{instance.id}"
+    small_key = f"graphql:resolve_layer_SMALL:{instance.id}"
+    cache.delete_many([large_key, small_key])
