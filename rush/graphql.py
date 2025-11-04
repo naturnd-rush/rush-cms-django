@@ -2,7 +2,7 @@ from typing import List
 
 import graphene
 from django.conf import settings
-from django.db.models import QuerySet
+from django.db.models import Prefetch, QuerySet
 from graphene.types import ResolveInfo
 from graphene_django.types import DjangoObjectType
 
@@ -160,7 +160,18 @@ class LayerGroupOnQuestionType(DjangoObjectType):
 
     def resolve_layers_on_layer_group(self, info):
         if isinstance(self, models.LayerGroupOnQuestion):
-            return models.LayerOnLayerGroup.objects.filter(layer_group_on_question=self).distinct()
+            if prefetch_cache := getattr(self, "_prefetched_objects_cache", None):
+                if "layers" in prefetch_cache:
+                    # use prefetched layers if available
+                    return self.layers.all()  # type: ignore
+            return (
+                models.LayerOnLayerGroup.objects.filter(layer_group_on_question=self)
+                .distinct()
+                .select_related("layer")
+                .defer(
+                    "layer__serialized_leaflet_json",
+                )
+            )
         raise ValueError("Expected LayerGroupOnQuestion object while resolving query!")
 
 
@@ -214,6 +225,10 @@ class QuestionType(DjangoObjectType):
     layer_groups_on_question = graphene.List(LayerGroupOnQuestionType)
 
     def resolve_layer_groups_on_question(self, info):
+        if prefetch_cache := getattr(self, "_prefetched_objects_cache"):
+            if "layer_groups" in prefetch_cache:
+                # use prefetched layer-groups if available
+                return self.layer_groups.all()  # type: ignore
         return models.LayerGroupOnQuestion.objects.filter(question=self)
 
 
@@ -267,6 +282,27 @@ def optimized_layer_resolve_qs(info: ResolveInfo) -> QuerySet[models.Layer]:
     return queryset.all()
 
 
+def optimized_question_resolve_qs() -> QuerySet[models.Question]:
+    """
+    Defer the expensive `serialized_leaflet_json` field and prefetch layers + layer-groups.
+    """
+    return models.Question.objects.prefetch_related(
+        Prefetch(
+            # Prefetch layer groups on each question
+            "layer_groups",
+            queryset=models.LayerGroupOnQuestion.objects.prefetch_related(
+                Prefetch(
+                    # Prefetch layer ids on each layer group
+                    "layers",
+                    queryset=models.LayerOnLayerGroup.objects.select_related("layer")
+                    .defer("layer__serialized_leaflet_json")
+                    .order_by("display_order"),
+                )
+            ).order_by("display_order"),
+        )
+    )
+
+
 class Query(graphene.ObjectType):
 
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
@@ -302,13 +338,17 @@ class Query(graphene.ObjectType):
         return optimized_layer_resolve_qs(info).get(pk=id)
 
     def resolve_layer_group(self, info, question_id):
-        return models.LayerGroupOnQuestion.objects.filter(layeronquestion__question__id=question_id).distinct()
+        return (
+            models.LayerGroupOnQuestion.objects.filter(layeronquestion__question__id=question_id)
+            .select_related("layer_on_layer_group")
+            .distinct()
+        )
 
     def resolve_all_questions(self, info):
-        return models.Question.objects.all()
+        return optimized_question_resolve_qs().all()
 
     def resolve_question(self, info, id):
-        return models.Question.objects.get(pk=id)
+        return optimized_question_resolve_qs().get(pk=id)
 
     def resolve_question_by_slug(self, info, slug: str):
         return models.Question.objects.get(slug=slug)
