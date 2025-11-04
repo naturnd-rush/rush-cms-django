@@ -225,7 +225,7 @@ class QuestionType(DjangoObjectType):
     layer_groups_on_question = graphene.List(LayerGroupOnQuestionType)
 
     def resolve_layer_groups_on_question(self, info):
-        if prefetch_cache := getattr(self, "_prefetched_objects_cache"):
+        if prefetch_cache := getattr(self, "_prefetched_objects_cache", None):
             if "layer_groups" in prefetch_cache:
                 # use prefetched layer-groups if available
                 return self.layer_groups.all()  # type: ignore
