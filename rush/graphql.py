@@ -160,7 +160,18 @@ class LayerGroupOnQuestionType(DjangoObjectType):
 
     def resolve_layers_on_layer_group(self, info):
         if isinstance(self, models.LayerGroupOnQuestion):
-            return models.LayerOnLayerGroup.objects.filter(layer_group_on_question=self).distinct()
+            if prefetch_cache := getattr(self, "_prefetched_objects_cache", None):
+                if "layers" in prefetch_cache:
+                    # use prefetched layers if available
+                    return self.layers.all()  # type: ignore
+            return (
+                models.LayerOnLayerGroup.objects.filter(layer_group_on_question=self)
+                .distinct()
+                .select_related("layer")
+                .defer(
+                    "layer__serialized_leaflet_json",
+                )
+            )
         raise ValueError("Expected LayerGroupOnQuestion object while resolving query!")
 
 
@@ -214,6 +225,10 @@ class QuestionType(DjangoObjectType):
     layer_groups_on_question = graphene.List(LayerGroupOnQuestionType)
 
     def resolve_layer_groups_on_question(self, info):
+        if prefetch_cache := getattr(self, "_prefetched_objects_cache"):
+            if "layer_groups" in prefetch_cache:
+                # use prefetched layer-groups if available
+                return self.layer_groups.all()  # type: ignore
         return models.LayerGroupOnQuestion.objects.filter(question=self)
 
 
@@ -302,10 +317,33 @@ class Query(graphene.ObjectType):
         return optimized_layer_resolve_qs(info).get(pk=id)
 
     def resolve_layer_group(self, info, question_id):
-        return models.LayerGroupOnQuestion.objects.filter(layeronquestion__question__id=question_id).distinct()
+        return (
+            models.LayerGroupOnQuestion.objects.filter(layeronquestion__question__id=question_id)
+            .select_related("layer_on_layer_group")
+            .distinct()
+        )
 
     def resolve_all_questions(self, info):
-        return models.Question.objects.all()
+        from django.db.models import Prefetch
+
+        # Prefetch the nested relationships to avoid N+1 queries
+        layers_on_layer_group_prefetch = Prefetch(
+            "layers",  # related_name from LayerOnLayerGroup to LayerGroupOnQuestion
+            queryset=models.LayerOnLayerGroup.objects.select_related("layer")
+            .defer(
+                "layer__serialized_leaflet_json",
+            )
+            .order_by("display_order"),
+        )
+
+        layer_groups_prefetch = Prefetch(
+            "layer_groups",  # related_name from LayerGroupOnQuestion to Question
+            queryset=models.LayerGroupOnQuestion.objects.prefetch_related(layers_on_layer_group_prefetch).order_by(
+                "display_order"
+            ),
+        )
+
+        return models.Question.objects.prefetch_related(layer_groups_prefetch).all()
 
     def resolve_question(self, info, id):
         return models.Question.objects.get(pk=id)
