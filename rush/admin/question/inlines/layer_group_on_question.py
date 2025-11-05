@@ -25,5 +25,5 @@ class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
         """
         fields = super().get_fields(request, obj)
         if not request.user.is_superuser:
-            fields = [x for x in fields if x != "group_type"]
+            fields = [x for x in fields if x != "behaviour"]
         return fields
