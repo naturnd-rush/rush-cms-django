@@ -327,6 +327,10 @@ class Query(graphene.ObjectType):
         question_slug=graphene.String(required=True),
         question_tab_slug=graphene.String(required=True),
     )
+    default_question_tab = graphene.Field(
+        QuestionTabType,
+        question_slug=graphene.String(required=True),
+    )
 
     all_map_datas = graphene.List(MapDataWithoutGeoJsonType)
     map_data = graphene.Field(MapDataType, id=graphene.UUID(required=True))
@@ -386,6 +390,9 @@ class Query(graphene.ObjectType):
 
     def resolve_question_tab_by_slug(self, info, question_slug: str, question_tab_slug: str):
         return models.QuestionTab.objects.filter(slug=question_tab_slug, question__slug=question_slug).first()
+
+    def resolve_default_question_tab(self, info, question_slug: str):
+        return models.QuestionTab.objects.filter(question__slug=question_slug).first()
 
     def resolve_question_tab_by_id(self, info, id):
         return models.QuestionTab.objects.get(pk=id)
