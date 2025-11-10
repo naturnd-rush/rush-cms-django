@@ -47,28 +47,6 @@ DEPLOY_NGINX_CONFIG_PATH = config("DEPLOY_NGINX_CONFIG_PATH", cast=str)
 DEPLOY_NGINX_ENABLED_PATH = config("DEPLOY_NGINX_ENABLED_PATH", cast=str)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
 
-ENABLE_SILK_PROFILING = config("ENABLE_SILK_PROFILING", cast=bool)
-if ENABLE_SILK_PROFILING:
-    SILKY_PYTHON_PROFILER = True  # enables Python-level profiling
-    SILKY_PYTHON_PROFILER_BINARY = False  # False = more readable text output
-    SILKY_PYTHON_PROFILER_RESULT_PATH = BASE_DIR / "profiles"  # Save profiles to disk
-    SILKY_META = True  # optional, adds extra metadata
-
-    # Control what gets profiled
-    SILKY_INTERCEPT_PERCENT = 100  # Profile 100% of requests (default is 100)
-    SILKY_MAX_RECORDED_REQUESTS = 10000  # Keep more history
-    SILKY_MAX_RECORDED_REQUESTS_CHECK_PERCENT = 10  # How often to check
-
-    # More detailed profiling
-    SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME = True  # More descriptive filenames
-    SILKY_ANALYZE_QUERIES = True  # Analyze SQL queries in detail
-
-    # Fix for "Another profiling tool is already active" error
-    # This catches and ignores the error when concurrent requests try to profile
-    SILKY_PYTHON_PROFILER_FUNC = None  # Use default profiler
-    SILKY_IGNORE_PATHS = []  # Don't ignore any paths
-
-
 FILE_UPLOAD_HANDLERS = [
     # Forces file-uploads to write to disk as the buffer instead of memory.
     "django.core.files.uploadhandler.TemporaryFileUploadHandler",
@@ -98,7 +76,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # "silk.middleware.SilkyMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -108,6 +85,28 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+ENABLE_SILK_PROFILING = config("ENABLE_SILK_PROFILING", cast=bool)
+if ENABLE_SILK_PROFILING:
+    MIDDLEWARE = ["silk.middleware.SilkyMiddleware", *MIDDLEWARE]  # Add silk middleware at beginning
+    SILKY_PYTHON_PROFILER = True  # enables Python-level profiling
+    SILKY_PYTHON_PROFILER_BINARY = False  # False = more readable text output
+    SILKY_PYTHON_PROFILER_RESULT_PATH = BASE_DIR / "profiles"  # Save profiles to disk
+    SILKY_META = True  # optional, adds extra metadata
+
+    # Control what gets profiled
+    SILKY_INTERCEPT_PERCENT = 100  # Profile 100% of requests (default is 100)
+    SILKY_MAX_RECORDED_REQUESTS = 10000  # Keep more history
+    SILKY_MAX_RECORDED_REQUESTS_CHECK_PERCENT = 10  # How often to check
+
+    # More detailed profiling
+    SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME = True  # More descriptive filenames
+    SILKY_ANALYZE_QUERIES = True  # Analyze SQL queries in detail
+
+    # Fix for "Another profiling tool is already active" error
+    # This catches and ignores the error when concurrent requests try to profile
+    SILKY_PYTHON_PROFILER_FUNC = None  # Use default profiler
+    SILKY_IGNORE_PATHS = []  # Don't ignore any paths
 
 # Reverse proxy configuration
 # Tell Django to read the real client IP from proxy headers
