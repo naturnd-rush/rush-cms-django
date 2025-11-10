@@ -263,3 +263,26 @@ else:
             "TIMEOUT": 300,  # Default cache timeout: 5 minutes (None = never expire)
         }
     }
+
+
+SUMMERNOTE_CONFIG = {
+    "summernote": {
+        "fontNames": [
+            "Poppins",
+            "Urbanist",
+            "Raleway",
+            "Figtree",
+            "Bitter",
+        ],
+        "fontNamesIgnoreCheck": [
+            "Poppins",
+            "Urbanist",
+            "Raleway",
+            "Figtree",
+            "Bitter",
+        ],
+        "callbacks": {
+            "onPaste": "function(e) { console.log('Called event paste');}",
+        },
+    },
+}
