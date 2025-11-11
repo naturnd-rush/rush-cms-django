@@ -4,7 +4,9 @@ node_modules/
 backups/
 logs/*
 poetry.lock
-
+.dev-collected-staticfiles/*
+.dev-mediafiles/*
+.claude/*
 
 ####
 # Auto-generated gitignore for python below...

@@ -3,12 +3,12 @@ from typing import List
 import graphene
 from django.conf import settings
 from django.core.cache import cache
-from django.core.cache.utils import make_template_fragment_key
 from django.db.models import Prefetch, QuerySet
 from graphene.types import ResolveInfo
 from graphene_django.types import DjangoObjectType
 
 from rush import models
+from rush.context_processors import base_url_from_request
 
 """
 GraphQL Schema for RUSH models. This file defines what data GraphQL
@@ -315,6 +315,8 @@ def optimized_question_resolve_qs() -> QuerySet[models.Question]:
 
 class Query(graphene.ObjectType):
 
+    base_admin_url = graphene.Field(graphene.String)
+
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
 
@@ -326,6 +328,10 @@ class Query(graphene.ObjectType):
         QuestionTabType,
         question_slug=graphene.String(required=True),
         question_tab_slug=graphene.String(required=True),
+    )
+    default_question_tab = graphene.Field(
+        QuestionTabType,
+        question_slug=graphene.String(required=True),
     )
 
     all_map_datas = graphene.List(MapDataWithoutGeoJsonType)
@@ -340,6 +346,9 @@ class Query(graphene.ObjectType):
 
     all_pages = graphene.List(PageType)
     page = graphene.Field(PageType, id=graphene.UUID(required=True))
+
+    def resolve_base_admin_url(self, info):
+        return base_url_from_request(info.context)
 
     def resolve_all_layers(self, info):
         return optimized_layer_resolve_qs(info).all()
@@ -386,6 +395,9 @@ class Query(graphene.ObjectType):
 
     def resolve_question_tab_by_slug(self, info, question_slug: str, question_tab_slug: str):
         return models.QuestionTab.objects.filter(slug=question_tab_slug, question__slug=question_slug).first()
+
+    def resolve_default_question_tab(self, info, question_slug: str):
+        return models.QuestionTab.objects.filter(question__slug=question_slug).first()
 
     def resolve_question_tab_by_id(self, info, id):
         return models.QuestionTab.objects.get(pk=id)
