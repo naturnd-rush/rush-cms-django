@@ -3,12 +3,12 @@ from typing import List
 import graphene
 from django.conf import settings
 from django.core.cache import cache
-from django.core.cache.utils import make_template_fragment_key
 from django.db.models import Prefetch, QuerySet
 from graphene.types import ResolveInfo
 from graphene_django.types import DjangoObjectType
 
 from rush import models
+from rush.context_processors import base_url_from_request
 
 """
 GraphQL Schema for RUSH models. This file defines what data GraphQL
@@ -315,6 +315,8 @@ def optimized_question_resolve_qs() -> QuerySet[models.Question]:
 
 class Query(graphene.ObjectType):
 
+    base_admin_url = graphene.Field(graphene.String)
+
     all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
 
@@ -344,6 +346,9 @@ class Query(graphene.ObjectType):
 
     all_pages = graphene.List(PageType)
     page = graphene.Field(PageType, id=graphene.UUID(required=True))
+
+    def resolve_base_admin_url(self, info):
+        return base_url_from_request(info.context)
 
     def resolve_all_layers(self, info):
         return optimized_layer_resolve_qs(info).all()
