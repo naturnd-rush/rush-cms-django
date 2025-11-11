@@ -2,7 +2,7 @@ from adminsortable2.admin import SortableTabularInline
 from django.contrib.admin import TabularInline
 from django_summernote.admin import SummernoteModelAdminMixin
 
-from rush.admin.question.forms import QuestionTabForm
+from rush.admin.question.forms import QuestionTabInlineForm
 from rush.models import QuestionTab
 
 
@@ -12,7 +12,7 @@ class QuestionTabInline(SortableTabularInline, SummernoteModelAdminMixin, Tabula
     """
 
     exclude = ["id"]
-    form = QuestionTabForm
+    form = QuestionTabInlineForm
     model = QuestionTab
     extra = 0  # don't display extra question tabs to add, let the user click
     sortable_field_name = "display_order"
@@ -23,6 +23,9 @@ class QuestionTabInline(SortableTabularInline, SummernoteModelAdminMixin, Tabula
     )
 
     def get_formset(self, request, obj=None, **kwargs):
+        """
+        Inject request onto the form (needed for )
+        """
         formset_class = super().get_formset(request, obj, **kwargs)
         formset_class.form.request = request  # type: ignore
         return formset_class

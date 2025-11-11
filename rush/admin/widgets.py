@@ -1,12 +1,77 @@
+import json
 from dataclasses import dataclass
 from typing import Any, List
 
 from django.db.models import Model
 from django.forms import Select
+from django.forms.utils import flatatt
 from django.template import Context, Engine
+from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django_summernote.widgets import SummernoteWidgetBase
 
 from rush.context_processors import base_url_from_request
+
+
+class SummernoteWidget(SummernoteWidgetBase):
+    """
+    Provide a default summernote-editor widget for RUSH admin, that can optionally be passed
+    some summernote configuration overrides, e.g., to change the width or height of the widget.
+    """
+
+    DEFAULT_SUMMERNOTE_SETTINGS = {
+        "height": "500px",
+        "width": "500px",
+        "toolbar": [
+            ["style", ["style"]],
+            ["font", ["bold", "underline", "clear"]],
+            ["fontname", ["fontname"]],
+            ["color", ["color"]],
+            ["para", ["ul", "ol", "paragraph"]],
+            # ["table", ["table"]],
+            ["insert", ["link", "picture", "video"]],
+        ],
+        "styleTags": ["h1", "h2", "h3", "p"],
+        "fontNames": [
+            "Poppins",
+            "Urbanist",
+            "Raleway",
+            "Figtree",
+            "Bitter",
+        ],
+        "fontNamesIgnoreCheck": [
+            "Poppins",
+            "Urbanist",
+            "Raleway",
+            "Figtree",
+            "Bitter",
+        ],
+    }
+
+    def __init__(self, **override_summernote_settings):
+        self.override_summernote_settings = override_summernote_settings
+        super().__init__()
+
+    def render(self, name, value, attrs=None, **kwargs):
+        if attrs is None:
+            attrs = {}
+        summernote_settings = self.summernote_settings()
+        summernote_settings.update(self.DEFAULT_SUMMERNOTE_SETTINGS)
+        summernote_settings.update(self.override_summernote_settings)
+        html = super().render(name, value, attrs=attrs, **kwargs)
+        context = {
+            "id": attrs["id"],
+            "id_safe": attrs["id"].replace("-", "_"),
+            "flat_attrs": flatatt(self.final_attr(attrs)),
+            "settings": json.dumps(summernote_settings),
+            "src": reverse("django_summernote-editor", kwargs={"id": attrs["id"]}),
+            # Width and height have to be pulled out to create an iframe with correct size
+            "width": summernote_settings["width"],
+            "height": summernote_settings["height"],
+        }
+        html += render_to_string("django_summernote/widget_iframe.html", context)
+        return mark_safe(html)
 
 
 class TiledForeignKeyWidget(Select):
