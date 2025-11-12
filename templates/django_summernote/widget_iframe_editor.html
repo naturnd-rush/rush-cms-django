@@ -13,49 +13,106 @@
             .note-editor {
                 margin-bottom: 0;
             }
+            
+            /* Global Variables */
+            body {
+                --rush-text-color: rgb(26, 32, 44);
+            }
+
+            /* Default Text Color */
+            p, h1, h2, h3, h4, h5, h6, .rush-title, .rush-subtitle, .rush-hint {
+                color: var(--rush-text-color)
+            }
+
+            /* Normal */
+            p {
+                font-family: 'Bitter Variable', 'Times New Roman', Times, serif;
+                font-weight: 500;
+                font-size: 0.875rem;
+            }
+
+            /* Title */
+            .rush-title {
+                font-family: 'Figtree Variable', Arial, Helvetica, sans-serif;
+                font-weight: 700;
+                font-size: 2.5rem;
+            }
+
+            /* Subtitle */
+            .rush-subtitle {
+                font-family: 'Urbanist Variable', Arial, Helvetica, sans-serif;
+                font-weight: 500;
+                font-size: 1rem;
+            }
+
+            /* Hint */
+            .rush-hint {
+                font-family: 'Urbanist Variable', Arial, Helvetica, sans-serif;
+                font-weight: 400;
+                font-size: 0.75rem;
+            }
+
+            h1, h2, h3, h4, h5, h6 {
+                font-family: 'Poppins';
+                font-weight: 500;
+            }
+
             /* poppins-latin-700-normal */
             @font-face {
-                font-family: 'Poppins';
+                font-family: Poppins;
                 font-style: normal;
-                font-display: swap;
+                font-display: auto;
                 font-weight: 700;
-                src: url(https://cdn.jsdelivr.net/fontsource/fonts/poppins@latest/latin-700-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/fontsource/fonts/poppins@latest/latin-700-normal.woff) format('woff');
+                src: url(https://cdn.jsdelivr.net/fontsource/fonts/poppins@latest/latin-700-normal.woff2) format('woff2'), url("https://cdn.jsdelivr.net/fontsource/fonts/poppins@latest/latin-700-normal.woff") format('woff');
                 unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
             }
-            /* urbanist-latin-500-normal */
+
+            /* poppins-latin-500-normal */
             @font-face {
-                font-family: 'Urbanist';
+                font-family: Poppins;
                 font-style: normal;
-                font-display: swap;
+                font-display: auto;
                 font-weight: 500;
-                src: url(https://cdn.jsdelivr.net/fontsource/fonts/urbanist@latest/latin-500-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/fontsource/fonts/urbanist@latest/latin-500-normal.woff) format('woff');
+                src: url(https://cdn.jsdelivr.net/fontsource/fonts/poppins@latest/latin-500-normal.woff2) format('woff2'), url("https://cdn.jsdelivr.net/fontsource/fonts/poppins@latest/latin-500-normal.woff") format('woff');
                 unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
             }
-            /* raleway-latin-400-normal */
+
+            /* bitter-latin-wght-normal */
             @font-face {
-                font-family: 'Raleway';
+                font-family: 'Bitter Variable';
                 font-style: normal;
-                font-display: swap;
-                font-weight: 400;
-                src: url(https://cdn.jsdelivr.net/fontsource/fonts/raleway@latest/latin-400-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/fontsource/fonts/raleway@latest/latin-400-normal.woff) format('woff');
+                font-display: auto;
+                font-weight: 100 900;
+                src: url(https://cdn.jsdelivr.net/fontsource/fonts/bitter:vf@latest/latin-wght-normal.woff2) format('woff2-variations');
                 unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
             }
-            /* figtree-latin-700-normal */
+            /* bitter-latin-wght-italic */
             @font-face {
-                font-family: 'Figtree';
-                font-style: normal;
-                font-display: swap;
-                font-weight: 700;
-                src: url(https://cdn.jsdelivr.net/fontsource/fonts/figtree@latest/latin-700-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/fontsource/fonts/figtree@latest/latin-700-normal.woff) format('woff');
+                font-family: 'Bitter Variable';
+                font-style: italic;
+                font-display: auto;
+                font-weight: 100 900;
+                src: url(https://cdn.jsdelivr.net/fontsource/fonts/bitter:vf@latest/latin-wght-italic.woff2) format('woff2-variations');
                 unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
             }
-            /* bitter-latin-500-normal */
+
+            /* urbanist-latin-wght-normal */
             @font-face {
-                font-family: 'Bitter';
+                font-family: 'Urbanist Variable';
                 font-style: normal;
                 font-display: swap;
-                font-weight: 500;
-                src: url(https://cdn.jsdelivr.net/fontsource/fonts/bitter@latest/latin-500-normal.woff2) format('woff2'), url(https://cdn.jsdelivr.net/fontsource/fonts/bitter@latest/latin-500-normal.woff) format('woff');
+                font-weight: 100 900;
+                src: url(https://cdn.jsdelivr.net/fontsource/fonts/urbanist:vf@latest/latin-wght-normal.woff2) format('woff2-variations');
+                unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+            }
+
+            /* figtree-latin-wght-normal */
+            @font-face {
+                font-family: 'Figtree Variable';
+                font-style: normal;
+                font-display: swap;
+                font-weight: 300 900;
+                src: url(https://cdn.jsdelivr.net/fontsource/fonts/figtree:vf@latest/latin-wght-normal.woff2) format('woff2-variations');
                 unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
             }
         </style>
