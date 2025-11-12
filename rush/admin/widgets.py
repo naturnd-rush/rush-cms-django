@@ -26,7 +26,7 @@ class SummernoteWidget(SummernoteWidgetBase):
         "toolbar": [
             ["style", ["style"]],
             ["font", ["bold", "underline", "clear"]],
-            ["fontname", ["fontname"]],
+            # ["fontname", ["fontname"]],
             ["color", ["color"]],
             ["para", ["ul", "ol", "paragraph"]],
             # ["table", ["table"]],
