@@ -14,34 +14,34 @@ p, h1, h2, h3, h4, h5, h6, .rush-title, .rush-subtitle, .rush-hint {
 
 /* Normal */
 p {
-    font-family: 'Bitter Variable', 'Times New Roman', Times, serif;
+    font-family: Bitter, 'Times New Roman', Times, serif;
     font-weight: 500;
     font-size: 0.875rem;
 }
 
 /* Title */
 .rush-title {
-    font-family: 'Figtree Variable', Arial, Helvetica, sans-serif;
+    font-family: Figtree, Arial, Helvetica, sans-serif;
     font-weight: 700;
     font-size: 2.5rem;
 }
 
 /* Subtitle */
 .rush-subtitle {
-    font-family: 'Urbanist Variable', Arial, Helvetica, sans-serif;
+    font-family: Urbanist, Arial, Helvetica, sans-serif;
     font-weight: 500;
     font-size: 1rem;
 }
 
 /* Hint */
 .rush-hint {
-    font-family: 'Urbanist Variable', Arial, Helvetica, sans-serif;
+    font-family: Urbanist, Arial, Helvetica, sans-serif;
     font-weight: 400;
     font-size: 0.75rem;
 }
 
 h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins';
+    font-family: Poppins;
     font-weight: 500;
 }
 
@@ -67,7 +67,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* bitter-latin-wght-normal */
 @font-face {
-    font-family: 'Bitter Variable';
+    font-family: Bitter;
     font-style: normal;
     font-display: auto;
     font-weight: 100 900;
@@ -76,7 +76,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 /* bitter-latin-wght-italic */
 @font-face {
-    font-family: 'Bitter Variable';
+    font-family: Bitter;
     font-style: italic;
     font-display: auto;
     font-weight: 100 900;
@@ -86,7 +86,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* urbanist-latin-wght-normal */
 @font-face {
-    font-family: 'Urbanist Variable';
+    font-family: Urbanist;
     font-style: normal;
     font-display: swap;
     font-weight: 100 900;
@@ -96,7 +96,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* figtree-latin-wght-normal */
 @font-face {
-    font-family: 'Figtree Variable';
+    font-family: Figtree;
     font-style: normal;
     font-display: swap;
     font-weight: 300 900;
