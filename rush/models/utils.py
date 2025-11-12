@@ -1,3 +1,4 @@
+import html
 from io import BytesIO
 
 import bleach
@@ -115,15 +116,20 @@ class SummernoteTextCleaner:
         "max-height",
         "min-width",
         "min-height",
+        "font-family",
+        "font-weight",
+        "font-size",
     ]
 
     @classmethod
-    def clean(cls, html: str) -> str:
-        return bleach.clean(
-            text=html,
+    def clean(cls, text: str) -> str:
+        unescaped = text.replace("&quot;", "'")
+        cleaned = bleach.clean(
+            text=unescaped,
             attributes=cls.ALLOWED_ATTRIBUTES,
             tags=cls.ALLOWED_TAGS,
             css_sanitizer=bleach.css_sanitizer.CSSSanitizer(
                 allowed_css_properties=cls.BLEACH_ALLOWED_STYLES,
             ),
         )
+        return cleaned

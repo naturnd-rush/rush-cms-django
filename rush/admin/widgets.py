@@ -26,7 +26,7 @@ class SummernoteWidget(SummernoteWidgetBase):
         "toolbar": [
             ["style", ["style"]],
             ["font", ["bold", "underline", "clear"]],
-            # ["fontname", ["fontname"]],
+            ["fontname", ["fontname"]],
             ["color", ["color"]],
             ["para", ["ul", "ol", "paragraph"]],
             # ["table", ["table"]],
@@ -64,6 +64,12 @@ class SummernoteWidget(SummernoteWidgetBase):
                 "className": "rush-hint",
                 "value": "p",
             },
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
         ],
         "fontNames": [
             "Poppins",
