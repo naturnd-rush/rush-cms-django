@@ -1,18 +1,14 @@
-from uuid import uuid4
-
-import adminsortable2.admin as sortable_admin
-import nested_admin.forms as nested_forms
-import nested_admin.nested as nested_admin
 from django import forms
 from django.contrib import admin
 from django.db import models
 from django.urls import reverse
 from django.utils.html import format_html_join
 from django.utils.safestring import mark_safe
-from django_summernote.admin import SummernoteModelAdmin, SummernoteModelAdminMixin
+from django_summernote.admin import SummernoteModelAdmin
 
 from rush import models
 from rush.admin import utils
+from rush.admin.widgets import SummernoteWidget
 
 
 class InitiativeForm(forms.ModelForm):
@@ -29,6 +25,7 @@ class InitiativeForm(forms.ModelForm):
         Inject image HTML in "image" field help text.
         """
         super().__init__(*args, **kwargs)
+        self.fields["content"].widget = SummernoteWidget()
         if self.instance and self.instance.image:
             self.fields["image"].help_text = utils.image_html(self.instance.image.url)
 
@@ -74,7 +71,7 @@ class InitiativeAdmin(SummernoteModelAdmin):
 
 
 @admin.register(models.InitiativeTag)
-class InitiativeTagAdmin(SummernoteModelAdmin):
+class InitiativeTagAdmin(admin.ModelAdmin):
     exclude = ["id"]
     list_display = ["name", "preview", "tagged_initiatives"]
     search_fields = ["name"]
@@ -145,11 +142,22 @@ class InitiativeTagAdmin(SummernoteModelAdmin):
 #     sortable_field_name = "display_order"
 
 
+class PageAdminForm(forms.ModelForm):
+
+    class Meta:
+        model = models.Page
+        exclude = ["id"]
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["content"].widget = SummernoteWidget(width="800px")
+
+
 @admin.register(models.Page)
-class PageAdmin(SummernoteModelAdmin, admin.ModelAdmin):
+class PageAdmin(SummernoteModelAdmin):
     """
     Admin page for editing other, non-map-related, Pages on the website.
     """
 
-    summernote_fields = ["content"]
-    exclude = ["id"]
+    form = PageAdminForm
