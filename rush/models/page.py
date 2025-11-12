@@ -2,6 +2,8 @@ import uuid
 
 from django.db import models
 
+from rush.models.utils import SummernoteTextCleaner
+
 
 class Page(models.Model):
     """
@@ -17,6 +19,9 @@ class Page(models.Model):
         blank=True,
         help_text="An optional background image that will appear behind the main content of the page.",
     )
+
+    def clean(self) -> None:
+        self.content = SummernoteTextCleaner.clean(self.content)
 
     def __str__(self):
         return f"{self.title} - Page"

@@ -151,7 +151,7 @@ class PageAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["content"].widget = SummernoteWidget()
+        self.fields["content"].widget = SummernoteWidget(width="800px")
 
 
 @admin.register(models.Page)

@@ -5,6 +5,8 @@ from django.core.cache import cache
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from rush.models.utils import SummernoteTextCleaner
+
 
 class Layer(models.Model):
     """
@@ -24,6 +26,9 @@ class Layer(models.Model):
     )
     styles = models.ManyToManyField("Style", through="StylesOnLayer")
     serialized_leaflet_json = models.JSONField(default=dict, null=True, blank=True)
+
+    def clean(self) -> None:
+        self.description = SummernoteTextCleaner.clean(self.description)
 
     def __str__(self):
         return self.name

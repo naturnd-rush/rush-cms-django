@@ -30,9 +30,41 @@ class SummernoteWidget(SummernoteWidgetBase):
             ["color", ["color"]],
             ["para", ["ul", "ol", "paragraph"]],
             # ["table", ["table"]],
-            ["insert", ["link", "picture", "video"]],
+            [
+                "insert",
+                [
+                    "link",
+                    "picture",
+                    # "video",
+                ],
+            ],
         ],
-        "styleTags": ["h1", "h2", "h3", "p"],
+        "styleTags": [
+            {
+                "tag": "p",
+                "title": "Title",
+                "className": "rush-title",
+                "value": "p",
+            },
+            {
+                "tag": "p",
+                "title": "Subtitle",
+                "className": "rush-subtitle",
+                "value": "p",
+            },
+            {
+                "tag": "p",
+                "title": "Normal",
+                # "className": "rush-hint",
+                "value": "p",
+            },
+            {
+                "tag": "p",
+                "title": "Hint",
+                "className": "rush-hint",
+                "value": "p",
+            },
+        ],
         "fontNames": [
             "Poppins",
             "Urbanist",
@@ -47,6 +79,7 @@ class SummernoteWidget(SummernoteWidgetBase):
             "Figtree",
             "Bitter",
         ],
+        # "addDefaultFonts": False,
     }
 
     def __init__(self, **override_summernote_settings):

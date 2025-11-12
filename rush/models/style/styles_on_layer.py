@@ -2,6 +2,8 @@ import uuid
 
 from django.db import models
 
+from rush.models.utils import SummernoteTextCleaner
+
 
 class StylesOnLayer(models.Model):
     """
@@ -31,3 +33,7 @@ class StylesOnLayer(models.Model):
 
     # Optional HTML text field for describing what the popup template will be used
     popup = models.TextField(null=True, blank=True)
+
+    def clean(self) -> None:
+        if self.popup:
+            self.popup = SummernoteTextCleaner.clean(self.popup)
