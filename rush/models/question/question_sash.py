@@ -9,6 +9,9 @@ class QuestionSash(models.Model):
     A decorative sash that can be added to questions for flair.
     """
 
+    class Meta:
+        verbose_name_plural = "Question Sashes"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     text = models.CharField(max_length=24)
     text_color = ColorField()
