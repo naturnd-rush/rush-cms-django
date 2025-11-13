@@ -38,6 +38,7 @@ class Question(models.Model):
         help_text="A decorative sash that can be added to questions for flair.",
         related_name="questions",
     )
+    basemaps = models.ManyToManyField(to="BasemapSource", related_name="questions")
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 
     def __str__(self):
