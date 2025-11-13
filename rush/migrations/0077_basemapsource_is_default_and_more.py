@@ -15,6 +15,11 @@ class Migration(migrations.Migration):
             name="is_default",
             field=models.BooleanField(default=False),
         ),
+        migrations.AddField(
+            model_name="basemapsource",
+            name="name",
+            field=models.CharField(max_length=255, null=True),
+        ),
         migrations.AddConstraint(
             model_name="basemapsource",
             constraint=models.UniqueConstraint(

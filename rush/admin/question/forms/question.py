@@ -1,7 +1,7 @@
 from django.forms import ModelForm
 
 from rush.admin.utils import image_html
-from rush.models import Question
+from rush.models import BasemapSource, Question
 
 
 class QuestionForm(ModelForm):
@@ -18,6 +18,7 @@ class QuestionForm(ModelForm):
             "image",
             "sash",
             "initiatives",
+            "basemaps",
         ]
 
     def __init__(self, *args, **kwargs):
@@ -28,3 +29,7 @@ class QuestionForm(ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.image:
             self.fields["image"].help_text = image_html(self.instance.image.url)
+
+        if not Question.objects.filter(id=self.instance.id).exists():
+            # Add default basemap source to the form when creating new Questions
+            self.fields["basemaps"].initial = [BasemapSource.objects.default()]

@@ -24,7 +24,7 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
         "display_order",
     ]
     prepopulated_fields = {"slug": ("title",)}
-    autocomplete_fields = ["initiatives", "sash"]
+    autocomplete_fields = ["initiatives", "sash", "basemaps"]
     inlines = [QuestionTabInline, LayerGroupOnQuestionInline]
     actions = ["duplicate_object"]
     sortable_field_name = "display_order"  # Enable drag-and-drop for Questions in the list view

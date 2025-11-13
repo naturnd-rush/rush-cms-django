@@ -6,6 +6,7 @@ from django.db import migrations
 def create_default_basemap_source(apps, schema_editor):
     BasemapSource = apps.get_model("rush", "BasemapSource")
     BasemapSource.objects.create(
+        name="Satellite Basemap (Default)",
         tile_url="https://api.mapbox.com/styles/v1/rushadmin/clw2m6f9b018001obfxcc747g/tiles/256/{z}/{x}/{y}@2x",
         attribution='© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>',
         max_zoom=22,
