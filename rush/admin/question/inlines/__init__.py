@@ -1,8 +1,8 @@
 if True:
     # Must init before LayerGroupOnQuestionInline
-    from rush.admin.question.inlines.layer_on_layer_group import LayerOnLayerGroupInline
+    from rush.admin.question.inlines.layer_on_layer_group_inline import LayerOnLayerGroupInline
 
-from rush.admin.question.inlines.layer_group_on_question import (
+from rush.admin.question.inlines.layer_group_on_question_inline import (
     LayerGroupOnQuestionInline,
 )
-from rush.admin.question.inlines.question_tab import QuestionTabInline
+from rush.admin.question.inlines.question_tab_inline import QuestionTabInline
