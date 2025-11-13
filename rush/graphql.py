@@ -213,6 +213,17 @@ class InitiativeType(DjangoObjectType):
         fields = ["id", "title", "link", "image", "content", "tags"]
 
 
+class QuestionSashType(DjangoObjectType):
+    class Meta:
+        model = models.QuestionSash
+        fields = [
+            "id",
+            "text",
+            "text_color",
+            "background_color",
+        ]
+
+
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
@@ -221,6 +232,7 @@ class QuestionType(DjangoObjectType):
             "title",
             "subtitle",
             "image",
+            "sash",
             "initiatives",
             "tabs",
             "slug",
