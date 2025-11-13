@@ -29,6 +29,15 @@ class Question(models.Model):
     initiatives = models.ManyToManyField(to="Initiative", blank=True)
     questions = models.ManyToManyField(to="Layer", related_name="questions")
     slug = models.SlugField(max_length=255, unique=True)
+    sash = models.ForeignKey(
+        to="QuestionSash",
+        # Sash should be set to null if deleted.
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="A decorative sash that can be added to questions for flair.",
+        related_name="questions",
+    )
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 
     def __str__(self):

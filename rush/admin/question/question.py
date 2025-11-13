@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from adminsortable2.admin import SortableAdminMixin
 from django.contrib import admin
+from django.utils.safestring import mark_safe
 from nested_admin.nested import NestedModelAdmin
 
 from rush.admin.question.forms import QuestionForm
@@ -18,15 +19,22 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
         "title",
         "slug",
         "image_preview",
+        "sash_preview",
         "get_initiatives",
         "display_order",
     ]
     prepopulated_fields = {"slug": ("title",)}
-    autocomplete_fields = ["initiatives"]
+    autocomplete_fields = ["initiatives", "sash"]
     inlines = [QuestionTabInline, LayerGroupOnQuestionInline]
     actions = ["duplicate_object"]
     sortable_field_name = "display_order"  # Enable drag-and-drop for Questions in the list view
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
+
+    @admin.display(description="Sash")
+    def sash_preview(self, obj: Question):
+        if obj and obj.sash:
+            return mark_safe(obj.sash.get_html_preview())
+        return "-"
 
     def image_preview(self, obj):
         """
