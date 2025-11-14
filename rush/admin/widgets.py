@@ -27,6 +27,7 @@ class SummernoteWidget(SummernoteWidgetBase):
             ["style", ["style"]],
             ["font", ["bold", "underline", "clear"]],
             ["fontname", ["fontname"]],
+            ["fontsize", ["fontsize"]],
             ["color", ["color"]],
             ["para", ["ul", "ol", "paragraph"]],
             # ["table", ["table"]],
@@ -55,7 +56,6 @@ class SummernoteWidget(SummernoteWidgetBase):
             {
                 "tag": "p",
                 "title": "Normal",
-                # "className": "rush-hint",
                 "value": "p",
             },
             {
