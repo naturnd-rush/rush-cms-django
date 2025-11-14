@@ -6,7 +6,11 @@ from django.utils.safestring import mark_safe
 from nested_admin.nested import NestedModelAdmin
 
 from rush.admin.question.forms import QuestionForm
-from rush.admin.question.inlines import LayerGroupOnQuestionInline, QuestionTabInline
+from rush.admin.question.inlines import (
+    BasemapSourceOnQuestionInline,
+    LayerGroupOnQuestionInline,
+    QuestionTabInline,
+)
 from rush.admin.utils import image_html
 from rush.models import Question
 
@@ -24,8 +28,12 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
         "display_order",
     ]
     prepopulated_fields = {"slug": ("title",)}
-    autocomplete_fields = ["initiatives", "sash", "basemaps"]
-    inlines = [QuestionTabInline, LayerGroupOnQuestionInline]
+    autocomplete_fields = ["initiatives", "sash"]
+    inlines = [
+        BasemapSourceOnQuestionInline,
+        QuestionTabInline,
+        LayerGroupOnQuestionInline,
+    ]
     actions = ["duplicate_object"]
     sortable_field_name = "display_order"  # Enable drag-and-drop for Questions in the list view
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields

@@ -224,6 +224,31 @@ class QuestionSashType(DjangoObjectType):
         ]
 
 
+class BasemapSourceType(DjangoObjectType):
+    class Meta:
+        model = models.BasemapSource
+        fields = [
+            "name",
+            "tile_url",
+            "max_zoom",
+            "attribution",
+            # "is_default"
+            # ^^ excluded because being "default" is an overloaded concept here. When you see "is_default=True", it means that
+            #    that basemap is the global default basemap for all questions at question-editing time, while "is_default_for_question"
+            #    means that when a particular question is clicked on by a visitor to the site, that is the basemap that should be loaded
+            #    by default.
+        ]
+
+
+class BasemapSourceOnQuestionType(DjangoObjectType):
+    class Meta:
+        model = models.BasemapSourceOnQuestion
+        fields = [
+            "basemap_source",
+            "is_default_for_question",
+        ]
+
+
 class QuestionType(DjangoObjectType):
     class Meta:
         model = models.Question
@@ -237,6 +262,7 @@ class QuestionType(DjangoObjectType):
             "tabs",
             "slug",
             "display_order",
+            "basemaps",
         ]
 
     # Link one half of the many-to-many through table in the graphql schema
@@ -248,6 +274,15 @@ class QuestionType(DjangoObjectType):
                 # use prefetched layer-groups if available
                 return self.layer_groups.all()  # type: ignore
         return models.LayerGroupOnQuestion.objects.filter(question=self)
+
+    basemaps = graphene.List(BasemapSourceOnQuestionType)
+
+    def resolve_basemaps(self, info):
+        if prefetch_cache := getattr(self, "_prefetched_objects_cache", None):
+            if "basemaps" in prefetch_cache:
+                # use prefetched basemaps if available
+                return self.basemaps.all()  # type: ignore
+        return models.BasemapSourceOnQuestion.objects.filter(question=self)
 
 
 class PageType(DjangoObjectType):
@@ -321,8 +356,8 @@ def optimized_question_resolve_qs() -> QuerySet[models.Question]:
                     .order_by("display_order"),
                 )
             ).order_by("display_order"),
-        )
-    )
+        ),
+    ).prefetch_related("basemaps")
 
 
 class Query(graphene.ObjectType):
