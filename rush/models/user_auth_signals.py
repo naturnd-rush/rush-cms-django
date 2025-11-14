@@ -2,7 +2,6 @@ import logging
 
 from django.contrib.admin.models import CHANGE, LogEntry
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth.signals import (
     user_logged_in,
     user_logged_out,
