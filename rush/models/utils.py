@@ -1,4 +1,3 @@
-import html
 from io import BytesIO
 
 import bleach
@@ -97,6 +96,8 @@ class SummernoteTextCleaner:
         "del",
         "b",
         "i",
+        "button",
+        "input",
     ]
 
     ALLOWED_ATTRIBUTES = [

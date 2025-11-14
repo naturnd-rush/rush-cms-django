@@ -6,7 +6,7 @@ from colorfield.fields import ColorField
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
-from rush.models import utils
+from rush.models.utils import CompressionFailed, compress_image
 from rush.models.validators import (
     FiletypeValidator,
     validate_only_integers_and_whitespace,
@@ -161,10 +161,10 @@ def compress_marker_icon(sender, instance: Style, **kwargs):
         return
     if image := instance.marker_icon:
         try:
-            compressed = utils.compress_image(image, pixel_width=256)
+            compressed = compress_image(image, pixel_width=256)
             # save = False avoids double-saving for efficiency and just
             # assigns the compressed image value to the marker_icon field
             image.save(compressed.name, compressed, save=False)
             instance.is_marker_icon_compressed = True
-        except utils.CompressionFailed:
+        except CompressionFailed:
             pass

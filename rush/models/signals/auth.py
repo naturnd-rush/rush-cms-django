@@ -1,5 +1,3 @@
-import logging
-
 from django.contrib.admin.models import CHANGE, LogEntry
 from django.contrib.auth import get_user_model
 from django.contrib.auth.signals import (
@@ -7,14 +5,10 @@ from django.contrib.auth.signals import (
     user_logged_out,
     user_login_failed,
 )
-from django.contrib.contenttypes.models import ContentType
 from django.dispatch import receiver
 
+from rush.models.signals.utils import user_content_type
 from rush.utils import get_client_ip
-
-
-def user_content_type() -> ContentType:
-    return ContentType.objects.get_for_model(get_user_model())
 
 
 @receiver(user_logged_in)
