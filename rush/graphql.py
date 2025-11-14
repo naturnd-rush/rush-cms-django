@@ -1,6 +1,8 @@
 from typing import List
+from urllib.parse import urljoin
 
 import graphene
+from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Prefetch, QuerySet
@@ -14,6 +16,42 @@ from rush.context_processors import base_url_from_request
 GraphQL Schema for RUSH models. This file defines what data GraphQL
 is allowed to query and communicate to the frontend.
 """
+
+
+def convert_relative_images_to_absolute(html: str, info) -> str:
+    """
+    Convert all relative HTML image URLs to absolute ones (using Django's base media url).
+    The "info" parameter is graphql's query info object.
+    """
+
+    base_media_url = base_url_from_request(info.context)
+    soup = BeautifulSoup(html, "html.parser")
+
+    for img in soup.find_all("img"):
+
+        src = img.get("src")
+        if not isinstance(src, str):
+            # LOG TODO: Log a warning here!
+            continue
+
+        if not src:
+            # LOG TODO: Log a warning here!
+            continue
+
+        if (
+            src.startswith("http://")
+            or src.startswith("https://")
+            # the "//" is for protocol-agnostic urls
+            or src.startswith("//")
+            or src.startswith(base_media_url)
+        ):
+            # Skip if already absolute URL or already prefixed with the base-media-url
+            continue
+
+        # Build full absolute URL
+        img["src"] = urljoin(base_media_url, src.lstrip("/"))
+
+    return str(soup)
 
 
 class MapDataType(DjangoObjectType):
@@ -74,6 +112,17 @@ class StylesOnLayersType(DjangoObjectType):
             "layer",
         ]
 
+    legend_description = graphene.String()
+
+    def resolve_legend_description(self, info) -> str:
+        if not isinstance(self, models.StylesOnLayer):
+            raise ValueError("Expected object to be of type StylesOnLayer when resolving query.")
+        if not isinstance(self.legend_description, str):
+            # Not sure why but the linter thinks self.content here is potentially
+            # graphene.String() when the same code works for MapData.geojson.
+            raise ValueError("Expected StylesOnLayer.legend_description to be of type string at runtime.")
+        return convert_relative_images_to_absolute(html=self.legend_description, info=info)
+
 
 class StyleType(DjangoObjectType):
     class Meta:
@@ -122,6 +171,24 @@ class LayerType(DjangoObjectType):
             return models.StylesOnLayer.objects.filter(layer__id=self.id)
         raise ValueError("Expected Layer object while resolving query!")
 
+    description = graphene.String()
+
+    def resolve_description(self, info) -> str:
+        if not isinstance(self, models.Layer):
+            raise ValueError("Expected object to be of type Layer when resolving query.")
+        if not isinstance(self.description, str):
+            # Not sure why but the linter thinks self.content here is potentially
+            # graphene.String() when the same code works for MapData.geojson.
+            raise ValueError("Expected Layer.description to be of type string at runtime.")
+        return convert_relative_images_to_absolute(html=self.description, info=info)
+
+    serialized_leaflet_json = graphene.String()
+
+    def resolve_serialized_leaflet_json(self, info) -> str:
+        if not isinstance(self, models.Layer):
+            raise ValueError("Expected object to be of type Layer when resolving query.")
+        return convert_relative_images_to_absolute(html=str(self.serialized_leaflet_json), info=info)
+
 
 class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
     """
@@ -133,7 +200,23 @@ class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
 
     class Meta:  # type: ignore
         model = models.Layer
-        fields = ["id", "name", "description", "map_data"]
+        fields = [
+            "id",
+            "name",
+            "description",
+            "map_data",
+        ]
+
+    description = graphene.String()
+
+    def resolve_description(self, info) -> str:
+        if not isinstance(self, models.Layer):
+            raise ValueError("Expected object to be of type Layer when resolving query.")
+        if not isinstance(self.description, str):
+            # Not sure why but the linter thinks self.content here is potentially
+            # graphene.String() when the same code works for MapData.geojson.
+            raise ValueError("Expected Layer.description to be of type string at runtime.")
+        return convert_relative_images_to_absolute(html=self.description, info=info)
 
 
 class LayerOnLayerGroupType(DjangoObjectType):
@@ -185,7 +268,14 @@ class QuestionTabType(DjangoObjectType):
 
     class Meta:
         model = models.QuestionTab
-        fields = ["id", "title", "content", "display_order", "slug", "icon_url"]
+        fields = [
+            "id",
+            "title",
+            "content",
+            "display_order",
+            "slug",
+            "icon_url",
+        ]
 
     icon_url = graphene.String()
 
@@ -200,6 +290,17 @@ class QuestionTabType(DjangoObjectType):
             return url
         raise ValueError("Expected QuestionTab object while resolving query!")
 
+    content = graphene.String()
+
+    def resolve_content(self, info) -> str:
+        if not isinstance(self, models.QuestionTab):
+            raise ValueError("Expected object to be of type QuestionTab when resolving query.")
+        if not isinstance(self.content, str):
+            # Not sure why but the linter thinks self.content here is potentially
+            # graphene.String() when the same code works for MapData.geojson.
+            raise ValueError("Expected QuestionTab.content to be of type string at runtime.")
+        return convert_relative_images_to_absolute(html=self.content, info=info)
+
 
 class InitiativeTagType(DjangoObjectType):
     class Meta:
@@ -210,7 +311,25 @@ class InitiativeTagType(DjangoObjectType):
 class InitiativeType(DjangoObjectType):
     class Meta:
         model = models.Initiative
-        fields = ["id", "title", "link", "image", "content", "tags"]
+        fields = [
+            "id",
+            "title",
+            "link",
+            "image",
+            "content",
+            "tags",
+        ]
+
+    content = graphene.String()
+
+    def resolve_content(self, info) -> str:
+        if not isinstance(self, models.Initiative):
+            raise ValueError("Expected object to be of type Initiative when resolving query.")
+        if not isinstance(self.content, str):
+            # Not sure why but the linter thinks self.content here is potentially
+            # graphene.String() when the same code works for MapData.geojson.
+            raise ValueError("Expected initiative.content to be of type string at runtime.")
+        return convert_relative_images_to_absolute(html=self.content, info=info)
 
 
 class QuestionSashType(DjangoObjectType):
@@ -288,7 +407,23 @@ class QuestionType(DjangoObjectType):
 class PageType(DjangoObjectType):
     class Meta:
         model = models.Page
-        fields = ["id", "title", "content", "background_image"]
+        fields = [
+            "id",
+            "title",
+            "content",
+            "background_image",
+        ]
+
+    content = graphene.String()
+
+    def resolve_content(self, info) -> str:
+        if not isinstance(self, models.Page):
+            raise ValueError("Expected object to be of type Page when resolving query.")
+        if not isinstance(self.content, str):
+            # Not sure why but the linter thinks self.content here is potentially
+            # graphene.String() when the same code works for MapData.geojson.
+            raise ValueError("Expected page.content to be of type string at runtime.")
+        return convert_relative_images_to_absolute(html=self.content, info=info)
 
 
 def get_requested_fields(info: ResolveInfo) -> List[str]:
