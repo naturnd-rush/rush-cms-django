@@ -1,10 +1,12 @@
-from django.contrib.admin import ModelAdmin, register
+from django.contrib.admin import register
+from django_summernote.admin import SummernoteModelAdmin
 
+from rush.admin.basemap_source.forms import BasemapSourceForm
 from rush.models import BasemapSource
 
 
 @register(BasemapSource)
-class BasemapSourceAdmin(ModelAdmin):
+class BasemapSourceAdmin(SummernoteModelAdmin):
     exclude = ["id"]
     list_display = [
         "name",
@@ -14,6 +16,7 @@ class BasemapSourceAdmin(ModelAdmin):
         "is_default",
     ]
     search_fields = ["name", "tile_url"]
+    form = BasemapSourceForm
 
     def get_fields(self, request, obj=None):
         """
