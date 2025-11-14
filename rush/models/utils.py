@@ -97,6 +97,8 @@ class SummernoteTextCleaner:
         "del",
         "b",
         "i",
+        "button",
+        "input",
     ]
 
     ALLOWED_ATTRIBUTES = [
