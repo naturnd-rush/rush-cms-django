@@ -12,7 +12,7 @@ from rush.admin.question.inlines import (
     QuestionTabInline,
 )
 from rush.admin.utils import image_html
-from rush.models import Question
+from rush.models import BasemapSource, BasemapSourceOnQuestion, Question
 
 
 @admin.register(Question)
@@ -67,3 +67,31 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
             obj.save()
 
         self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
+
+    def save_related(self, request, form, formsets, change):
+        """
+        Runs AFTER the main object is saved, and AFTER all inlines are saved.
+        Perfect place to enforce defaults or create missing inline rows.
+        # TODO: HOLY CRAP I NEED TO UNIT TEST THIS.
+        """
+        super().save_related(request, form, formsets, change)
+
+        question = form.instance
+        basemaps = BasemapSourceOnQuestion.objects.filter(question=question)
+
+        if not basemaps.exists():
+            # If no related basemaps exist, add a default basemap inline.
+            BasemapSourceOnQuestion.objects.create(
+                question=question,
+                basemap_source=BasemapSource.objects.default(),
+                is_default_for_question=True,
+            )
+        elif not basemaps.filter(is_default_for_question=True).exists():
+            # There are basemaps, but none of them are marked as default.
+            # Just choose one of them to be the default at random.
+            if basemap := basemaps.first():
+                basemap.is_default_for_question = True
+                basemap.full_clean()
+                basemap.save()
+            else:
+                raise ValueError("This should never happen! Basemap should exist here.")

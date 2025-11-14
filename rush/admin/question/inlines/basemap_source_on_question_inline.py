@@ -1,8 +1,6 @@
-from adminsortable2.admin import SortableTabularInline
 from django.contrib.admin import TabularInline
-from django_summernote.admin import SummernoteModelAdminMixin
 
-from rush.models import BasemapSourceOnQuestion
+from rush.models import BasemapSource, BasemapSourceOnQuestion
 
 
 class BasemapSourceOnQuestionInline(TabularInline):
