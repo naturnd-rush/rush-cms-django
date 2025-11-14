@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
-from rush.models import utils
+from rush.models.utils import CompressionFailed, compress_image
 from rush.models.validators import FiletypeValidator
 
 
@@ -51,7 +51,7 @@ class Question(models.Model):
 
 
 @receiver(pre_save, sender=Question)
-def compress_image(sender, instance: Question, **kwargs):
+def compress_image_pre_save(sender, instance: Question, **kwargs):
     if db_instance := Question.objects.filter(pk=instance.id).first():
         if instance.image != db_instance.image:
             # Mark file as needing compression if it has changed at all
@@ -61,10 +61,10 @@ def compress_image(sender, instance: Question, **kwargs):
         return
     if image := instance.image:
         try:
-            compressed = utils.compress_image(image, pixel_width=512)
+            compressed = compress_image(image, pixel_width=512)
             # save = False avoids double-saving for efficiency and just
             # assigns the compressed image value to the marker_icon field
             image.save(compressed.name, compressed, save=False)
             instance.is_image_compressed = True
-        except utils.CompressionFailed:
+        except CompressionFailed:
             pass

@@ -11,5 +11,5 @@ from rush.models.layer import *
 from rush.models.map_data import *
 from rush.models.page import *
 from rush.models.question import *
+from rush.models.signals import *
 from rush.models.style import *
-from rush.models.user_auth_signals import *
