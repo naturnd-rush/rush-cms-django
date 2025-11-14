@@ -1,4 +1,5 @@
 # We need to import admin models here so Django picks them up...
 from rush.admin import map, site
+from rush.admin.basemap_source import BasemapSourceAdmin
 from rush.admin.icon import IconAdmin
 from rush.admin.question import QuestionSashAdmin
