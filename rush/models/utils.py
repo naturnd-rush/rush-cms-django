@@ -1,4 +1,3 @@
-import html
 from io import BytesIO
 
 import bleach
