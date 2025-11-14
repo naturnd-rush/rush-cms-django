@@ -73,7 +73,10 @@ INSTALLED_APPS = [
     "corsheaders",  # CORS headers for frontend on different origin
     "adminsortable2",  # Adds drag-and-drop sortable lists on the Django admin-site.
     "silk",  # Django Request Profiling
+    "django_admin_logs",  # Added for it's ability to easily disable django admin writing to the LogEntry table.
 ]
+
+DJANGO_ADMIN_LOGS_ENABLED = False
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",

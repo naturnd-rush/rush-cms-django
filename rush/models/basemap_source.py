@@ -1,5 +1,6 @@
 import uuid
 
+from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import models
 
@@ -30,6 +31,13 @@ class BasemapSource(models.Model):
     max_zoom = models.PositiveIntegerField()
     attribution = models.TextField()
     is_default = models.BooleanField(default=False)
+
+    def delete(self, using=None, keep_parents=False) -> tuple[int, dict[str, int]]:
+        # It shouldn't be possible to delete the default basemap source.
+        default_basemap = BasemapSource.objects.default()
+        if self.id == default_basemap.id:
+            raise ValidationError("Deleting the default basemap source is not allowed.")
+        return super().delete(using=using, keep_parents=keep_parents)
 
     objects: BasemapSourceManager = BasemapSourceManager()  # type: ignore
 
