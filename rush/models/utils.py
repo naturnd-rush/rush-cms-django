@@ -95,6 +95,8 @@ class SummernoteTextCleaner:
         "source",
         "img",
         "del",
+        "b",
+        "i",
     ]
 
     ALLOWED_ATTRIBUTES = [
