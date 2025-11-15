@@ -182,12 +182,12 @@ class LayerType(DjangoObjectType):
             raise ValueError("Expected Layer.description to be of type string at runtime.")
         return convert_relative_images_to_absolute(html=self.description, info=info)
 
-    serialized_leaflet_json = graphene.String()
+    # serialized_leaflet_json = graphene.String()
 
-    def resolve_serialized_leaflet_json(self, info) -> str:
-        if not isinstance(self, models.Layer):
-            raise ValueError("Expected object to be of type Layer when resolving query.")
-        return convert_relative_images_to_absolute(html=str(self.serialized_leaflet_json), info=info)
+    # def resolve_serialized_leaflet_json(self, info) -> str:
+    #     if not isinstance(self, models.Layer):
+    #         raise ValueError("Expected object to be of type Layer when resolving query.")
+    #     return convert_relative_images_to_absolute(html=str(self.serialized_leaflet_json), info=info)
 
 
 class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
