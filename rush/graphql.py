@@ -11,6 +11,11 @@ from graphene_django.types import DjangoObjectType
 
 from rush import models
 from rush.context_processors import base_url_from_request
+from rush.models.validators import (
+    OGM_CAMPAIGN_RE,
+    OGM_MAP_BROWSE_RE,
+    OGM_MAP_EXPLORE_RE,
+)
 
 """
 GraphQL Schema for RUSH models. This file defines what data GraphQL
@@ -65,10 +70,28 @@ class MapDataType(DjangoObjectType):
             "map_link",
             "campaign_link",
             "geotiff_link",
+            "ogm_map_id",
+            "ogm_campaign_id",
         ]
 
     geojson = graphene.String()
+    ogm_map_id = graphene.String()
+    ogm_campaign_id = graphene.String()
+    map_link = graphene.String()
+    campaign_link = graphene.String()
     geotiff_link = graphene.String()
+
+    def resolve_map_link(self, info):
+        if not isinstance(self, models.MapData):
+            raise ValueError("Expected object to be of type MapData when resolving query.")
+        # LOG TODO: Log a warning here. This should be deprecated and I wanna make sure it's no longer being used when I delete it.
+        return self.map_link
+
+    def resolve_campaign_link(self, info):
+        if not isinstance(self, models.MapData):
+            raise ValueError("Expected object to be of type MapData when resolving query.")
+        # LOG TODO: Log a warning here. This should be deprecated and I wanna make sure it's no longer being used when I delete it.
+        return self.campaign_link
 
     def resolve_geojson(self, info):
         if not isinstance(self, models.MapData):
@@ -79,9 +102,29 @@ class MapDataType(DjangoObjectType):
         if not isinstance(self, models.MapData):
             return None
         if not self.geotiff.name:
-            # .geotiff.name doesn't make a file-existance check, unlike .geotiff.
+            # .geotiff.name doesn't make an (ASYNC IN PROD) file-existance check, unlike .geotiff.
             return None
         return self.geotiff.url
+
+    def resolve_ogm_map_id(self, info):
+        if not isinstance(self, models.MapData) or not isinstance(self.map_link, str):
+            return None
+        for regex in [OGM_MAP_EXPLORE_RE, OGM_MAP_BROWSE_RE]:
+            m = regex.match(self.map_link)
+            if m:
+                return m.group("id")
+        # LOG TODO: Log error here...
+        raise ValueError(f"{self.map_link} didn't match the expected map_link regex.")
+
+    def resolve_ogm_campaign_id(self, info):
+        if not isinstance(self, models.MapData) or not isinstance(self.campaign_link, str):
+            return None
+        for regex in [OGM_CAMPAIGN_RE]:
+            m = regex.match(self.campaign_link)
+            if m:
+                return m.group("id")
+        # LOG TODO: Log error here...
+        raise ValueError(f"{self.campaign_link} didn't match the expected campaign_link regex.")
 
 
 class MapDataWithoutGeoJsonType(DjangoObjectType):
