@@ -61,6 +61,11 @@ def validate_only_integers_and_whitespace(value):
         raise ValidationError("This field must contain only digits and whitespace.")
 
 
+OGM_MAP_EXPLORE_RE = re.compile(r"^https://greenmap\.org/explore/maps/(?P<id>[0-9A-Za-z-]+)/?$")
+OGM_MAP_BROWSE_RE = re.compile(r"^https://greenmap\.org/browse/maps/(?P<id>[0-9A-Za-z-]+)/map-view/?$")
+OGM_CAMPAIGN_RE = re.compile(r"^https://greenmap\.org/explore/survey/(?P<id>[0-9A-Za-z-]+)/?$")
+
+
 def validate_ogm_map_link(value: str) -> None:
     """
     Validate that the string looks like an OpenGreenMaps map-link.
@@ -69,8 +74,6 @@ def validate_ogm_map_link(value: str) -> None:
         https://greenmap.org/browse/maps/<uuid>/map-view
     """
 
-    OGM_MAP_EXPLORE_RE = re.compile(r"^https://greenmap\.org/explore/maps/[0-9a-fA-F-]+/?$")
-    OGM_MAP_BROWSE_RE = re.compile(r"^https://greenmap\.org/browse/maps/[0-9a-fA-F-]+/map-view/?$")
     if not OGM_MAP_EXPLORE_RE.match(value) and not OGM_MAP_BROWSE_RE.match(value):
         raise ValidationError(
             "Invalid OpenGreenMap map link. It should look like {}.".format(
@@ -90,7 +93,6 @@ def validate_ogm_campaign_link(value: str) -> None:
     i.e., in the format:
         https://greenmap.org/explore/survey/<uuid>
     """
-    OGM_CAMPAIGN_RE = re.compile(r"^https://greenmap\.org/explore/survey/[0-9a-fA-F-]+/?$")
     if not OGM_CAMPAIGN_RE.match(value):
         raise ValidationError(
             "Invalid OpenGreenMap campaign link. It should look like {}.".format(
