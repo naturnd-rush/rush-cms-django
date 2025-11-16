@@ -42,7 +42,11 @@ DATABASES = {
 
 CONSOLE_LOG_LEVEL = config("CONSOLE_LOG_LEVEL", cast=str)
 FILE_LOG_LEVEL = config("FILE_LOG_LEVEL", cast=str)
-LOG_DIR = config("LOG_DIR", cast=str)
+LOG_DIR = str(config("LOG_DIR", cast=str))
+
+# Ensure log directory exists
+LOG_DIR_PATH = BASE_DIR / LOG_DIR
+LOG_DIR_PATH.mkdir(exist_ok=True)
 
 LOGGING = {
     "version": 1,
@@ -61,7 +65,7 @@ LOGGING = {
         },
         "file": {
             "class": "logging.handlers.TimedRotatingFileHandler",
-            "filename": f"{LOG_DIR}/log.txt",
+            "filename": str(LOG_DIR_PATH / "log.txt"),
             "when": "midnight",
             "interval": 30,
             "backupCount": 12,

@@ -1,4 +1,5 @@
 from io import BytesIO
+from logging import getLogger
 
 import bleach
 import bleach.css_sanitizer
@@ -7,6 +8,8 @@ from django.db.models.fields.files import FieldFile
 from PIL import Image
 
 from rush.models.validators import FiletypeValidator
+
+logger = getLogger(__name__)
 
 
 class CompressionFailed(Exception):
@@ -59,6 +62,7 @@ def compress_image(image: FieldFile, pixel_width=128) -> ContentFile:
         return ContentFile(img_io.getvalue(), name=compressed_name)
 
     except Exception as e:
+        logger.error(f"Failed to compress file: {image.name}.")
         raise CompressionFailed from e
 
 
