@@ -8,7 +8,11 @@ from django.core.files.storage import FileSystemStorage
 from django.core.validators import URLValidator
 from storages.backends.s3 import S3Storage
 
-from rush.models.validators import FiletypeValidator
+from rush.models.validators import (
+    FiletypeValidator,
+    validate_ogm_campaign_link,
+    validate_ogm_map_link,
+)
 from rush.storage import BackblazeStorageFactory
 
 
@@ -47,13 +51,13 @@ class MapData(models.Model):
         max_length=2000,
         null=True,
         blank=True,
-        validators=[URLValidator(schemes=["https"])],
+        validators=[URLValidator(schemes=["https"]), validate_ogm_map_link],
     )
     campaign_link = models.CharField(
         max_length=2000,
         null=True,
         blank=True,
-        validators=[URLValidator(schemes=["https"])],
+        validators=[URLValidator(schemes=["https"]), validate_ogm_campaign_link],
     )
 
     # Geotiff provider fields
