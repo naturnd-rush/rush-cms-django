@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 Deployment checklist: https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/.
 """
 
+import logging
 from pathlib import Path
 
 # pulls env vars from .env file
@@ -42,6 +43,38 @@ DATABASES = {
 CONSOLE_LOG_LEVEL = config("CONSOLE_LOG_LEVEL", cast=str)
 FILE_LOG_LEVEL = config("FILE_LOG_LEVEL", cast=str)
 LOG_DIR = config("LOG_DIR", cast=str)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "custom": {
+            "format": "%(asctime)s [%(levelname)s] (%(name)s): %(message)s",
+            "datefmt": "%Y-%m-%d_%I:%M:%S:%p_%Z",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "custom",
+            "level": logging.DEBUG,
+        },
+        "file": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": f"{LOG_DIR}/log.txt",
+            "when": "midnight",
+            "interval": 30,
+            "backupCount": 12,
+            "utc": False,
+            "formatter": "custom",
+            "level": logging.INFO,
+        },
+    },
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "DEBUG",
+    },
+}
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
 
@@ -159,7 +192,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "America/New_York"
 
 USE_I18N = True
 
