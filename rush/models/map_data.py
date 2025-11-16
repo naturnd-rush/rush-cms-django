@@ -1,16 +1,13 @@
 import json
 import sys
 import uuid
-from typing import Iterable
 
 import django.db.models as models
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.core.validators import URLValidator
-from silk.profiling.dynamic import silk_profile
 from storages.backends.s3 import S3Storage
 
-from rush.models import MimeType
 from rush.models.validators import FiletypeValidator
 from rush.storage import BackblazeStorageFactory
 

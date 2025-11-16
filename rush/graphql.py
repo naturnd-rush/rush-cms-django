@@ -1,3 +1,4 @@
+import json
 from typing import List
 from urllib.parse import urljoin
 
@@ -182,12 +183,36 @@ class LayerType(DjangoObjectType):
             raise ValueError("Expected Layer.description to be of type string at runtime.")
         return convert_relative_images_to_absolute(html=self.description, info=info)
 
-    # serialized_leaflet_json = graphene.String()
+    serialized_leaflet_json = graphene.String()
 
-    # def resolve_serialized_leaflet_json(self, info) -> str:
-    #     if not isinstance(self, models.Layer):
-    #         raise ValueError("Expected object to be of type Layer when resolving query.")
-    #     return convert_relative_images_to_absolute(html=str(self.serialized_leaflet_json), info=info)
+    def resolve_serialized_leaflet_json(self, info) -> str:
+        if not isinstance(self, models.Layer):
+            raise ValueError("Expected object to be of type Layer when resolving query.")
+        if not isinstance(self.serialized_leaflet_json, dict):
+            # Not sure why but the linter thinks self.serialized_leaflet_json here is potentially
+            # graphene.String() when the same code works for MapData.geojson.
+            raise ValueError("Expected Layer.serialized_leaflet_json to be of type dict at runtime.")
+
+        data_obj = self.serialized_leaflet_json
+
+        # Jeez, I can't wait until I move the serialization code to the backend...
+        # HACK: This is for cleaning the image src to make sure it uses the absolute media url.
+        for feature in data_obj["featureCollection"]["features"]:
+            if "properties" in feature:
+                properties = feature["properties"]
+                if "__popupHTML" in properties:
+                    print("Fixed popupHTML link!")
+                    properties["__popupHTML"] = convert_relative_images_to_absolute(
+                        html=properties["__popupHTML"],
+                        info=info,
+                    )
+                if "__pointDivIconStyleProps" in properties and "html" in properties["__pointDivIconStyleProps"]:
+                    print("Fixed __pointDivIconStyleProps link!")
+                    properties["__pointDivIconStyleProps"]["html"] = convert_relative_images_to_absolute(
+                        html=properties["__pointDivIconStyleProps"]["html"],
+                        info=info,
+                    )
+        return json.dumps(data_obj)
 
 
 class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
@@ -436,7 +461,6 @@ def get_requested_fields(info: ResolveInfo) -> List[str]:
         return []
     requested_fields = []
     for field in selection_set.selections:
-        print(field)
         name = getattr(field, "name", None)
         value = getattr(name, "value", None)
         if value is not None:
