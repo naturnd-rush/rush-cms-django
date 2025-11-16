@@ -38,13 +38,7 @@ DATABASES = {
         },
     }
 }
-DEPLOY_DOMAIN_NAME = config("DEPLOY_DOMAIN_NAME", cast=str)
-DEPLOY_LOGS_DIR = config("DEPLOY_LOGS_DIR", cast=str)
-DEPLOY_GITHUB_REPO = config("DEPLOY_GITHUB_REPO", cast=str)
-DEPLOY_GITHUB_WEBHOOK_SECRET = config("DEPLOY_GITHUB_WEBHOOK_SECRET", cast=str)
-DEPLOY_GUNICORN_SOCKET_PATH = config("DEPLOY_GUNICORN_SOCKET_PATH", cast=str)
-DEPLOY_NGINX_CONFIG_PATH = config("DEPLOY_NGINX_CONFIG_PATH", cast=str)
-DEPLOY_NGINX_ENABLED_PATH = config("DEPLOY_NGINX_ENABLED_PATH", cast=str)
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
 
 FILE_UPLOAD_HANDLERS = [
@@ -133,25 +127,6 @@ TEMPLATES = [
         },
     },
 ]
-
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "default": {
-            "level": "INFO",
-            "class": "logging.StreamHandler",
-        },
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["default"],
-            "level": "INFO",
-            "propagate": True,
-        },
-    },
-}
 
 WSGI_APPLICATION = "config.wsgi.application"
 
