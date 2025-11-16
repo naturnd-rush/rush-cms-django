@@ -39,6 +39,10 @@ DATABASES = {
     }
 }
 
+CONSOLE_LOG_LEVEL = config("CONSOLE_LOG_LEVEL", cast=str)
+FILE_LOG_LEVEL = config("FILE_LOG_LEVEL", cast=str)
+LOG_DIR = config("LOG_DIR", cast=str)
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
 
 FILE_UPLOAD_HANDLERS = [
