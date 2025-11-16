@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 Deployment checklist: https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/.
 """
 
+import logging
 from pathlib import Path
 
 # pulls env vars from .env file
@@ -38,13 +39,47 @@ DATABASES = {
         },
     }
 }
-DEPLOY_DOMAIN_NAME = config("DEPLOY_DOMAIN_NAME", cast=str)
-DEPLOY_LOGS_DIR = config("DEPLOY_LOGS_DIR", cast=str)
-DEPLOY_GITHUB_REPO = config("DEPLOY_GITHUB_REPO", cast=str)
-DEPLOY_GITHUB_WEBHOOK_SECRET = config("DEPLOY_GITHUB_WEBHOOK_SECRET", cast=str)
-DEPLOY_GUNICORN_SOCKET_PATH = config("DEPLOY_GUNICORN_SOCKET_PATH", cast=str)
-DEPLOY_NGINX_CONFIG_PATH = config("DEPLOY_NGINX_CONFIG_PATH", cast=str)
-DEPLOY_NGINX_ENABLED_PATH = config("DEPLOY_NGINX_ENABLED_PATH", cast=str)
+
+CONSOLE_LOG_LEVEL = config("CONSOLE_LOG_LEVEL", cast=str)
+FILE_LOG_LEVEL = config("FILE_LOG_LEVEL", cast=str)
+LOG_DIR = str(config("LOG_DIR", cast=str))
+
+# Ensure log directory exists
+LOG_DIR_PATH = BASE_DIR / LOG_DIR
+LOG_DIR_PATH.mkdir(exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "custom": {
+            "format": "%(asctime)s [%(levelname)s] (%(name)s): %(message)s",
+            "datefmt": "%Y-%m-%d_%I:%M:%S:%p_%Z",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "custom",
+            "level": logging.DEBUG,
+        },
+        "file": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": str(LOG_DIR_PATH / "log.txt"),
+            "when": "midnight",
+            "interval": 30,
+            "backupCount": 12,
+            "utc": False,
+            "formatter": "custom",
+            "level": logging.INFO,
+        },
+    },
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "DEBUG",
+    },
+}
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
 
 FILE_UPLOAD_HANDLERS = [
@@ -134,25 +169,6 @@ TEMPLATES = [
     },
 ]
 
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "default": {
-            "level": "INFO",
-            "class": "logging.StreamHandler",
-        },
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["default"],
-            "level": "INFO",
-            "propagate": True,
-        },
-    },
-}
-
 WSGI_APPLICATION = "config.wsgi.application"
 
 
@@ -180,7 +196,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "America/New_York"
 
 USE_I18N = True
 

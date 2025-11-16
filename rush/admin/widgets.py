@@ -1,5 +1,6 @@
 import json
 from dataclasses import dataclass
+from logging import getLogger
 from typing import Any, List
 
 from django.db.models import Model
@@ -12,6 +13,8 @@ from django.utils.safestring import mark_safe
 from django_summernote.widgets import SummernoteWidgetBase
 
 from rush.context_processors import base_url_from_request
+
+logger = getLogger(__name__)
 
 
 class SummernoteWidget(SummernoteWidgetBase):
@@ -145,7 +148,7 @@ class TiledForeignKeyWidget(Select):
             """
             related = getattr(self.instance, self.fk_name, None)
             if related is None:
-                # LOG TODO: Should log warning here.
+                logger.error("Cannot accss fk field '{}' on {}.".format(self.fk_name, self.instance))
                 return ""
             selected = str(related.id) == self.id
             return "selected" if selected else ""
