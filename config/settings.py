@@ -85,6 +85,9 @@ LOGGING = {
 # This just silences any warnings coming from the silk profiler in an attempt to clean up out logs.
 logging.getLogger("silk.profiling.profiler").setLevel(logging.ERROR)
 
+# Noisy botocore DEBUG logs are annoying when I'm trying to debug RUSH app errors.
+logging.getLogger("botocore").setLevel(logging.INFO)
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
 
 FILE_UPLOAD_HANDLERS = [
