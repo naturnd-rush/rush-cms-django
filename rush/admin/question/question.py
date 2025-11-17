@@ -59,6 +59,14 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
             return ", ".join([initiative.title for initiative in obj.initiatives.all()])
         return "No Initiatives"
 
+    def get_queryset(self, request):
+        """
+        Optimize queryset to prevent loading massive JSONFields from related Layer objects.
+        """
+        qs = super().get_queryset(request)
+        # Prefetch initiatives to avoid N+1 queries in get_initiatives() display method
+        return qs.prefetch_related("initiatives")
+
     @admin.action(description="Duplicate selected items")
     def duplicate_object(self, request, queryset):
         for obj in queryset:

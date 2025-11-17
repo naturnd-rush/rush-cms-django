@@ -33,7 +33,7 @@ DATABASES = {
         "PASSWORD": config("POSTGRES_DATABASE_PASSWORD", cast=str),
         "HOST": config("POSTGRES_DATABASE_HOST", cast=str),
         "PORT": config("POSTGRES_DATABASE_PORT", cast=str),
-        "CONN_MAX_AGE": 600,  # Keep connections alive for 10 minutes
+        "CONN_MAX_AGE": 60,  # Keep connections alive for 1 minute
         "OPTIONS": {
             "connect_timeout": 10,
         },
@@ -146,7 +146,7 @@ if ENABLE_SILK_PROFILING:
 
     # Control what gets profiled
     SILKY_INTERCEPT_PERCENT = 100  # Profile 100% of requests (default is 100)
-    SILKY_MAX_RECORDED_REQUESTS = 10000  # Keep more history
+    SILKY_MAX_RECORDED_REQUESTS = 100  # Limit history to prevent memory accumulation (was 10000)
     SILKY_MAX_RECORDED_REQUESTS_CHECK_PERCENT = 10  # How often to check
 
     # More detailed profiling
