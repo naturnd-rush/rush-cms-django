@@ -116,8 +116,8 @@ class LayerAdmin(sortable_admin.SortableAdminBase, SummernoteModelAdmin):  # typ
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        # avoid fetching map_data when listing Layers
-        return qs.defer("map_data", "serialized_leaflet_json")
+        # Defer expensive fields when listing Layers
+        return qs.select_related("map_data").defer("serialized_leaflet_json", "map_data___geojson")
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         """Handles both GET (load form) and POST (save form) requests"""
