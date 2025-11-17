@@ -33,32 +33,37 @@ def convert_relative_images_to_absolute(html: str, info) -> str:
     """
 
     base_media_url = base_url_from_request(info.context)
-    soup = BeautifulSoup(html, "html.parser")
 
-    for img in soup.find_all("img"):
+    soup = None
+    try:
+        soup = BeautifulSoup(html, "html.parser")
 
-        src = img.get("src")
-        if not isinstance(src, str):
-            # LOG TODO: Log a warning here!
-            continue
+        for img in soup.find_all("img"):
 
-        if not src:
-            # LOG TODO: Log a warning here!
-            continue
+            src = img.get("src")
+            if not isinstance(src, str):
+                # LOG TODO: Log a warning here!
+                continue
 
-        if (
-            src.startswith("http://")
-            or src.startswith("https://")
-            # the "//" is for protocol-agnostic urls
-            or src.startswith("//")
-            or src.startswith(base_media_url)
-        ):
-            # Skip if already absolute URL or already prefixed with the base-media-url
-            continue
+            if not src:
+                # LOG TODO: Log a warning here!
+                continue
 
-        # Build full absolute URL
-        img["src"] = urljoin(base_media_url, src.lstrip("/"))
+            if (
+                src.startswith("http://")
+                or src.startswith("https://")
+                # the "//" is for protocol-agnostic urls
+                or src.startswith("//")
+                or src.startswith(base_media_url)
+            ):
+                # Skip if already absolute URL or already prefixed with the base-media-url
+                continue
 
+            # Build full absolute URL
+            img["src"] = urljoin(base_media_url, src.lstrip("/"))
+    finally:
+        if soup is not None:
+            soup.decompose()
     return str(soup)
 
 
