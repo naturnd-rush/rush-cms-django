@@ -38,12 +38,7 @@ class Question(models.Model):
         help_text="A decorative sash that can be added to questions for flair.",
         related_name="questions",
     )
-    # basemaps = models.ManyToManyField(
-    #     to="BasemapSource",
-    #     # through="BasemapSourceOnQuestion",
-    #     related_name="questions",
-    #     help_text='A basemap where the map background comes from, it specifies the "look and feel" of the map for this question. A single question can have any number of basemaps, and visitors to the site will be allowed to choose between the available options.',
-    # )
+
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 
     def __str__(self):
