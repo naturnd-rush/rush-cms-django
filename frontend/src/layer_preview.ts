@@ -418,7 +418,6 @@ async function showSpinner(){
     addAnotherBtn.disabled = true;
     continueBtn.disabled = true;
 
-    console.log("SHOWING SPINNER");
     const mapPreviewEl = document.getElementById("map-preview");
     const spinnerEl = document.getElementById("map-spinner");
     if (mapPreviewEl !== null && spinnerEl !== null){
@@ -771,39 +770,40 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     
     // Listen to redraw the map when the tab is refocused (the user leaves and then comes back).
     // This can happen after a user edits one of the inline styles and then clicks on the layer edit tab.
-    document.addEventListener('visibilitychange', function () {
+    document.addEventListener('visibilitychange', async function () {
         if (document.visibilityState === 'visible') {
-            mapPreviewState.isUpdating = true;
-            showSpinnerAfter(1, mapPreviewState);
-            getStyleUpdate().then(styleUpdate => {
-                drawMapPreview(map, mapPreviewState, styleUpdate);
-            });
+            const mapData = await mapDataFromSpan(mapDataSelectSpan);
+            if (mapData?.providerState === "GEOJSON"){
+                console.log("REFOCUS SHOWS SPINERNERNENRN");
+                mapPreviewState.isUpdating = true;
+                showSpinnerAfter(1, mapPreviewState);
+                getStyleUpdate().then(styleUpdate => {
+                    drawMapPreview(map, mapPreviewState, styleUpdate);
+                });
+            }
         }
     });
 
     // Listen to redraw the map when the map-data is changed.
     const mapPreviewEl = await waitForElementById("map-preview");
-    const stylesOnLayersGroupEl = await waitForElementById("stylesonlayer_set-group");
+    //const stylesOnLayersGroupEl = await waitForElementById("stylesonlayer_set-group");
     async function onMapDataDropdownChange(){
         const mapData = await mapDataFromSpan(mapDataSelectSpan);
-        const hideMapPreviewAndStyles = () => {
-            console.log("Hiding ", mapPreviewEl, stylesOnLayersGroupEl);
+        const hideMapPreview = () => {
             mapPreviewEl.style.display = 'none';
-            stylesOnLayersGroupEl.style.display = 'none';
         };
-        const showMapPreviewAndStyles = () => {
+        const showMapPreview = () => {
             mapPreviewEl.style.display = 'block';
-            stylesOnLayersGroupEl.style.display = 'block';
         };
         console.log(mapData?.providerState);
         if (mapData?.providerState === "GEOJSON"){
-            showMapPreviewAndStyles();
+            showMapPreview();
             mapPreviewState.isUpdating = true;
             showSpinnerAfter(1, mapPreviewState);
             getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
         } else {
             // Hide map preview and styles on layers when we are not dealing with GEOJSON map data for this layer...
-            hideMapPreviewAndStyles();
+            hideMapPreview();
         }
     };
     onMapDataDropdownChange(); // for initial load
