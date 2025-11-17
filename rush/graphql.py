@@ -61,10 +61,10 @@ def convert_relative_images_to_absolute(html: str, info) -> str:
 
             # Build full absolute URL
             img["src"] = urljoin(base_media_url, src.lstrip("/"))
+            return str(soup)
     finally:
         if soup is not None:
             soup.decompose()
-    return str(soup)
 
 
 class MapDataType(DjangoObjectType):
