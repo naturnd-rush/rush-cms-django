@@ -31,3 +31,52 @@ def get_client_ip(group, request):
 
     # Fall back to REMOTE_ADDR (direct connection, no proxy)
     return request.META.get("REMOTE_ADDR", "")
+
+
+import logging
+import time
+from contextlib import contextmanager
+
+logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def log_execution_time(operation_name: str, log_level: int = logging.INFO):
+    """
+    Context manager that logs the time spent executing a block of code.
+
+    Args:
+        operation_name: Description of the operation being timed
+        log_level: Logging level (default: logging.INFO)
+
+    Usage:
+        with log_execution_time("Database query"):
+            # Your code here
+            results = expensive_query()
+    """
+    start_time = time.time()
+    try:
+        yield
+    finally:
+        elapsed_time = time.time() - start_time
+        logger.log(log_level, f"{operation_name} took {elapsed_time:.3f} seconds")
+
+
+@contextmanager
+def log_execution_time_with_result(operation_name: str, log_level: int = logging.INFO):
+    """
+    Context manager that logs execution time and provides a way to log additional result info.
+
+    Usage:
+        with log_execution_time_with_result("Database query") as timer:
+            results = expensive_query()
+            timer['count'] = len(results)  # Optional: add context to the log
+    """
+    start_time = time.time()
+    context = {}
+    try:
+        yield context
+    finally:
+        elapsed_time = time.time() - start_time
+        extra_info = f" ({context})" if context else ""
+        logger.log(log_level, f"{operation_name} took {elapsed_time:.3f} seconds{extra_info}")

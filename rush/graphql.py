@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import List
 from urllib.parse import urljoin
 
@@ -17,6 +18,7 @@ from rush.models.validators import (
     OGM_MAP_BROWSE_RE,
     OGM_MAP_EXPLORE_RE,
 )
+from rush.utils import log_execution_time_with_result
 
 """
 GraphQL Schema for RUSH models. This file defines what data GraphQL
@@ -229,33 +231,38 @@ class LayerType(DjangoObjectType):
     serialized_leaflet_json = graphene.String()
 
     def resolve_serialized_leaflet_json(self, info) -> str:
-        if not isinstance(self, models.Layer):
-            raise ValueError("Expected object to be of type Layer when resolving query.")
-        if not isinstance(self.serialized_leaflet_json, dict):
-            # Not sure why but the linter thinks self.serialized_leaflet_json here is potentially
-            # graphene.String() when the same code works for MapData.geojson.
-            raise ValueError("Expected Layer.serialized_leaflet_json to be of type dict at runtime.")
+        with log_execution_time_with_result("resolve_serialized_leaflet_json", log_level=logging.DEBUG) as result:
+            if not isinstance(self, models.Layer):
+                raise ValueError("Expected object to be of type Layer when resolving query.")
+            if not isinstance(self.serialized_leaflet_json, dict):
+                # Not sure why but the linter thinks self.serialized_leaflet_json here is potentially
+                # graphene.String() when the same code works for MapData.geojson.
+                raise ValueError("Expected Layer.serialized_leaflet_json to be of type dict at runtime.")
 
-        data_obj = self.serialized_leaflet_json
+            result["layer_id"] = self.id
+            result["layer_name"] = self.name
 
-        # Jeez, I can't wait until I move the serialization code to the backend...
-        # HACK: This is for cleaning the image src to make sure it uses the absolute media url.
-        for feature in data_obj["featureCollection"]["features"]:
-            if "properties" in feature:
-                properties = feature["properties"]
-                if "__popupHTML" in properties:
-                    print("Fixed popupHTML link!")
-                    properties["__popupHTML"] = convert_relative_images_to_absolute(
-                        html=properties["__popupHTML"],
-                        info=info,
-                    )
-                if "__pointDivIconStyleProps" in properties and "html" in properties["__pointDivIconStyleProps"]:
-                    print("Fixed __pointDivIconStyleProps link!")
-                    properties["__pointDivIconStyleProps"]["html"] = convert_relative_images_to_absolute(
-                        html=properties["__pointDivIconStyleProps"]["html"],
-                        info=info,
-                    )
-        return json.dumps(data_obj)
+            data_obj = self.serialized_leaflet_json
+
+            # Jeez, I can't wait until I move the serialization code to the backend...
+            # HACK: This is for cleaning the image src to make sure it uses the absolute media url.
+            for feature in data_obj["featureCollection"]["features"]:
+                if "properties" in feature:
+                    properties = feature["properties"]
+                    if "__popupHTML" in properties:
+                        properties["__popupHTML"] = convert_relative_images_to_absolute(
+                            html=properties["__popupHTML"],
+                            info=info,
+                        )
+                    if (
+                        "__pointDivIconStyleProps" in properties
+                        and "html" in properties["__pointDivIconStyleProps"]
+                    ):
+                        properties["__pointDivIconStyleProps"]["html"] = convert_relative_images_to_absolute(
+                            html=properties["__pointDivIconStyleProps"]["html"],
+                            info=info,
+                        )
+            return json.dumps(data_obj)
 
 
 class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
