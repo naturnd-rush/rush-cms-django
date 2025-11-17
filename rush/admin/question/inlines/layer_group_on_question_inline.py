@@ -17,6 +17,27 @@ class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
     inlines = [LayerOnLayerGroupInline]
     sortable_field_name = "display_order"
 
+    def get_queryset(self, request):
+        """
+        Optimize queryset to prefetch nested LayerOnLayerGroup objects with deferred heavy fields.
+        """
+        qs = super().get_queryset(request)
+        # Prefetch the layers relation to avoid N+1 queries and defer heavy fields
+        from django.db.models import Prefetch
+
+        from rush.models import Layer, LayerOnLayerGroup
+
+        return qs.prefetch_related(
+            Prefetch(
+                "layers",  # This is the related_name from LayerOnLayerGroup
+                queryset=LayerOnLayerGroup.objects.select_related("layer__map_data").defer(
+                    "layer__serialized_leaflet_json",
+                    "layer__map_data___geojson",
+                    "layer__map_data__geotiff",
+                ),
+            )
+        )
+
     def get_fields(self, request, obj=None):
         """
         Only superusers should be able to see and edit the hidden field `group_type`.
