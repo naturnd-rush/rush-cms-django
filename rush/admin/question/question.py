@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from adminsortable2.admin import SortableAdminMixin
 from django.contrib import admin
+from django.db.models import Prefetch
 from django.utils.safestring import mark_safe
 from nested_admin.nested import NestedModelAdmin
 
@@ -12,7 +13,7 @@ from rush.admin.question.inlines import (
     QuestionTabInline,
 )
 from rush.admin.utils import image_html
-from rush.models import BasemapSource, BasemapSourceOnQuestion, Question
+from rush.models import BasemapSource, BasemapSourceOnQuestion, Layer, Question
 
 
 @admin.register(Question)
@@ -37,19 +38,6 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
     actions = ["duplicate_object"]
     sortable_field_name = "display_order"  # Enable drag-and-drop for Questions in the list view
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        return qs.prefetch_related(
-            # Prefetch related layer info.
-            "layer_groups",
-            "layer_groups__layers",
-            "layer_groups__layers__layer",
-        ).defer(
-            # Defer serialized_leaflet_json, because the question form doesn't need to know about that...)
-            "layer_groups__layers__layer__serialized_leaflet_json",
-            "layer_groups__layers__layer__map_data",
-        )
 
     @admin.display(description="Sash")
     def sash_preview(self, obj: Question):
