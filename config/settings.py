@@ -85,8 +85,15 @@ LOGGING = {
 # This just silences any warnings coming from the silk profiler in an attempt to clean up out logs.
 logging.getLogger("silk.profiling.profiler").setLevel(logging.ERROR)
 
-# Noisy botocore DEBUG logs are annoying when I'm trying to debug RUSH app errors.
-logging.getLogger("botocore").setLevel(logging.INFO)
+THIRD_PARTY_LIB_DEBUG_LOGS_TO_SILENCE = [
+    # Some third party libraries have noisy debug logs. When I set logging to DEBUG on production
+    # I want to see mostly RUSH DEBUG logs.
+    "botocore",
+    "boto3",
+    "urllib3",
+]
+for module_name in THIRD_PARTY_LIB_DEBUG_LOGS_TO_SILENCE:
+    logging.getLogger(module_name).setLevel(logging.INFO)
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
 
