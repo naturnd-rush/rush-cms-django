@@ -39,8 +39,8 @@ def log_changelist(sender, request, model, modeladmin, **kwargs):
 @receiver(admin_changeform_viewed)
 def log_changeform(sender, request, model, object_id, modeladmin, **kwargs):
     user = getattr(request, "user", None)
-    obj = model.objects.get(id=object_id)
-    obj_desc = f"<{model.__name__}: {str(obj)}>"
+    obj = model.objects.filter(id=object_id).first()
+    obj_desc = f"<{model.__name__}: {str(obj)}>" if obj is not None else None
     if user is not None:
         try:
             LogEntry.objects.log_action(
