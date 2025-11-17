@@ -61,7 +61,7 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "custom",
-            "level": logging.DEBUG,
+            "level": CONSOLE_LOG_LEVEL,
         },
         "file": {
             "class": "logging.handlers.TimedRotatingFileHandler",
@@ -71,7 +71,7 @@ LOGGING = {
             "backupCount": 12,
             "utc": False,
             "formatter": "custom",
-            "level": logging.INFO,
+            "level": FILE_LOG_LEVEL,
         },
     },
     "root": {
