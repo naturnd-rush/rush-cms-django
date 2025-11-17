@@ -80,6 +80,11 @@ LOGGING = {
     },
 }
 
+# The Silk profiler has annoying warnings when disabled, and it doesn't seem
+# like they're going to fix them anytime soon (see https://github.com/jazzband/django-silk/issues/307).
+# This just silences any warnings coming from the silk profiler in an attempt to clean up out logs.
+logging.getLogger("silk.profiling.profiler").setLevel(logging.ERROR)
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
 
 FILE_UPLOAD_HANDLERS = [
