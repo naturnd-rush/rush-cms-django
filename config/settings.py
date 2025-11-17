@@ -146,7 +146,7 @@ if ENABLE_SILK_PROFILING:
 
     # Control what gets profiled
     SILKY_INTERCEPT_PERCENT = 100  # Profile 100% of requests (default is 100)
-    SILKY_MAX_RECORDED_REQUESTS = 10000  # Keep more history
+    SILKY_MAX_RECORDED_REQUESTS = 100  # Limit history to prevent memory accumulation (was 10000)
     SILKY_MAX_RECORDED_REQUESTS_CHECK_PERCENT = 10  # How often to check
 
     # More detailed profiling

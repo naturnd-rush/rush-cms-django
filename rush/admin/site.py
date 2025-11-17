@@ -49,6 +49,11 @@ class InitiativeAdmin(SummernoteModelAdmin):
     ]
     search_fields = ["title"]
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Prefetch tags to avoid N+1 queries in get_tags() display method
+        return qs.prefetch_related("tags")
+
     def image_preview(self, obj):
         """
         Image preview inline.
@@ -79,6 +84,11 @@ class InitiativeTagAdmin(admin.ModelAdmin):
     # Reverse relation is readonly in the add/change view for now, we can
     # change this later, but the solution is a little complicated.
     readonly_fields = ["tagged_initiatives"]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Prefetch initiatives to avoid N+1 queries in tagged_initiatives() display method
+        return qs.prefetch_related("initiatives")
 
     def preview(self, obj: models.InitiativeTag):
         return mark_safe(
