@@ -33,7 +33,7 @@ DATABASES = {
         "PASSWORD": config("POSTGRES_DATABASE_PASSWORD", cast=str),
         "HOST": config("POSTGRES_DATABASE_HOST", cast=str),
         "PORT": config("POSTGRES_DATABASE_PORT", cast=str),
-        "CONN_MAX_AGE": 600,  # Keep connections alive for 10 minutes
+        "CONN_MAX_AGE": 60,  # Keep connections alive for 1 minute
         "OPTIONS": {
             "connect_timeout": 10,
         },
