@@ -1,9 +1,12 @@
+from logging import getLogger
+
 from django.contrib.admin.models import ADDITION, LogEntry
-from django.db.models import Model
 from django.dispatch import Signal, receiver
 
 from rush.models.signals.utils import user_content_type
 from rush.utils import get_client_ip
+
+logger = getLogger(__name__)
 
 # Fired when *any* admin changelist is viewed
 admin_changelist_viewed = Signal()
@@ -25,17 +28,21 @@ def log_changelist(sender, request, model, modeladmin, **kwargs):
             change_message=f"{user} viewed the list of {model._meta.verbose_name_plural}.",
         )
     else:
-        # LOG TODO Should log a warning here...
-        ...
+        logger.warning(
+            "Request from '{}' for viewing '{}' changelist has no user!".format(
+                get_client_ip(None, request),
+                model.__name__,
+            )
+        )
 
 
 @receiver(admin_changeform_viewed)
 def log_changeform(sender, request, model, object_id, modeladmin, **kwargs):
     user = getattr(request, "user", None)
+    obj = model.objects.get(id=object_id)
+    obj_desc = f"<{model.__name__}: {str(obj)}>"
     if user is not None:
         try:
-            obj = model.objects.get(id=object_id)
-            obj_desc = f"<{model.__name__}: {str(obj)}>"
             LogEntry.objects.log_action(
                 user_id=user.pk,
                 content_type_id=user_content_type().pk,
@@ -45,8 +52,17 @@ def log_changeform(sender, request, model, object_id, modeladmin, **kwargs):
                 change_message=f"{user} viewed {obj_desc}.",
             )
         except Exception as e:
-            # LOG TODO: should log a warning here...
-            ...
+            logger.error(
+                "Coundn't create a 'LogEntry' when user '{}' viewed '{}'.".format(
+                    str(user),
+                    obj_desc,
+                ),
+                exc_info=e,
+            )
     else:
-        # LOG TODO: Should log a warning here...
-        ...
+        logger.warning(
+            "Request from '{}' for viewing '{}' changeform has no user!".format(
+                get_client_ip(None, request),
+                obj_desc,
+            )
+        )
