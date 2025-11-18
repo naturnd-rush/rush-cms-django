@@ -3,6 +3,10 @@ import uuid
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from rush.models.layer.layer import Layer
+from rush.models.layer.layer_group_on_question import LayerGroupOnQuestion
+from rush.models.question.question import Question
+
 
 class LayerOnLayerGroup(models.Model):
     """
@@ -46,4 +50,8 @@ class LayerOnLayerGroup(models.Model):
             )
 
     def __str__(self) -> str:
-        return "{} on {}".format(self.layer.name, self.layer_group_on_question.question.title)
+        # Being careful not to access any more related data than we absolutely need here...
+        related_layer = Layer.objects.only("name").get(id=self.layer_id)  # type: ignore
+        related_lgoq = LayerGroupOnQuestion.objects.only("question__id").get(id=self.layer_group_on_question_id)  # type: ignore
+        related_question = Question.objects.only("title").get(id=related_lgoq.question_id)  # type: ignore
+        return "{} on {}".format(related_layer.name, related_question.title)
