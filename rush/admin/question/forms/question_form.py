@@ -16,6 +16,7 @@ class QuestionForm(ModelForm):
             "slug",
             "subtitle",
             "image",
+            "sash",
             "initiatives",
         ]
 

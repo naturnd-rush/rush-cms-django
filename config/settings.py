@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 Deployment checklist: https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/.
 """
 
+import logging
 from pathlib import Path
 
 # pulls env vars from .env file
@@ -32,42 +33,69 @@ DATABASES = {
         "PASSWORD": config("POSTGRES_DATABASE_PASSWORD", cast=str),
         "HOST": config("POSTGRES_DATABASE_HOST", cast=str),
         "PORT": config("POSTGRES_DATABASE_PORT", cast=str),
-        "CONN_MAX_AGE": 600,  # Keep connections alive for 10 minutes
+        "CONN_MAX_AGE": 60,  # Keep connections alive for 1 minute
         "OPTIONS": {
             "connect_timeout": 10,
         },
     }
 }
-DEPLOY_DOMAIN_NAME = config("DEPLOY_DOMAIN_NAME", cast=str)
-DEPLOY_LOGS_DIR = config("DEPLOY_LOGS_DIR", cast=str)
-DEPLOY_GITHUB_REPO = config("DEPLOY_GITHUB_REPO", cast=str)
-DEPLOY_GITHUB_WEBHOOK_SECRET = config("DEPLOY_GITHUB_WEBHOOK_SECRET", cast=str)
-DEPLOY_GUNICORN_SOCKET_PATH = config("DEPLOY_GUNICORN_SOCKET_PATH", cast=str)
-DEPLOY_NGINX_CONFIG_PATH = config("DEPLOY_NGINX_CONFIG_PATH", cast=str)
-DEPLOY_NGINX_ENABLED_PATH = config("DEPLOY_NGINX_ENABLED_PATH", cast=str)
+
+CONSOLE_LOG_LEVEL = config("CONSOLE_LOG_LEVEL", cast=str)
+FILE_LOG_LEVEL = config("FILE_LOG_LEVEL", cast=str)
+LOG_DIR = str(config("LOG_DIR", cast=str))
+
+# Ensure log directory exists
+LOG_DIR_PATH = BASE_DIR / LOG_DIR
+LOG_DIR_PATH.mkdir(exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "custom": {
+            "format": "%(asctime)s [%(levelname)s] (%(name)s): %(message)s",
+            "datefmt": "%Y-%m-%d_%I:%M:%S:%p_%Z",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "custom",
+            "level": CONSOLE_LOG_LEVEL,
+        },
+        "file": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": str(LOG_DIR_PATH / "log.txt"),
+            "when": "midnight",
+            "interval": 30,
+            "backupCount": 12,
+            "utc": False,
+            "formatter": "custom",
+            "level": FILE_LOG_LEVEL,
+        },
+    },
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "DEBUG",
+    },
+}
+
+# The Silk profiler has annoying warnings when disabled, and it doesn't seem
+# like they're going to fix them anytime soon (see https://github.com/jazzband/django-silk/issues/307).
+# This just silences any warnings coming from the silk profiler in an attempt to clean up out logs.
+logging.getLogger("silk.profiling.profiler").setLevel(logging.ERROR)
+
+THIRD_PARTY_LIB_DEBUG_LOGS_TO_SILENCE = [
+    # Some third party libraries have noisy debug logs. When I set logging to DEBUG on production
+    # I want to see mostly RUSH DEBUG logs.
+    "botocore",
+    "boto3",
+    "urllib3",
+]
+for module_name in THIRD_PARTY_LIB_DEBUG_LOGS_TO_SILENCE:
+    logging.getLogger(module_name).setLevel(logging.INFO)
+
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2621440 * 10  # 25 MB
-
-ENABLE_SILK_PROFILING = config("ENABLE_SILK_PROFILING", cast=bool)
-if ENABLE_SILK_PROFILING:
-    SILKY_PYTHON_PROFILER = True  # enables Python-level profiling
-    SILKY_PYTHON_PROFILER_BINARY = False  # False = more readable text output
-    SILKY_PYTHON_PROFILER_RESULT_PATH = BASE_DIR / "profiles"  # Save profiles to disk
-    SILKY_META = True  # optional, adds extra metadata
-
-    # Control what gets profiled
-    SILKY_INTERCEPT_PERCENT = 100  # Profile 100% of requests (default is 100)
-    SILKY_MAX_RECORDED_REQUESTS = 10000  # Keep more history
-    SILKY_MAX_RECORDED_REQUESTS_CHECK_PERCENT = 10  # How often to check
-
-    # More detailed profiling
-    SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME = True  # More descriptive filenames
-    SILKY_ANALYZE_QUERIES = True  # Analyze SQL queries in detail
-
-    # Fix for "Another profiling tool is already active" error
-    # This catches and ignores the error when concurrent requests try to profile
-    SILKY_PYTHON_PROFILER_FUNC = None  # Use default profiler
-    SILKY_IGNORE_PATHS = []  # Don't ignore any paths
-
 
 FILE_UPLOAD_HANDLERS = [
     # Forces file-uploads to write to disk as the buffer instead of memory.
@@ -98,7 +126,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # "silk.middleware.SilkyMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -108,6 +135,28 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+ENABLE_SILK_PROFILING = config("ENABLE_SILK_PROFILING", cast=bool)
+if ENABLE_SILK_PROFILING:
+    MIDDLEWARE = ["silk.middleware.SilkyMiddleware", *MIDDLEWARE]  # Add silk middleware at beginning
+    SILKY_PYTHON_PROFILER = True  # enables Python-level profiling
+    SILKY_PYTHON_PROFILER_BINARY = False  # False = more readable text output
+    SILKY_PYTHON_PROFILER_RESULT_PATH = BASE_DIR / "profiles"  # Save profiles to disk
+    SILKY_META = True  # optional, adds extra metadata
+
+    # Control what gets profiled
+    SILKY_INTERCEPT_PERCENT = 100  # Profile 100% of requests (default is 100)
+    SILKY_MAX_RECORDED_REQUESTS = 100  # Limit history to prevent memory accumulation (was 10000)
+    SILKY_MAX_RECORDED_REQUESTS_CHECK_PERCENT = 10  # How often to check
+
+    # More detailed profiling
+    SILKY_PYTHON_PROFILER_EXTENDED_FILE_NAME = True  # More descriptive filenames
+    SILKY_ANALYZE_QUERIES = True  # Analyze SQL queries in detail
+
+    # Fix for "Another profiling tool is already active" error
+    # This catches and ignores the error when concurrent requests try to profile
+    SILKY_PYTHON_PROFILER_FUNC = None  # Use default profiler
+    SILKY_IGNORE_PATHS = []  # Don't ignore any paths
 
 # Reverse proxy configuration
 # Tell Django to read the real client IP from proxy headers
@@ -134,25 +183,6 @@ TEMPLATES = [
         },
     },
 ]
-
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "default": {
-            "level": "INFO",
-            "class": "logging.StreamHandler",
-        },
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["default"],
-            "level": "INFO",
-            "propagate": True,
-        },
-    },
-}
 
 WSGI_APPLICATION = "config.wsgi.application"
 
@@ -181,7 +211,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "America/New_York"
 
 USE_I18N = True
 

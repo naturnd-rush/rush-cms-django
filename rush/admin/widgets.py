@@ -1,12 +1,119 @@
+import json
 from dataclasses import dataclass
+from logging import getLogger
 from typing import Any, List
 
 from django.db.models import Model
 from django.forms import Select
+from django.forms.utils import flatatt
 from django.template import Context, Engine
+from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django_summernote.widgets import SummernoteWidgetBase
 
 from rush.context_processors import base_url_from_request
+
+logger = getLogger(__name__)
+
+
+class SummernoteWidget(SummernoteWidgetBase):
+    """
+    Provide a default summernote-editor widget for RUSH admin, that can optionally be passed
+    some summernote configuration overrides, e.g., to change the width or height of the widget.
+    """
+
+    DEFAULT_SUMMERNOTE_SETTINGS = {
+        "height": "500px",
+        "width": "500px",
+        "toolbar": [
+            ["style", ["style"]],
+            ["font", ["bold", "underline", "clear"]],
+            ["fontname", ["fontname"]],
+            ["fontsize", ["fontsize"]],
+            ["color", ["color"]],
+            ["para", ["ul", "ol", "paragraph"]],
+            # ["table", ["table"]],
+            [
+                "insert",
+                [
+                    "link",
+                    "picture",
+                    # "video",
+                ],
+            ],
+        ],
+        "styleTags": [
+            {
+                "tag": "p",
+                "title": "Title",
+                "className": "rush-title",
+                "value": "p",
+            },
+            {
+                "tag": "p",
+                "title": "Subtitle",
+                "className": "rush-subtitle",
+                "value": "p",
+            },
+            {
+                "tag": "p",
+                "title": "Normal",
+                "value": "p",
+            },
+            {
+                "tag": "p",
+                "title": "Hint",
+                "className": "rush-hint",
+                "value": "p",
+            },
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+        ],
+        "fontNames": [
+            "Poppins",
+            "Urbanist",
+            "Raleway",
+            "Figtree",
+            "Bitter",
+        ],
+        "fontNamesIgnoreCheck": [
+            "Poppins",
+            "Urbanist",
+            "Raleway",
+            "Figtree",
+            "Bitter",
+        ],
+        # "addDefaultFonts": False,
+    }
+
+    def __init__(self, **override_summernote_settings):
+        self.override_summernote_settings = override_summernote_settings
+        super().__init__()
+
+    def render(self, name, value, attrs=None, **kwargs):
+        if attrs is None:
+            attrs = {}
+        summernote_settings = self.summernote_settings()
+        summernote_settings.update(self.DEFAULT_SUMMERNOTE_SETTINGS)
+        summernote_settings.update(self.override_summernote_settings)
+        html = super().render(name, value, attrs=attrs, **kwargs)
+        context = {
+            "id": attrs["id"],
+            "id_safe": attrs["id"].replace("-", "_"),
+            "flat_attrs": flatatt(self.final_attr(attrs)),
+            "settings": json.dumps(summernote_settings),
+            "src": reverse("django_summernote-editor", kwargs={"id": attrs["id"]}),
+            # Width and height have to be pulled out to create an iframe with correct size
+            "width": summernote_settings["width"],
+            "height": summernote_settings["height"],
+        }
+        html += render_to_string("django_summernote/widget_iframe.html", context)
+        return mark_safe(html)
 
 
 class TiledForeignKeyWidget(Select):
@@ -41,7 +148,7 @@ class TiledForeignKeyWidget(Select):
             """
             related = getattr(self.instance, self.fk_name, None)
             if related is None:
-                # LOG TODO: Should log warning here.
+                logger.error("Cannot accss fk field '{}' on {}.".format(self.fk_name, self.instance))
                 return ""
             selected = str(related.id) == self.id
             return "selected" if selected else ""

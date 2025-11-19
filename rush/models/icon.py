@@ -51,5 +51,4 @@ def compress_icon_file(sender, instance: Icon, **kwargs):
             image.save(compressed.name, compressed, save=False)
             instance.is_file_compressed = True
         except CompressionFailed:
-            # LOG TODO: Log a warning here
             pass

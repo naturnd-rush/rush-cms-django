@@ -1,11 +1,15 @@
 from io import BytesIO
+from logging import getLogger
 
+import bleach
+import bleach.css_sanitizer
 from django.core.files.base import ContentFile
 from django.db.models.fields.files import FieldFile
 from PIL import Image
 
-from rush.models import MimeType
 from rush.models.validators import FiletypeValidator
+
+logger = getLogger(__name__)
 
 
 class CompressionFailed(Exception):
@@ -58,4 +62,81 @@ def compress_image(image: FieldFile, pixel_width=128) -> ContentFile:
         return ContentFile(img_io.getvalue(), name=compressed_name)
 
     except Exception as e:
+        logger.error(f"Failed to compress file: {image.name}.")
         raise CompressionFailed from e
+
+
+class SummernoteTextCleaner:
+    """
+    Responsible for sanitizing summernote TextField data before it
+    gets saved to the database.
+    """
+
+    ALLOWED_TAGS = [
+        "p",
+        "ul",
+        "ol",
+        "li",
+        "strong",
+        "em",
+        "div",
+        "span",
+        "a",
+        "blockquote",
+        "pre",
+        "figure",
+        "figcaption",
+        "br",
+        "code",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "picture",
+        "source",
+        "img",
+        "del",
+        "b",
+        "i",
+        "button",
+        "input",
+    ]
+
+    ALLOWED_ATTRIBUTES = [
+        "alt",
+        "class",
+        "src",
+        "srcset",
+        "href",
+        "media",
+        "style",
+    ]
+
+    # Which CSS properties are allowed in 'style' attributes (assuming style is
+    # an allowed attribute)
+    BLEACH_ALLOWED_STYLES = [
+        "width",
+        "height",
+        "max-width",
+        "max-height",
+        "min-width",
+        "min-height",
+        "font-family",
+        "font-weight",
+        "font-size",
+    ]
+
+    @classmethod
+    def clean(cls, text: str) -> str:
+        unescaped = text.replace("&quot;", "'")
+        cleaned = bleach.clean(
+            text=unescaped,
+            attributes=cls.ALLOWED_ATTRIBUTES,
+            tags=cls.ALLOWED_TAGS,
+            css_sanitizer=bleach.css_sanitizer.CSSSanitizer(
+                allowed_css_properties=cls.BLEACH_ALLOWED_STYLES,
+            ),
+        )
+        return cleaned

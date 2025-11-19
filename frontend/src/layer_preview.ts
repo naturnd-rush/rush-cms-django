@@ -3,7 +3,7 @@ import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygo
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
 import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid, cyrb53 } from "./utils/math";
-import { waitForElementById, expectEl, ThrottledSignalReceiver } from "./utils/timing";
+import { waitForElementById, expectEl, ThrottledSignalReceiver, expectQuerySelector } from "./utils/timing";
 import { Parser } from 'expr-eval';
 import Mustache from "mustache";
 import { DynamicSubscriberManager } from './utils/events'
@@ -409,24 +409,49 @@ function getPolygonCentroid(polygonCoords: Position[]): L.Point{
     return getCentroid(points);
 }
 
-// async function showSpinner(){
-//     // THIS IS BAD: SPINNER SHOWING QUERIES AN ASYNC REQUEST!!!
-//     const mapDataSelectSpan = await waitForElementById("id_map_data");
-//     const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
-//     if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON"){
-//         console.log("SHOWING SPINNER");
-//         const mapPreviewEl = document.getElementById("map-preview");
-//         const spinnerEl = document.getElementById("map-spinner");
-//         if (mapPreviewEl !== null && spinnerEl !== null){
-//             mapPreviewEl.classList.add('blur');
-//             spinnerEl.classList.remove('hidden');
-//         } else {
-//             console.error("Couldn't find map-preview and map-spinner in the DOM!");
-//         }
-//     }
-// }
+async function showSpinner(){
+
+    const saveBtn = expectQuerySelector(document.body, "input[name='_save']") as HTMLInputElement;
+    const addAnotherBtn = expectQuerySelector(document.body, "input[name='_addanother']") as HTMLInputElement;
+    const continueBtn = expectQuerySelector(document.body, "input[name='_continue']") as HTMLInputElement;
+    saveBtn.disabled = true;
+    addAnotherBtn.disabled = true;
+    continueBtn.disabled = true;
+
+    const mapPreviewEl = document.getElementById("map-preview");
+    const spinnerEl = document.getElementById("map-spinner");
+    if (mapPreviewEl !== null && spinnerEl !== null){
+        mapPreviewEl.classList.add('blur');
+        spinnerEl.classList.remove('hidden');
+    } else {
+        console.error("Couldn't find map-preview and map-spinner in the DOM!");
+    }
+
+    // THIS IS BAD: SPINNER SHOWING QUERIES AN ASYNC REQUEST!!!
+    // const mapDataSelectSpan = await waitForElementById("id_map_data");
+    // const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
+    // if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON"){
+    //     console.log("SHOWING SPINNER");
+    //     const mapPreviewEl = document.getElementById("map-preview");
+    //     const spinnerEl = document.getElementById("map-spinner");
+    //     if (mapPreviewEl !== null && spinnerEl !== null){
+    //         mapPreviewEl.classList.add('blur');
+    //         spinnerEl.classList.remove('hidden');
+    //     } else {
+    //         console.error("Couldn't find map-preview and map-spinner in the DOM!");
+    //     }
+    // }
+}
 
 function hideSpinner(){
+    
+    const saveBtn = expectQuerySelector(document.body, "input[name='_save']") as HTMLInputElement;
+    const addAnotherBtn = expectQuerySelector(document.body, "input[name='_addanother']") as HTMLInputElement;
+    const continueBtn = expectQuerySelector(document.body, "input[name='_continue']") as HTMLInputElement;
+    saveBtn.disabled = false;
+    addAnotherBtn.disabled = false;
+    continueBtn.disabled = false;
+    
     const mapPreviewEl = document.getElementById("map-preview");
     const spinnerEl = document.getElementById("map-spinner");
     if (mapPreviewEl !== null && spinnerEl !== null){
@@ -440,7 +465,7 @@ function hideSpinner(){
 function showSpinnerAfter(numSeconds: number, state: MapPreviewState): void {
     setTimeout(() => {
         if (state.isUpdating){
-            //showSpinner();
+            showSpinner();
         }
     }, numSeconds * 1000)
 }
@@ -681,15 +706,19 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     // Move spinner from top of page to inside the map preview box and show the spinner initially as the map preview is drawn
     const mapDataSelectSpan = await waitForElementById("id_map_data");
     (await waitForElementById('id_map_data_helptext')).appendChild(await waitForElementById("map-spinner"));
-    hideSpinner();
-    //showSpinner();
+    const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
+    hideSpinner(); // Spinner should be turned off by default... (this is needed so non-gejson map data layers don't initialize with a spinner that never goes away.)
+    if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON"){
+        // Render the spinner initially if the being edited is for GEOJSON map-data.
+        showSpinner();
+    }
     
     // Shorthand for redrawing the map by fetching new styles / popup info
     const doStyleUpdate = () => {
         mapDataFromSpan(mapDataSelectSpan).then((mapData) => {
             if (mapData?.providerState === "GEOJSON"){
                 mapPreviewState.isUpdating = true;
-                //showSpinnerAfter(1, mapPreviewState);
+                showSpinnerAfter(1, mapPreviewState);
                 getStyleUpdate().then(styleUpdate => {
                     drawMapPreview(map, mapPreviewState, styleUpdate);
                 });
@@ -741,39 +770,40 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     
     // Listen to redraw the map when the tab is refocused (the user leaves and then comes back).
     // This can happen after a user edits one of the inline styles and then clicks on the layer edit tab.
-    document.addEventListener('visibilitychange', function () {
+    document.addEventListener('visibilitychange', async function () {
         if (document.visibilityState === 'visible') {
-            mapPreviewState.isUpdating = true;
-            //showSpinnerAfter(1, mapPreviewState);
-            getStyleUpdate().then(styleUpdate => {
-                drawMapPreview(map, mapPreviewState, styleUpdate);
-            });
+            const mapData = await mapDataFromSpan(mapDataSelectSpan);
+            if (mapData?.providerState === "GEOJSON"){
+                console.log("REFOCUS SHOWS SPINERNERNENRN");
+                mapPreviewState.isUpdating = true;
+                showSpinnerAfter(1, mapPreviewState);
+                getStyleUpdate().then(styleUpdate => {
+                    drawMapPreview(map, mapPreviewState, styleUpdate);
+                });
+            }
         }
     });
 
     // Listen to redraw the map when the map-data is changed.
     const mapPreviewEl = await waitForElementById("map-preview");
-    const stylesOnLayersGroupEl = await waitForElementById("stylesonlayer_set-group");
+    //const stylesOnLayersGroupEl = await waitForElementById("stylesonlayer_set-group");
     async function onMapDataDropdownChange(){
         const mapData = await mapDataFromSpan(mapDataSelectSpan);
-        const hideMapPreviewAndStyles = () => {
-            console.log("Hiding ", mapPreviewEl, stylesOnLayersGroupEl);
+        const hideMapPreview = () => {
             mapPreviewEl.style.display = 'none';
-            stylesOnLayersGroupEl.style.display = 'none';
         };
-        const showMapPreviewAndStyles = () => {
+        const showMapPreview = () => {
             mapPreviewEl.style.display = 'block';
-            stylesOnLayersGroupEl.style.display = 'block';
         };
         console.log(mapData?.providerState);
         if (mapData?.providerState === "GEOJSON"){
-            showMapPreviewAndStyles();
+            showMapPreview();
             mapPreviewState.isUpdating = true;
-            //showSpinnerAfter(1, mapPreviewState);
+            showSpinnerAfter(1, mapPreviewState);
             getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
         } else {
             // Hide map preview and styles on layers when we are not dealing with GEOJSON map data for this layer...
-            hideMapPreviewAndStyles();
+            hideMapPreview();
         }
     };
     onMapDataDropdownChange(); // for initial load

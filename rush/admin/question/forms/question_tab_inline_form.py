@@ -1,15 +1,20 @@
 from django.forms import ModelForm
 
-from rush.admin.widgets import TiledForeignKeyWidget
+from rush.admin.widgets import SummernoteWidget, TiledForeignKeyWidget
 from rush.models import Icon, QuestionTab
 
 
-class QuestionTabForm(ModelForm):
+class QuestionTabInlineForm(ModelForm):
+
     class Meta:
         model = QuestionTab
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
+        """
+        Tiled foreign key widget needs to access the form, to get the request, so it can
+        render thumbnails using the correct base-media-url.
+        """
         super().__init__(*args, **kwargs)
         self.fields["icon"].widget = TiledForeignKeyWidget(
             display_choices=[
@@ -23,3 +28,4 @@ class QuestionTabForm(ModelForm):
                 for icon in Icon.objects.order_by("-created_at")[:10]
             ],
         )
+        self.fields["content"].widget = SummernoteWidget()

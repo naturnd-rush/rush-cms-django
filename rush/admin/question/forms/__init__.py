@@ -1,2 +1,2 @@
-from rush.admin.question.forms.question import QuestionForm
-from rush.admin.question.forms.question_tab import QuestionTabForm
+from rush.admin.question.forms.question_form import QuestionForm
+from rush.admin.question.forms.question_tab_inline_form import QuestionTabInlineForm

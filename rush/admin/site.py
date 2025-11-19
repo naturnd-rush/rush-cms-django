@@ -1,18 +1,14 @@
-from uuid import uuid4
-
-import adminsortable2.admin as sortable_admin
-import nested_admin.forms as nested_forms
-import nested_admin.nested as nested_admin
 from django import forms
 from django.contrib import admin
 from django.db import models
 from django.urls import reverse
 from django.utils.html import format_html_join
 from django.utils.safestring import mark_safe
-from django_summernote.admin import SummernoteModelAdmin, SummernoteModelAdminMixin
+from django_summernote.admin import SummernoteModelAdmin
 
 from rush import models
 from rush.admin import utils
+from rush.admin.widgets import SummernoteWidget
 
 
 class InitiativeForm(forms.ModelForm):
@@ -29,6 +25,7 @@ class InitiativeForm(forms.ModelForm):
         Inject image HTML in "image" field help text.
         """
         super().__init__(*args, **kwargs)
+        self.fields["content"].widget = SummernoteWidget()
         if self.instance and self.instance.image:
             self.fields["image"].help_text = utils.image_html(self.instance.image.url)
 
@@ -52,6 +49,11 @@ class InitiativeAdmin(SummernoteModelAdmin):
     ]
     search_fields = ["title"]
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Prefetch tags to avoid N+1 queries in get_tags() display method
+        return qs.prefetch_related("tags")
+
     def image_preview(self, obj):
         """
         Image preview inline.
@@ -74,7 +76,7 @@ class InitiativeAdmin(SummernoteModelAdmin):
 
 
 @admin.register(models.InitiativeTag)
-class InitiativeTagAdmin(SummernoteModelAdmin):
+class InitiativeTagAdmin(admin.ModelAdmin):
     exclude = ["id"]
     list_display = ["name", "preview", "tagged_initiatives"]
     search_fields = ["name"]
@@ -82,6 +84,11 @@ class InitiativeTagAdmin(SummernoteModelAdmin):
     # Reverse relation is readonly in the add/change view for now, we can
     # change this later, but the solution is a little complicated.
     readonly_fields = ["tagged_initiatives"]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Prefetch initiatives to avoid N+1 queries in tagged_initiatives() display method
+        return qs.prefetch_related("initiatives")
 
     def preview(self, obj: models.InitiativeTag):
         return mark_safe(
@@ -143,4 +150,3 @@ class InitiativeTagAdmin(SummernoteModelAdmin):
 #     search_fields = ["group_name"]
 #     inlines = [LayerOnLayerGroupInline]
 #     sortable_field_name = "display_order"
-

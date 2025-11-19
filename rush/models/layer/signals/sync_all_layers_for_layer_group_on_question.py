@@ -21,12 +21,17 @@ def add_all_layers_when_all_layers_behaviour_enabled(sender, instance, created, 
         raise ValueError(f"Expected {instance} to be a {LayerGroupOnQuestion.__class__}.")
     if instance.behaviour != LayerGroupOnQuestion.Behaviour.ALL_LAYERS:
         return None
-    for display_order, layer in enumerate(Layer.objects.all()):
-        if instance.layers.filter(layer=layer).exists():  # type: ignore
+
+    # Only fetch layer IDs to avoid loading massive serialized_leaflet_json and map_data fields
+    existing_layer_ids = set(instance.layers.values_list("layer_id", flat=True))  # type: ignore
+    all_layer_ids = Layer.objects.values_list("id", flat=True)
+
+    for display_order, layer_id in enumerate(all_layer_ids):
+        if layer_id in existing_layer_ids:
             # skip if layer already in group
             continue
         LayerOnLayerGroup.objects.create(
-            layer=layer,
+            layer_id=layer_id,
             layer_group_on_question=instance,
             display_order=display_order,
         )
@@ -39,13 +44,15 @@ def add_layer_when_layer_created(sender, instance, created, **kwargs):
     if not created:
         # Skip if layer is being updated rather than created
         return None
-    groups = LayerGroupOnQuestion.objects.filter(behaviour=LayerGroupOnQuestion.Behaviour.ALL_LAYERS)
+
+    # Only fetch IDs to avoid loading all layer group data
+    groups = LayerGroupOnQuestion.objects.filter(behaviour=LayerGroupOnQuestion.Behaviour.ALL_LAYERS).only("id")
     for group in groups:
-        if group.layers.filter(layer=instance).exists():  # type: ignore
+        if group.layers.filter(layer_id=instance.id).exists():  # type: ignore
             # skip if layer already in group
             continue
         LayerOnLayerGroup.objects.create(
-            layer=instance,
+            layer_id=instance.id,
             layer_group_on_question=group,
             display_order=group.max_display_order() + 1,
         )

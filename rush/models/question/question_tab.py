@@ -3,6 +3,7 @@ import uuid
 from django.db import models
 
 from rush.models.question import Question
+from rush.models.utils import SummernoteTextCleaner
 
 
 class QuestionTab(models.Model):
@@ -31,6 +32,9 @@ class QuestionTab(models.Model):
     )
     slug = models.SlugField(max_length=255)
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
+
+    def clean(self) -> None:
+        self.content = SummernoteTextCleaner.clean(self.content)
 
     def __str__(self):
         return f"{self.title} for question: '{self.question.title}'"
