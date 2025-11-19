@@ -144,12 +144,3 @@ class InitiativeTagAdmin(SummernoteModelAdmin):
 #     inlines = [LayerOnLayerGroupInline]
 #     sortable_field_name = "display_order"
 
-
-@admin.register(models.Page)
-class PageAdmin(SummernoteModelAdmin, admin.ModelAdmin):
-    """
-    Admin page for editing other, non-map-related, Pages on the website.
-    """
-
-    summernote_fields = ["content"]
-    exclude = ["id"]

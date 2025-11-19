@@ -2,3 +2,4 @@
 from rush.admin import map, site
 from rush.admin.icon import IconAdmin
 from rush.admin.question import QuestionAdmin
+from rush.admin.page import PageAdmin
