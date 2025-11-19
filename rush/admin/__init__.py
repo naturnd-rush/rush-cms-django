@@ -2,4 +2,6 @@
 from rush.admin import map, site
 from rush.admin.basemap_source.basemap_source import BasemapSourceAdmin
 from rush.admin.icon import IconAdmin
+from rush.admin.question import QuestionAdmin
+from rush.admin.page import PageAdmin
 from rush.admin.question import QuestionSashAdmin

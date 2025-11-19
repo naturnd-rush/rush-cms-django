@@ -150,24 +150,3 @@ class InitiativeTagAdmin(admin.ModelAdmin):
 #     search_fields = ["group_name"]
 #     inlines = [LayerOnLayerGroupInline]
 #     sortable_field_name = "display_order"
-
-
-class PageAdminForm(forms.ModelForm):
-
-    class Meta:
-        model = models.Page
-        exclude = ["id"]
-        fields = "__all__"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["content"].widget = SummernoteWidget(width="800px")
-
-
-@admin.register(models.Page)
-class PageAdmin(SummernoteModelAdmin):
-    """
-    Admin page for editing other, non-map-related, Pages on the website.
-    """
-
-    form = PageAdminForm
