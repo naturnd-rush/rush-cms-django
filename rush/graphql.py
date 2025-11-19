@@ -79,8 +79,6 @@ class MapDataType(DjangoObjectType):
             "map_link",
             "campaign_link",
             "geotiff_link",
-            "ogm_map_id",
-            "ogm_campaign_id",
         ]
 
     geojson = graphene.String()
@@ -151,6 +149,29 @@ class MapDataWithoutGeoJsonType(DjangoObjectType):
                 return self.geotiff.url
             return None
         raise ValueError("Expected API object to be an instance of MapData!")
+
+    ogm_map_id = graphene.String()
+    ogm_campaign_id = graphene.String()
+
+    def resolve_ogm_map_id(self, info):
+        if not isinstance(self, models.MapData) or not isinstance(self.map_link, str):
+            return None
+        for regex in [OGM_MAP_EXPLORE_RE, OGM_MAP_BROWSE_RE]:
+            m = regex.match(self.map_link)
+            if m:
+                return m.group("id")
+        # LOG TODO: Log error here...
+        raise ValueError(f"{self.map_link} didn't match the expected map_link regex.")
+
+    def resolve_ogm_campaign_id(self, info):
+        if not isinstance(self, models.MapData) or not isinstance(self.campaign_link, str):
+            return None
+        for regex in [OGM_CAMPAIGN_RE]:
+            m = regex.match(self.campaign_link)
+            if m:
+                return m.group("id")
+        # LOG TODO: Log error here...
+        raise ValueError(f"{self.campaign_link} didn't match the expected campaign_link regex.")
 
 
 class StylesOnLayersType(DjangoObjectType):
