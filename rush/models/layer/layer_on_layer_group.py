@@ -51,7 +51,10 @@ class LayerOnLayerGroup(models.Model):
 
     def __str__(self) -> str:
         # Being careful not to access any more related data than we absolutely need here...
-        related_layer = Layer.objects.only("name").get(id=self.layer_id)  # type: ignore
-        related_lgoq = LayerGroupOnQuestion.objects.only("question__id").get(id=self.layer_group_on_question_id)  # type: ignore
-        related_question = Question.objects.only("title").get(id=related_lgoq.question_id)  # type: ignore
-        return "{} on {}".format(related_layer.name, related_question.title)
+        related_layer = Layer.objects.only("name").filter(id=self.layer_id).first()  # type: ignore
+        related_lgoq = LayerGroupOnQuestion.objects.only("question__id").filter(id=self.layer_group_on_question_id).first()  # type: ignore
+        related_question = Question.objects.only("title").filter(id=related_lgoq.question_id).first()  # type: ignore
+        return "{} on {}".format(
+            related_layer.name if related_layer else "Deleted Layer",
+            related_question.title if related_question else "Deleted LayerGroupOnQuestion or Question",
+        )
