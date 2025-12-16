@@ -16,6 +16,7 @@ class s extends Error{constructor(e){super(e)}}async function a(r){const e=await
                 markerIcon
                 markerIconOpacity
                 markerBackgroundColor
+                markerBackgroundOpacity
             }
         }
     `,variables:{id:r}}))).data.style}async function i(r){return(await a(JSON.stringify({query:`
