@@ -68,7 +68,7 @@ function getPreviewHTML(state: PreviewState): string {
     const svgWidth = 200;
     const svgHeight = 150;
     const markerRadius = 16; // target 32 diameter for the marker icon backround
-    const markerImageWidth = 26;
+    const markerImageWidth = 22;
     const polygonPoints: Array<Point> = [
         new Point(20, 20),
         new Point(100, 40),

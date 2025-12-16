@@ -30,12 +30,12 @@ import{l as u,g as v}from"./utils/math.js";import{g as h}from"./graphql.js";impo
         <img 
             id="marker-image"
             src="${t.markerOptions.data}"
-            width="26"
-            height="26"
+            width="22"
+            height="22"
             style='
                 position: absolute;
-                left: ${e.x-26/2}px;
-                top: ${e.y-26/2}px;
+                left: ${e.x-22/2}px;
+                top: ${e.y-22/2}px;
                 opacity: ${t.markerOptions.markerOpacity}
             '
         />'
