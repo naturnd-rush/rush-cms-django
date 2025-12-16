@@ -62,7 +62,7 @@ class Style(models.Model):
     stroke_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
-        default=Decimal(1),
+        default=Decimal(1.0),
         verbose_name="Transparency",
     )
     stroke_line_cap = models.CharField(
@@ -107,7 +107,7 @@ class Style(models.Model):
     fill_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
-        default=Decimal(1),
+        default=Decimal(0.8),
         null=True,
         blank=True,
     )
@@ -133,7 +133,7 @@ class Style(models.Model):
     marker_icon_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
-        default=Decimal(1),
+        default=Decimal(0.8),
         null=True,
         blank=True,
     )
@@ -146,7 +146,7 @@ class Style(models.Model):
     marker_background_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
-        default=Decimal(1),
+        default=Decimal(0.8),
         null=True,
         blank=True,
     )

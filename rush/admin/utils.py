@@ -65,7 +65,7 @@ class SliderAndTextboxNumberInput(forms.Widget):
         def render(input: forms.NumberInput, id: str) -> SafeText:
             return input.render(
                 name,
-                get_decimal(value),
+                round(get_decimal(value), 2),
                 attrs={**self.attrs, "id": id},
                 renderer=renderer,
             )
