@@ -328,30 +328,31 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
  */
 function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
     const markerBackgroundSize = 32;
-    const markerImageWidth = 26;
+    const markerImageWidth = 22;
     return {
         html: `
-            <div 
-                style="
+            <div>
+                <div style="
                     width: ${markerBackgroundSize}px;
                     height: ${markerBackgroundSize}px;
                     background-color: ${markerStyle.markerBackgroundColor};
                     opacity: ${markerStyle.markerBackgroundOpacity};
                     border-radius: 50%;
                     display: flex;
-                    align-items: center;
-                    justify-content: center;
-                "
-            >
+                    position: absolute;
+                "></div>
                 <img 
                     src="${baseMediaUrl + markerStyle.markerIcon}"
                     style="
                         width: ${markerImageWidth}px; 
                         height: ${markerImageWidth}px;
                         opacity: ${markerStyle.markerIconOpacity};
+                        position: relative;
+                        top: 5px;
+                        left: 5px;
                     "
                 />
-            <div/>
+            </div>
         `,
         className: '', // Disable default Leaflet styles
         iconSize: [markerBackgroundSize, markerBackgroundSize],
