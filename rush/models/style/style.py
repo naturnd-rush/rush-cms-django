@@ -143,6 +143,13 @@ class Style(models.Model):
         blank=True,
         verbose_name="Background Color",
     )
+    marker_background_opacity = models.DecimalField(
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal(1),
+        null=True,
+        blank=True,
+    )
 
     # TODO: Add _hover style and _active style recursive foreign keys.
 

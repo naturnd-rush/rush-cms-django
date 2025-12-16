@@ -388,6 +388,7 @@ class StyleForm(forms.ModelForm):
             # Icon data
             "draw_marker",
             "marker_background_color",
+            "marker_background_opacity",
             "marker_icon",
             "marker_icon_opacity",
             # "fill_rule", <-- gonna handle this later. Seems like an extreme edge-case for using the admin site.
@@ -401,6 +402,7 @@ class StyleForm(forms.ModelForm):
             "stroke_dash_offset": utils.SliderAndTextboxNumberInput(max=100, step=1),
             "fill_opacity": utils.SliderAndTextboxNumberInput(),
             "marker_icon_opacity": utils.SliderAndTextboxNumberInput(),
+            "marker_background_opacity": utils.SliderAndTextboxNumberInput(),
             "marker_icon": forms.FileInput(),
         }
 

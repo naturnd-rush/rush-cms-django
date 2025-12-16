@@ -33,7 +33,8 @@ type PreviewState = {
     markerOptions: {
         data: string | null, // blob icon data
         bgColor: string,
-        opacity: number,
+        bgOpacity: number,
+        markerOpacity: number,
     },
 };
 
@@ -115,13 +116,12 @@ function getPreviewHTML(state: PreviewState): string {
     const centroid = getCentroid(polygonPoints);
     if (state.drawMarker){
         // refX and Y should be HALF the width & height to center the image on the actual point
-        // orient="auto" → rotates the marker to match the path direction (default). orient="auto-start-reverse" → rotates to match start, reversed. orient="0" → fixed angle, no rotation.
         html += `
         <circle 
             id="marker-centroid"
             r="${markerRadius}px"
             fill=${state.markerOptions.bgColor}
-            opacity=${state.markerOptions.opacity}
+            opacity=${state.markerOptions.bgOpacity}
             cx=${centroid.x}
             cy=${centroid.y}
         />
@@ -141,7 +141,7 @@ function getPreviewHTML(state: PreviewState): string {
                 position: absolute;
                 left: ${centroid.x - markerImageWidth/2}px;
                 top: ${centroid.y - markerImageWidth/2}px;
-                opacity: ${state.markerOptions.opacity}
+                opacity: ${state.markerOptions.markerOpacity}
             '
         />'
         `
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
         drawMarker: false,
         strokeOptions: {color: "#FFFFFF", opacity: 1, weight: 1, lineJoin: "", lineCap: "ROUND", dashArray: "", dashOffset: "0"},
         fillOptions: {color: "#FFFFFF", opacity: 1},
-        markerOptions: {bgColor: "#FFFFFF", opacity: 1, data: null},
+        markerOptions: {bgColor: "#FFFFFF", bgOpacity: 1, data: null, markerOpacity: 1},
     };
 
     const sources:  Array<UpdateSource> = [
@@ -349,7 +349,6 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
 
                 // Check to see if a new file has been selected
                 let file = null;
-                console.log(el.files);
                 if (el.files){
                     file = el.files[0];
                 }
@@ -363,7 +362,6 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
                     // I wanted something that didn't rely on Django's file input's "Currently" section 
                     // link (see the field row in the admin site), which doesn't appear with an ID in the
                     // DOM. This way, I can be sure that the image data (if it exists) is being accessed.
-                    console.log("Getting old marker icon data from injected style id: ", styleId);
                     if (styleId !== ""){ 
                         const style = await getStyleById(styleId);
                         if (style !== null){
@@ -387,13 +385,19 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
         {
             groupName: "Marker",
             el: document.querySelector('#id_marker_icon_opacity'),
-            update: (el) => previewState.markerOptions.opacity = Number(el.value),
+            update: (el) => previewState.markerOptions.markerOpacity = Number(el.value),
             eventName: "input",
         },
         {
             groupName: "Marker",
             el: document.querySelector('#id_marker_background_color'),
             update: (el) => previewState.markerOptions.bgColor = el.value,
+            eventName: "input",
+        },
+        {
+            groupName: "Marker",
+            el: document.querySelector('#id_marker_background_opacity'),
+            update: (el) => previewState.markerOptions.bgOpacity = Number(el.value),
             eventName: "input",
         },
     ];
@@ -411,73 +415,3 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
     }
     
 })();});
-
-
-    // let styleOptions = {
-    //     drawFill: document.querySelector('#id_draw_fill') as HTMLInputElement,
-    //     drawMarker: document.querySelector('#id_draw_marker') as HTMLInputElement,
-    //     drawStroke: document.querySelector('#id_draw_stroke') as HTMLInputElement,
-    //     stroke: {
-    //         color: document.querySelector('#id_stroke_color'),
-    //         weight: document.querySelector('#id_stroke_weight'),
-    //         opacity: document.querySelector('#id_stroke_opacity'),
-    //         lineCap: document.querySelector('#id_stroke_line_cap'),
-    //         lineJoin: document.querySelector('#id_stroke_line_join'),
-    //         dashArray: document.querySelector('#id_stroke_dash_array'),
-    //         dashOffset: document.querySelector('#id_stroke_dash_offset'),
-    //     },
-    //     fill: {
-    //         color: document.querySelector('#id_fill_color'),
-    //         opacity: document.querySelector('#id_fill_opacity'),
-    //     },
-    //     marker: {
-    //         icon: document.querySelector('#live_image_input_marker_icon'),
-    //         opacity: document.querySelector('#id_marker_icon_opacity'),
-    //         backgroundColor: document.querySelector("#id_marker_background_color")
-    //     },
-    // };
-
-    // const allOptionsAndToggles = [
-    //     styleOptions.drawStroke, ...Object.values(styleOptions.stroke),
-    //     styleOptions.drawFill, ...Object.values(styleOptions.fill),
-    //     styleOptions.drawMarker, ...Object.values(styleOptions.drawMarker),
-    // ];
-    // for (let element of allOptionsAndToggles){
-    //     if (element === null){
-    //         console.log(allOptionsAndToggles);
-    //         throw new Error("Missing element!");
-    //     }
-    // }
-
-    
-
-    // // Add event-listeners for redrawing the style preview.
-    // for (let element of allOptionsAndToggles){
-    //     const input = element as HTMLInputElement;
-    //     input.addEventListener('input', () => updatePreview(previewContainer, styleOptions, null));
-    //     input.addEventListener('input', () => collapseAndExpandOptionGroups(styleOptions));
-    // }
-
-    // // Add event listeners for collapsing and expanding options groups
-    // styleOptions.drawStroke.addEventListener("change", () => collapseAndExpandOptionGroups(styleOptions));
-
-    // // Draw initial style preview on page-load.
-    // collapseAndExpandOptionGroups(styleOptions);
-    // updatePreview(previewContainer, styleOptions, null);
-
-    // if (styleOptions.marker.icon !== null){
-    //     styleOptions.marker.icon.addEventListener('change', (event) => {
-    //         const file = event.target.files[0];
-    //         if (file) {
-    //             const reader = new FileReader();
-    //             reader.onload = function(e) {
-    //                 console.log(e.target.result?.toString());
-    //                 // previewEl.src = e.target.result;
-    //                 // previewEl.style.display = 'block';
-    //                 //styleOptions.marker.rawData = e.target.result;
-    //                 updatePreview(previewContainer, styleOptions, e.target.result);
-    //             }
-    //             reader.readAsDataURL(file);
-    //         }
-    //     });
-    // }

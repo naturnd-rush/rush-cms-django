@@ -85,7 +85,6 @@ async function mapDataFromSpan(mapDataSelectSpan: HTMLSpanElement): Promise<MapD
     let mapDataId = null;
     for (let child of mapDataSelectSpan.childNodes){
         if (child instanceof HTMLOptionElement && child.selected){
-            console.log(child);
             mapDataId = child.value;
         }
     }
@@ -337,7 +336,7 @@ function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
                     width: ${markerBackgroundSize}px;
                     height: ${markerBackgroundSize}px;
                     background-color: ${markerStyle.markerBackgroundColor};
-                    opacity: ${markerStyle.markerIconOpacity};
+                    opacity: ${markerStyle.markerBackgroundOpacity};
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
@@ -349,6 +348,7 @@ function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
                     style="
                         width: ${markerImageWidth}px; 
                         height: ${markerImageWidth}px;
+                        opacity: ${markerStyle.markerIconOpacity};
                     "
                 />
             <div/>
@@ -564,7 +564,6 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     // Update currentLayer if we are receiving new map data.
     if ("MapData" === update.type){
         const newGeoJson = (update as MapDataUpdate).newGeoJsonData;
-        console.log("Re-drawing map layer from new map data update: ", update);
         if (newGeoJson === null){
             state.currentLayer = null;
         } else {
@@ -774,7 +773,6 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         if (document.visibilityState === 'visible') {
             const mapData = await mapDataFromSpan(mapDataSelectSpan);
             if (mapData?.providerState === "GEOJSON"){
-                console.log("REFOCUS SHOWS SPINERNERNENRN");
                 mapPreviewState.isUpdating = true;
                 showSpinnerAfter(1, mapPreviewState);
                 getStyleUpdate().then(styleUpdate => {
@@ -795,7 +793,6 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         const showMapPreview = () => {
             mapPreviewEl.style.display = 'block';
         };
-        console.log(mapData?.providerState);
         if (mapData?.providerState === "GEOJSON"){
             showMapPreview();
             mapPreviewState.isUpdating = true;
