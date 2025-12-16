@@ -336,7 +336,7 @@ function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
                     width: ${markerBackgroundSize}px;
                     height: ${markerBackgroundSize}px;
                     background-color: ${markerStyle.markerBackgroundColor};
-                    opacity: ${markerStyle.markerIconOpacity};
+                    opacity: ${markerStyle.markerBackgroundOpacity};
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
@@ -348,6 +348,7 @@ function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
                     style="
                         width: ${markerImageWidth}px; 
                         height: ${markerImageWidth}px;
+                        opacity: ${markerStyle.markerIconOpacity};
                     "
                 />
             <div/>
