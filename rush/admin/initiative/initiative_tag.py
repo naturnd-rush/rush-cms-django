@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html_join
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin
 from rush import models
@@ -22,7 +23,7 @@ class InitiativeTagAdmin(SummernoteModelAdmin):
         return qs.prefetch_related("initiatives")
 
     def preview(self, obj: models.InitiativeTag):
-        return mark_safe(
+        return format_html(
             f"""
                 <p style='
                     color: {obj.text_color};
