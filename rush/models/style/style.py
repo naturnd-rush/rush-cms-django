@@ -137,6 +137,13 @@ class Style(models.Model):
         null=True,
         blank=True,
     )
+    marker_size = models.DecimalField(
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal(22),
+        null=True,
+        blank=True,
+    )
     marker_background_color = ColorField(
         default="#F2F2F2",
         null=True,
