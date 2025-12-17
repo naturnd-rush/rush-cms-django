@@ -65,6 +65,7 @@ export interface Style{
     markerIconOpacity: number,
     markerBackgroundColor: string,
     markerBackgroundOpacity: number,
+    markerSize: number,
 }
 
 export async function getStyleById(styleId: string): Promise<Style | null> {
@@ -87,6 +88,7 @@ export async function getStyleById(styleId: string): Promise<Style | null> {
                 markerIconOpacity
                 markerBackgroundColor
                 markerBackgroundOpacity
+                markerSize
             }
         }
     `;
