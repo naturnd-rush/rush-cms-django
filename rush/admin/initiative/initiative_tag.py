@@ -1,14 +1,13 @@
 from django.contrib import admin
-from django.db import models
 from django.urls import reverse
 from django.utils.html import format_html_join
 from django.utils.safestring import mark_safe
-
+from django_summernote.admin import SummernoteModelAdmin
 from rush import models
 
 
 @admin.register(models.InitiativeTag)
-class InitiativeTagAdmin(admin.ModelAdmin):
+class InitiativeTagAdmin(SummernoteModelAdmin):
     exclude = ["id"]
     list_display = ["name", "preview", "tagged_initiatives"]
     search_fields = ["name"]
