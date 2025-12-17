@@ -327,14 +327,14 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
  * @param markerStyle the marker style.
  */
 function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
-    const markerBackgroundSize = 32;
-    const markerImageWidth = 22;
+    const markerImageWidth = markerStyle.markerSize;
+    const markerRadius = Math.sqrt(Math.pow(markerImageWidth / 2, 2) + Math.pow(markerImageWidth / 2, 2));
     return {
         html: `
             <div>
                 <div style="
-                    width: ${markerBackgroundSize}px;
-                    height: ${markerBackgroundSize}px;
+                    width: ${markerRadius * 2}px;
+                    height: ${markerRadius * 2}px;
                     background-color: ${markerStyle.markerBackgroundColor};
                     opacity: ${markerStyle.markerBackgroundOpacity};
                     border-radius: 50%;
@@ -348,15 +348,15 @@ function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
                         height: ${markerImageWidth}px;
                         opacity: ${markerStyle.markerIconOpacity};
                         position: relative;
-                        top: 5px;
-                        left: 5px;
+                        top: ${markerRadius - (markerImageWidth / 2)}px;
+                        left: ${markerRadius - (markerImageWidth / 2)}px;
                     "
                 />
             </div>
         `,
         className: '', // Disable default Leaflet styles
-        iconSize: [markerBackgroundSize, markerBackgroundSize],
-        iconAnchor: [markerBackgroundSize/2, markerBackgroundSize/2], // Center the icon around the latlng
+        iconSize: [markerRadius * 2, markerRadius * 2],
+        iconAnchor: [markerRadius, markerRadius], // Center the icon around the latlng
     };
 }
 

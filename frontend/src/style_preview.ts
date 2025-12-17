@@ -5,7 +5,7 @@
 import { Point } from "leaflet";
 import { getStyleById } from "./graphql";
 import { getCentroid } from "./utils/math";
-import { expectEl } from "./utils/timing";
+import { expectEl, expectQuerySelector, waitForElementById } from "./utils/timing";
 
 /**
  * Data used to draw the preview.
@@ -35,6 +35,7 @@ type PreviewState = {
         bgColor: string,
         bgOpacity: number,
         markerOpacity: number,
+        markerSize: number,
     },
 };
 
@@ -65,21 +66,21 @@ function getPointsAsString(points: Array<Point>): string{
  * @param state the style-preview state used to generate the HTML code.
  */
 function getPreviewHTML(state: PreviewState): string {
-    const svgWidth = 200;
-    const svgHeight = 150;
-    const markerRadius = 16; // target 32 diameter for the marker icon backround
-    const markerImageWidth = 22;
+    const svgWidth = 400;
+    const svgHeight = 400;
+    const markerImageWidth = state.markerOptions.markerSize;
+    const markerRadius = Math.sqrt(Math.pow(markerImageWidth / 2, 2) + Math.pow(markerImageWidth / 2, 2));
     const polygonPoints: Array<Point> = [
-        new Point(20, 20),
-        new Point(100, 40),
-        new Point(140, 80),
-        new Point(60, 120),
-        new Point(20, 80),
+        new Point(40, 40),
+        new Point(200, 80),
+        new Point(280, 160),
+        new Point(120, 240),
+        new Point(40, 160),
     ];
 
     // Declare SVG header and polygon with points
     let html = `
-    <svg 
+    <svg
         width="${svgWidth}px"
         height="${svgHeight}px"
         xmlns="http://www.w3.org/2000/svg"
@@ -235,6 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
     const previewContainer = expectEl('style_preview') as HTMLDivElement;
     const styleId = expectEl("injected-style-id").innerHTML;
     const baseMediaUrl = expectEl("injected-media-url").innerHTML;
+    const stylePreview = expectQuerySelector(document, ".field-style_preview");
+    console.log(stylePreview);
 
     // Define a default preview state (this is temporary because we will update the preview 
     // based on the admin form's currently selected style attributes on page load).
@@ -244,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
         drawMarker: false,
         strokeOptions: {color: "#FFFFFF", opacity: 1, weight: 1, lineJoin: "", lineCap: "ROUND", dashArray: "", dashOffset: "0"},
         fillOptions: {color: "#FFFFFF", opacity: 1},
-        markerOptions: {bgColor: "#FFFFFF", bgOpacity: 1, data: null, markerOpacity: 1},
+        markerOptions: {bgColor: "#FFFFFF", bgOpacity: 1, data: null, markerOpacity: 1, markerSize: 22},
     };
 
     const sources:  Array<UpdateSource> = [
@@ -367,7 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
                         if (style !== null){
                             const url = baseMediaUrl + style.markerIcon;
                             const response = await fetch(url);
-                            console.log(response, url);
                             const blob = await response.blob();
                             const markerData = await readFile(blob);
                             previewState.markerOptions.data = markerData;
@@ -398,6 +400,15 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
             groupName: "Marker",
             el: document.querySelector('#id_marker_background_opacity'),
             update: (el) => previewState.markerOptions.bgOpacity = Number(el.value),
+            eventName: "input",
+        },
+        {
+            groupName: "Marker",
+            el: document.querySelector('#id_marker_size'),
+            update: (el) => {
+                previewState.markerOptions.markerSize = Number(el.value);
+
+            },
             eventName: "input",
         },
     ];

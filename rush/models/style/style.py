@@ -137,6 +137,13 @@ class Style(models.Model):
         null=True,
         blank=True,
     )
+    marker_size = models.DecimalField(
+        max_digits=6,  # 6 instead of 5 here to support sizes with triple digits begfore the decimal place, e.g., 101.23. I suppose the decimal place counts as a digit?
+        decimal_places=3,
+        default=Decimal(22),
+        null=True,
+        blank=True,
+    )
     marker_background_color = ColorField(
         default="#F2F2F2",
         null=True,

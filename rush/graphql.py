@@ -218,6 +218,7 @@ class StyleType(DjangoObjectType):
             "marker_icon_opacity",
             "marker_background_color",
             "marker_background_opacity",
+            "marker_size",
             "name",
         ]
 
