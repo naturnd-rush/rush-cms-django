@@ -28,9 +28,7 @@ services:
       - POSTGRES_USER=${POSTGRES_DATABASE_USERNAME}
       - POSTGRES_PASSWORD=${POSTGRES_DATABASE_PASSWORD}
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+      - pgdata:/var/lib/postgresql
 
 volumes:
   djangodata:
