@@ -4,13 +4,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.django
-      # args:
-      #   # For calling django makemigrations and migrate during the build stage (.env and environment are not injected by Docker until container runtime).
-      #   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      #   DJANGO_DEBUG: ${DJANGO_DEBUG}
     image: rush_admin/django
     volumes:
-      - .:/rush_admin
+      - djangodata:/rush_admin
     depends_on:
       - postgres
     env_file:
@@ -35,5 +31,12 @@ services:
       - POSTGRES_DB=${POSTGRES_DATABASE_NAME}
       - POSTGRES_USER=${POSTGRES_DATABASE_USERNAME}
       - POSTGRES_PASSWORD=${POSTGRES_DATABASE_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+
+volumes:
+  djangodata:
+  pgdata:
+
