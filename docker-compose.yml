@@ -19,7 +19,8 @@ services:
       - POSTGRES_DATABASE_HOST=postgres # db container service defined below
       - GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so.37 # configure GDAL env path for django (should be stable since we are using a fixed GDAL base image)
     command: >
-      sh -c "poetry run python manage.py migrate &&
+      sh -c "poetry run python manage.py makemigrations &&
+            poetry run python manage.py migrate &&
             poetry run python manage.py runserver 0.0.0.0:8000"
     ports:
       - "8000:8000"
