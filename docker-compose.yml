@@ -10,7 +10,7 @@ services:
       #   DJANGO_DEBUG: ${DJANGO_DEBUG}
     image: rush_admin/django
     volumes:
-      - .:/app
+      - .:/rush_admin
     depends_on:
       - postgres
     env_file:
