@@ -49,11 +49,6 @@ jobs:
         --progress=plain \
         .
 
-        docker build \
-        --file Dockerfile.postgres \
-        --progress=plain \
-        .
-
     - name: Run Django Tests
       run: |
         docker compose \
