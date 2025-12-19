@@ -21,12 +21,8 @@ services:
     ports:
       - "8000:8000"
 
-
   postgres:
-    build:
-      context: .
-      dockerfile: Dockerfile.postgres
-    image: rush_admin/postgres
+    image: postgis/postgis:18-3.6
     environment:
       - POSTGRES_DB=${POSTGRES_DATABASE_NAME}
       - POSTGRES_USER=${POSTGRES_DATABASE_USERNAME}
@@ -39,4 +35,3 @@ services:
 volumes:
   djangodata:
   pgdata:
-
