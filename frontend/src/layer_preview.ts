@@ -751,7 +751,7 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
 
     // HACK FOR DFG PRESENTATION TODAY
     // I just want to get popup editing to refresh the map preview!
-    // This is ineffecient!!! TODO: Fix me...
+    // This is SUPER SUPER ineffecient!!! I dont even think we need to hash anything... TODO: Fix me...
     let previousHash = 0;
     const pollPopupChanges = () => {
         const popupTemplates = [];
