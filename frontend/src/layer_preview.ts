@@ -56,7 +56,7 @@ interface PopupMetadata {
  */
 export async function getStyleUpdate(): Promise<StyleUpdate> {
     const stylesOnLayers: Array<StyleOnLayer> = [];
-    for (let inlineRow of document.querySelectorAll("tr[id*='stylesonlayer_set-']")){
+    for (let inlineRow of document.querySelectorAll("div[id*='stylesonlayer_set-']")){
         // for each styleOnLayer inline group
         const styleId = (inlineRow.querySelector("select[id*='-style']") as HTMLSelectElement)?.value;
         const featureMapping = (inlineRow.querySelector("textarea[id*='feature_mapping']") as HTMLInputElement | null)?.value;
