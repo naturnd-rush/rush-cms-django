@@ -308,19 +308,6 @@ class MapDataAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Inject field information on provider so the frontend can know which
-        # provider fields to show depending on what value is selected in the dropdown.
-        # TODO: Should probably move this to the admin "render changeform" method and use context[VAR_NAME]
-        #       to inject this data, instead of hackily putting JSON data into HTML elements like this...
-        # self.fields["provider_state"].widget.attrs["show-fields-map"] = json.dumps(
-        #     models.MapData.get_formfield_map()
-        # )
-        # all_fields = []
-        # for fieldlist in models.MapData.get_formfield_map().values():
-        #     for field in fieldlist:
-        #         all_fields.append(field["name"])
-        # self.fields["provider_state"].widget.attrs["all-fields"] = json.dumps({"fieldnames": all_fields})
-
         # Remove "UNSET" option from dropdown menu
         self.fields["provider_state"].choices = [
             (value, label)
