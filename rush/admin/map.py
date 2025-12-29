@@ -1,6 +1,7 @@
 import json
 import logging
 from dataclasses import asdict, dataclass
+from decimal import Decimal
 from typing import Any, List
 
 import adminsortable2.admin as sortable_admin
@@ -15,11 +16,22 @@ from rush import models
 from rush.admin import utils
 from rush.admin.utils import truncate_admin_text_from
 from rush.admin.widgets import SummernoteWidget
+from rush.models.style.tooltip import Direction
 
 logger = logging.getLogger(__name__)
 
 
 class StylesOnLayerInlineForm(forms.ModelForm):
+
+    # Related Tooltip fields
+    label = forms.CharField()
+    offset_x = forms.DecimalField()
+    offset_y = forms.DecimalField()
+    opacity = forms.DecimalField()
+    direction = forms.ChoiceField(choices=Direction.choices)
+    permanent = forms.BooleanField()
+    sticky = forms.BooleanField()
+
     class Meta:
         model = models.StylesOnLayer
         fields = [
@@ -32,6 +44,51 @@ class StylesOnLayerInlineForm(forms.ModelForm):
             "popup": SummernoteWidget(),
             "feature_mapping": forms.Textarea(attrs={"rows": 1, "cols": 50}),
         }
+
+    def __init__(self, *args, **kwargs):
+
+        instance = kwargs.get("instance")
+        super().__init__(*args, **kwargs)
+
+        # Set widgets on the tooltip fields
+        self.fields["label"].widget = SummernoteWidget(
+            width="250px",
+            height="100px",
+            styleTags=[],
+            toolbar=[["font", ["bold", "italic", "underline"]]],
+        )
+        self.fields["offset_x"].widget = utils.SliderAndTextboxNumberInput(min=-100, max=100, step=1)
+        self.fields["offset_y"].widget = utils.SliderAndTextboxNumberInput(min=-100, max=100, step=1)
+        self.fields["opacity"].widget = utils.SliderAndTextboxNumberInput(max=1, step=0.01)
+
+        if instance and hasattr(instance, "tooltip"):
+            # Set initial field values if the tooltip already exists
+            tooltip: models.Tooltip = instance.tooltip
+            self.fields["label"].initial = tooltip.label
+            self.fields["offset_x"].initial = tooltip.offset_x
+            self.fields["offset_y"].initial = tooltip.offset_y
+            self.fields["opacity"].initial = tooltip.opacity
+            self.fields["direction"].initial = tooltip.direction
+            self.fields["permanent"].initial = tooltip.permanent
+            self.fields["sticky"].initial = tooltip.sticky
+
+        else:
+            # Set defaults for a new tooltip being added. Django doesn't pull
+            # these automatically because we're using custom form fields and it
+            # can't automatically relate the tooltip formfields to the tooltip
+            # model's fields.
+            self.fields["opacity"].initial = Decimal(0.8)
+            self.fields["direction"].initial = Direction.CENTER
+            self.fields["permanent"].initial = True
+
+        # Set initial field help text values. This is done here instead of on the
+        # model because we're using custom form fields and, again, Django cannot
+        # automatically relate the tooltip formfields to the tooltip model's fields.
+        self.fields["direction"].help_text = "Where to draw the label relative to the marker."
+        self.fields["permanent"].help_text = (
+            "Turn this off if you only want the label to be visible when a user hovers their mouse over the marker area."
+        )
+        self.fields["sticky"].help_text = "Whether text attaches to the cursor when nearby."
 
 
 class StyleOnLayerInline(sortable_admin.SortableTabularInline, admin.TabularInline):
