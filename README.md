@@ -61,3 +61,7 @@ The most popular way to set up the RUSH Initiative development environment, and 
 9. Create a superuser so you can login to the development RUSH Admin Site: `poetry run python manage.py createsuperuser`.
 10. Visit `http://127.0.0.1:8000/` and try logging into the admin site with your superuser credentials.
 11. That's it! You should now have a working version of the RUSH Admin Site's development server :)
+
+## RUSH Developer FAQ:
+Q: I'm editing TypeScript files but don't see any changes on the Django frontend.
+A: Our TypeScript files for the Django admin site are transpiled and bundled by a tool called [Vite](https://github.com/vitejs/vite). If you are developing using our Docker Compose project, you will need to shell into the Django container, `cd` into the `frontend` folder, and run `npx vite build --watch`. On the other hand, if you are developing using a manual configuration, you will need to install [Node.js](https://nodejs.org/en/download), `cd` into the `frontend` folder, run `npm install`, and then you can run `npx vite build --watch`. In both cases, the `npx` command will watch for changes to the TypeScript files and automatically transpile and minify them to plain JavaScript in `static/js/compiled`. The JavaScript files should then be automatically picked-up by Django's development server and appear in the browser.
