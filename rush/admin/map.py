@@ -465,13 +465,6 @@ class StyleForm(forms.ModelForm):
             "marker_size": utils.SliderAndTextboxNumberInput(min=10, max=150),
         }
 
-    class Media:
-        js = [
-            # "style_preview.js",
-            # "slider_textbox_input_sync.js",
-            # "live_image_preview_refresh.js",
-        ]
-
 
 @admin.register(models.Style)
 class StyleAdmin(admin.ModelAdmin):
