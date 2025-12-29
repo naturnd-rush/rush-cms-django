@@ -374,7 +374,7 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
         const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
         for (let appliedStyle of appliedStyles){
             const style = appliedStyle.style;
-            if (style.drawMarker && style.markerIcon.trimStart().trimEnd() !== ""){
+            if (style.drawMarker === true){
                 markerStyle = style;
                 break;
             }
