@@ -61,3 +61,7 @@ The most popular way to set up the RUSH Initiative development environment, and 
 9. Create a superuser so you can login to the development RUSH Admin Site: `poetry run python manage.py createsuperuser`.
 10. Visit `http://127.0.0.1:8000/` and try logging into the admin site with your superuser credentials.
 11. That's it! You should now have a working version of the RUSH Admin Site's development server :)
+12. 
+
+## Contributing
+We welcome any, and all, contributions to the RUSH project. If you see something that you think could be better, don't hesitate to open a pull-request and we will do our best to look at it. Our goal is to create a [FOSS](https://en.wikipedia.org/wiki/Free_and_open-source_software) geospatial content management system, and we hope that it will be useful beyond what we're building specifically at the RUSH Initiative.
