@@ -5,7 +5,7 @@ By showcasing the research, creativity, and innovation happening throughout loca
 
 The RUSH webmap is a tool for people to connect habitats, restore watersheds, feel a sense of belonging, and start conversations that lead to a brighter future.
 
-This repository is for the "admin site," which is our content management solution for uploading, styling, and publishing geographical map data from a variety of sources. Published data is then visible on the "frontend website", which you can visit [here](https://whatstherush.earth). If you have any questions or want to to contribute to the RUSH Initiative, either as a developer or in some other capacity, feel free to reach out to our team lead _Anne-Marie Daniel_ -- annemarie@naturnd.com, or one of our developers _Doug Johnson_ -- Doug@naturnd.com, and _Sam Morris_ -- dodobird181@gmail.com.
+This repository is for the "admin site," which is our content management solution for uploading, styling, and publishing geographical map data from a variety of sources. Published data is then visible on the "frontend website", which you can visit [here](https://whatstherush.earth).
 
 We would like to officially recognize that the RUSH Initiative is exploring this work on the unceded and unsurrendered territories of the lək̓ʷəŋən and SENĆOŦEN speaking peoples. Maps have a long history of erasure of Indigenous cultures and territories. Our goal is to promote tools that support the healing of ecosystems and communities so that all beings can live their best life.
 
