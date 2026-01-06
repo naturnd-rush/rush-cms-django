@@ -689,7 +689,7 @@ const initStylesOnLayerResponsiveUI = (subscriberManager: DynamicSubscriberManag
     const registerCheckbox = (
         checkboxSelector: string, 
         affectedLabelsSubstring: string, 
-        callback: (formRows: Array<HTMLElement>, isChecked: boolean) => void,
+        callback: (checkboxFormRow: HTMLElement | null, formRows: Array<HTMLElement>, isChecked: boolean) => void,
     ) => {
         subscriberManager.subscribeEventListener("input", checkboxSelector, (event) => {
             if (event.target !== null && event.target instanceof HTMLInputElement){
@@ -700,7 +700,7 @@ const initStylesOnLayerResponsiveUI = (subscriberManager: DynamicSubscriberManag
                 }
                 // Run callback on matching labelled form-rows
                 const labelledFormRows = getFormRowsWithLabelText(inline, affectedLabelsSubstring)
-                callback(labelledFormRows, event.target.checked);
+                callback(event.target.closest("div[class*='form-row']"), labelledFormRows, event.target.checked);
             }
         });
         // Simulate an initial event to show/hide based on initial checkbox value on page-load (does not change checkbox value).
@@ -709,14 +709,22 @@ const initStylesOnLayerResponsiveUI = (subscriberManager: DynamicSubscriberManag
         );
     };
 
-    // Draw-tooltip checkbox
-    registerCheckbox("input[id*='-draw_tooltip']", "Tooltip", (formRows, checked) => {
+    const COLLAPSE_BG_COLOR = "#FFFFFF";
+    const EXPAND_BG_COLOR_CHECKBOX = "#E2DBC4";
+    const EXPAND_BG_COLOR = "#f6f6f6";
+
+    // Register the draw-tooltip checkbox
+    registerCheckbox("input[id*='-draw_tooltip']", "Tooltip", (checkboxFormRow, formRows, checked) => {
         for (let formRow of formRows){
             if (checked === true){
                 formRow.style.display = "block";
+                formRow.style.setProperty("background-color", EXPAND_BG_COLOR);
+                checkboxFormRow?.style.setProperty("background-color", EXPAND_BG_COLOR_CHECKBOX);
             }
             else {
                 formRow.style.display = "none";
+                formRow.style.setProperty("background-color", COLLAPSE_BG_COLOR);
+                checkboxFormRow?.style.setProperty("background-color", COLLAPSE_BG_COLOR);
             }
         }
     });
