@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 
 class StylesOnLayerInlineForm(forms.ModelForm):
 
+    # Popup toggle
+    draw_popup = forms.BooleanField(required=False)
+
     # Tooltip toggle (mostly aesthetic, but also lets the save() function know when
     # to attempt to create a related tooltip object on the styles-on-layer).
     draw_tooltip = forms.BooleanField(required=False)
@@ -42,6 +45,7 @@ class StylesOnLayerInlineForm(forms.ModelForm):
             "style",
             "feature_mapping",
             "legend_description",
+            "draw_popup",  # only on form, not the model
             "popup",
         ]
         widgets = {
@@ -137,6 +141,7 @@ class StylesOnLayerInlineForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Tooltip fields are pulled from related tooltip model
         self._init_tooltip_fields()
         if tooltip := self._get_related_tooltip_or_none():
             self.fields["draw_tooltip"].initial = True
@@ -144,6 +149,18 @@ class StylesOnLayerInlineForm(forms.ModelForm):
         else:
             self.fields["draw_tooltip"].initial = False
             self._set_initial_tooltip_defaults()
+
+        # Draw-popup checkbox should be checked initially if the popup input box has any content
+        if self.instance is None:
+            # By default, don't draw a popup
+            self.fields["draw_popup"].initial = False
+        else:
+            if self.instance.popup is not None and str(self.instance.popup).strip() != "":
+                # If the popup already contains text, then check the box
+                self.fields["draw_popup"].initial = True
+            else:
+                # If the popup contains nothing or is null then don't check the box
+                self.fields["draw_popup"].initial = False
 
     def save(self, commit=True) -> Any:
 
@@ -159,6 +176,11 @@ class StylesOnLayerInlineForm(forms.ModelForm):
                 # create new tooltip
                 tooltip = models.Tooltip.objects.create(label="")
                 self._save_tooltip_with_form_field_values(tooltip)
+
+        # If draw_popup checkbox is False then clear any saved popup text
+        if self.cleaned_data["draw_popup"] == False:
+            if self.instance:
+                self.instance.popup = None
 
         return super().save(commit)
 

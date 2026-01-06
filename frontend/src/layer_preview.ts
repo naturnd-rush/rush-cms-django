@@ -729,6 +729,22 @@ const initStylesOnLayerResponsiveUI = (subscriberManager: DynamicSubscriberManag
         }
     });
 
+    // Register the draw-tooltip checkbox
+    registerCheckbox("input[id*='-draw_popup']", "Popup", (checkboxFormRow, formRows, checked) => {
+        for (let formRow of formRows){
+            if (checked === true){
+                formRow.style.display = "block";
+                formRow.style.setProperty("background-color", EXPAND_BG_COLOR);
+                checkboxFormRow?.style.setProperty("background-color", EXPAND_BG_COLOR_CHECKBOX);
+            }
+            else {
+                formRow.style.display = "none";
+                formRow.style.setProperty("background-color", COLLAPSE_BG_COLOR);
+                checkboxFormRow?.style.setProperty("background-color", COLLAPSE_BG_COLOR);
+            }
+        }
+    });
+
 };
 
 document.addEventListener("DOMContentLoaded", () => {(async () => {
