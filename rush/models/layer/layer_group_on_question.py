@@ -16,7 +16,8 @@ class LayerGroupOnQuestion(models.Model):
 
     class Behaviour(models.TextChoices):
         """
-        Hidden (in the form) group behaviour that lets superusers specify
+        Hidden (in the form) group behaviour that lets superusers specify special
+        behaviour for a layer-group-on-question.
         """
 
         DEFAULT = "default"

@@ -674,6 +674,55 @@ function serializeLayer(state: MapPreviewState): string {
     });
 }
 
+/**
+ * Add hooks for current and future styles-on-layer inlnes that show/hide element groups when specific checkboxes are selected.
+ */
+const initStylesOnLayerResponsiveUI = (subscriberManager: DynamicSubscriberManager) => {
+
+    const getFormRowsWithLabelText = (stylesOnLayerInline: HTMLElement, labelText: string): Array<HTMLElement> => {
+        // All child form-rows of the inline that themselves have child labels whose text includes labelText.
+        const allFormRows = Array.from(stylesOnLayerInline.querySelectorAll('div[class*="form-row"]'));
+        const formRowsWithLabel = allFormRows.filter(div => div.querySelector('label')?.textContent.includes(labelText));
+        return formRowsWithLabel as Array<HTMLElement>;
+    };
+
+    const registerCheckbox = (
+        checkboxSelector: string, 
+        affectedLabelsSubstring: string, 
+        callback: (formRows: Array<HTMLElement>, isChecked: boolean) => void,
+    ) => {
+        subscriberManager.subscribeEventListener("input", checkboxSelector, (event) => {
+            if (event.target !== null && event.target instanceof HTMLInputElement){
+                // Grab parent inline when checkbox clicked
+                const inline = event.target.closest("div[id*='stylesonlayer_set-']");
+                if (inline === null || !(inline instanceof HTMLElement)){
+                    throw new Error("Could not find 'draw_tooltip' form-field parent row!");
+                }
+                // Run callback on matching labelled form-rows
+                const labelledFormRows = getFormRowsWithLabelText(inline, affectedLabelsSubstring)
+                callback(labelledFormRows, event.target.checked);
+            }
+        });
+        // Simulate an initial event to show/hide based on initial checkbox value on page-load (does not change checkbox value).
+        document.querySelectorAll<HTMLInputElement>(checkboxSelector).forEach(
+            checkbox => checkbox.dispatchEvent(new Event('input', { bubbles: true }))
+        );
+    };
+
+    // Draw-tooltip checkbox
+    registerCheckbox("input[id*='-draw_tooltip']", "Tooltip", (formRows, checked) => {
+        for (let formRow of formRows){
+            if (checked === true){
+                formRow.style.display = "block";
+            }
+            else {
+                formRow.style.display = "none";
+            }
+        }
+    });
+
+};
+
 document.addEventListener("DOMContentLoaded", () => {(async () => {
     
     const TILE_LAYER_OPTS = {
@@ -731,6 +780,7 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
 
     // Manage events declaratively, since new inline rows can be added 
     const subscriberManager = new DynamicSubscriberManager(document.body);
+    initStylesOnLayerResponsiveUI(subscriberManager);
 
     // Style select dropdowns
     subscriberManager.subscribeMutationObserver({childList: true, subtree: true}, "span[id*='select2-id_stylesonlayer_set']", (_) => {

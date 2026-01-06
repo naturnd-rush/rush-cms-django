@@ -28,13 +28,13 @@ class StylesOnLayerInlineForm(forms.ModelForm):
     draw_tooltip = forms.BooleanField(required=False)
 
     # Related Tooltip fields
-    label = forms.CharField(required=False)
-    offset_x = forms.DecimalField(required=False)
-    offset_y = forms.DecimalField(required=False)
-    opacity = forms.DecimalField(required=False)
-    direction = forms.ChoiceField(choices=Direction.choices, required=False)
-    permanent = forms.BooleanField(required=False)
-    sticky = forms.BooleanField(required=False)
+    label = forms.CharField(required=False, label="Tooltip Label")
+    offset_x = forms.DecimalField(required=False, label="Tooltip offset X")
+    offset_y = forms.DecimalField(required=False, label="Tooltip offset Y")
+    opacity = forms.DecimalField(required=False, label="Tooltip Opacity")
+    direction = forms.ChoiceField(choices=Direction.choices, required=False, label="Tooltip Direction")
+    permanent = forms.BooleanField(required=False, label="Tooltip Permanent")
+    sticky = forms.BooleanField(required=False, label="Tooltip Sticky")
 
     class Meta:
         model = models.StylesOnLayer
