@@ -13,11 +13,28 @@ import { DynamicSubscriberManager } from './utils/events'
  * the combination of style on layer objects currently being applied to the map layer.
  ************/
 
+interface Tooltip {
+    label: string,
+    offsetX: number,
+    offsetY: number,
+    opacity: number,
+    direction: string,
+    permanent: boolean,
+    sticky: boolean,
+}
+
 export interface StyleOnLayer{
+    
     style: Style,
     feature_mapping: string,
-    popupTemplate: string | null,
     inlineRow: Element,
+
+    drawPopup: boolean,
+    popupTemplate: string | null,
+
+    drawTooltip: boolean,
+    tooltip: Tooltip,
+
 }
 
 export interface MapPreviewState {
@@ -52,7 +69,8 @@ interface PopupMetadata {
 }
 
 /**
- * Get the currently configured style data for this layer.
+ * Search all style-on-layer inlines and collect their form data + any related data that may exist.
+ * Returns a list of style-on-layers to be rendered.
  */
 export async function getStyleUpdate(): Promise<StyleUpdate> {
     const stylesOnLayers: Array<StyleOnLayer> = [];
@@ -61,18 +79,73 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
         const styleId = (inlineRow.querySelector("select[id*='-style']") as HTMLSelectElement)?.value;
         const featureMapping = (inlineRow.querySelector("textarea[id*='feature_mapping']") as HTMLInputElement | null)?.value;
         const popupTemplate = (inlineRow.querySelector("textarea[id*='popup']") as HTMLInputElement | null)?.value;
+        const drawPopupChecked = (inlineRow.querySelector("input[id*='-draw_popup']") as HTMLInputElement | null)?.checked;
+        const drawTooltipChecked = (inlineRow.querySelector("input[id*='-draw_tooltip']") as HTMLInputElement | null)?.checked;
+        const tooltipLabel = (inlineRow.querySelector("textarea[id*='label']") as HTMLInputElement | null)?.value;
+        const tooltipOffsetX = (inlineRow.querySelector("input[id*='offset_x']") as HTMLInputElement | null)?.value;
+        const tooltipOffsetY = (inlineRow.querySelector("input[id*='offset_y']") as HTMLInputElement | null)?.value;
+        const tooltipOpacity = (inlineRow.querySelector("input[id*='opacity']") as HTMLInputElement | null)?.value;
+        const tooltipDirection = (inlineRow.querySelector("select[id*='direction']") as HTMLInputElement | null)?.value;
+        const tooltipPermanent = (inlineRow.querySelector("input[id*='permanent']") as HTMLInputElement | null)?.checked;
+        const tooltipSticky = (inlineRow.querySelector("input[id*='sticky']") as HTMLInputElement | null)?.checked;
         if (!(styleId && featureMapping)){
             // most likely an empty inline
             continue;
         }
         const style = await getStyleById(styleId);
-        if (style !== null){
-            stylesOnLayers.push({
+        if (
+            style !== null && 
+            featureMapping !== undefined && 
+            popupTemplate !== undefined && 
+            drawPopupChecked !== undefined && 
+            drawTooltipChecked !== undefined &&
+            tooltipLabel !== undefined &&
+            tooltipOffsetX !== undefined &&
+            tooltipOffsetY !== undefined &&
+            tooltipOpacity !== undefined &&
+            tooltipDirection !== undefined &&
+            tooltipPermanent !== undefined &&
+            tooltipSticky !== undefined
+        ){
+            const tooltipData = {
+                label: tooltipLabel,
+                offsetX: Number.parseFloat(tooltipOffsetX),
+                offsetY: Number.parseFloat(tooltipOffsetY),
+                opacity: Number.parseFloat(tooltipOpacity),
+                direction: tooltipDirection,
+                permanent: tooltipPermanent,
+                sticky: tooltipSticky,
+            };
+            const styleOnLayerData = {
                 style: style,
                 feature_mapping: featureMapping,
-                popupTemplate: popupTemplate !== undefined ? popupTemplate : null,
                 inlineRow: inlineRow,
-            });
+                drawPopup: drawPopupChecked,
+                popupTemplate: popupTemplate,
+                drawTooltip: drawTooltipChecked,
+                tooltip: tooltipData,
+            };
+            stylesOnLayers.push(styleOnLayerData);
+        } else {
+            const tooltipData = {
+                label: tooltipLabel,
+                offsetX: tooltipOffsetX !== undefined ? Number.parseFloat(tooltipOffsetX) : Number.NaN,
+                offsetY: tooltipOffsetY !== undefined ? Number.parseFloat(tooltipOffsetY) : Number.NaN,
+                opacity: tooltipOpacity !== undefined ? Number.parseFloat(tooltipOpacity) : Number.NaN,
+                direction: tooltipDirection,
+                permanent: tooltipPermanent,
+                sticky: tooltipSticky,
+            };
+            const styleOnLayerData = {
+                style: style,
+                feature_mapping: featureMapping,
+                inlineRow: inlineRow,
+                drawPopup: drawPopupChecked,
+                popupTemplate: popupTemplate,
+                drawTooltip: drawTooltipChecked,
+                tooltip: tooltipData,
+            };
+            console.warn("One or more expected values in a StyleOnLayer inline is missing: ", styleOnLayerData);
         }
     }
     return {
@@ -412,6 +485,7 @@ function getPolygonCentroid(polygonCoords: Position[]): L.Point{
 
 async function showSpinner(){
 
+    // Don't let users submit the form while the map-preview is loading.
     const saveBtn = expectQuerySelector(document.body, "input[name='_save']") as HTMLInputElement;
     const addAnotherBtn = expectQuerySelector(document.body, "input[name='_addanother']") as HTMLInputElement;
     const continueBtn = expectQuerySelector(document.body, "input[name='_continue']") as HTMLInputElement;
@@ -428,20 +502,6 @@ async function showSpinner(){
         console.error("Couldn't find map-preview and map-spinner in the DOM!");
     }
 
-    // THIS IS BAD: SPINNER SHOWING QUERIES AN ASYNC REQUEST!!!
-    // const mapDataSelectSpan = await waitForElementById("id_map_data");
-    // const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
-    // if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON"){
-    //     console.log("SHOWING SPINNER");
-    //     const mapPreviewEl = document.getElementById("map-preview");
-    //     const spinnerEl = document.getElementById("map-spinner");
-    //     if (mapPreviewEl !== null && spinnerEl !== null){
-    //         mapPreviewEl.classList.add('blur');
-    //         spinnerEl.classList.remove('hidden');
-    //     } else {
-    //         console.error("Couldn't find map-preview and map-spinner in the DOM!");
-    //     }
-    // }
 }
 
 function hideSpinner(){
@@ -587,7 +647,6 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         return;
     }
     
-    
     const baseMediaUrl = expectEl('injected-media-url').innerHTML;
     const anyMarkerStyles = state.stylesOnLayer.filter(styleOnLayer => styleOnLayer.style.drawMarker == true).length > 0;
     const styledGeoJsonData = L.geoJSON(state.currentLayer.toGeoJSON(), {
@@ -598,6 +657,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
             const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
             const popupTemplate = getPopupTemplate(appliedStyles);
             const popupMetadata = getPopupMetadata(feature, popupTemplate);
+            // TODO: toggle popup here
             if (popupMetadata.__hasPopup === true && popupMetadata.__popupHTML !== null && popupMetadata.__popupOptions !== null){
                 layer.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
                 feature.properties = {...feature.properties, ...popupMetadata};

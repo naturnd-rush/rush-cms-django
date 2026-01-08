@@ -38,9 +38,9 @@ class Tooltip(models.Model):
         null=True,
     )
     label = models.TextField()
-    offset_x = models.DecimalField(max_digits=5, decimal_places=3, default=Decimal(0))
-    offset_y = models.DecimalField(max_digits=5, decimal_places=3, default=Decimal(0))
-    opacity = models.DecimalField(max_digits=5, decimal_places=3, default=Decimal(0.8))
+    offset_x = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal(0))
+    offset_y = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal(0))
+    opacity = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal(0.8))
     direction = models.CharField(max_length=32, choices=Direction.choices)
     permanent = models.BooleanField(default=True)
     sticky = models.BooleanField(default=True)
