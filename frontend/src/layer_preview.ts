@@ -58,7 +58,7 @@ export interface MapDataUpdate extends MapPreviewUpdate {
 }
 
 interface AppliedStyle{
-    style: Style,
+    styleOnLayer: StyleOnLayer,
     popupTemplate: string | null,
 }
 
@@ -252,7 +252,7 @@ function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<
         try{
             const expr = parser.parse(styleOnLayer.feature_mapping);
             if (expr.evaluate(coerceNumbersDeep(feature.properties)) === true){
-                applied.push({style: styleOnLayer.style, popupTemplate: styleOnLayer.popupTemplate});
+                applied.push({styleOnLayer: styleOnLayer, popupTemplate: styleOnLayer.popupTemplate});
                 if (fieldMappingErrors && fieldMappingContainer){
                     fieldMappingContainer.removeChild(fieldMappingErrors);
                 }
@@ -333,7 +333,7 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
         let strokeLineJoin = "round";
 
         for (let appliedStyle of appliedStyles){
-            const style = appliedStyle.style;
+            const style = appliedStyle.styleOnLayer.style;
 
             // If one style draws something then the combined style will also draw that thing
             if (style.drawFill === true){
@@ -446,7 +446,7 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
         let markerStyle: Style | null = null;
         const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
         for (let appliedStyle of appliedStyles){
-            const style = appliedStyle.style;
+            const style = appliedStyle.styleOnLayer.style;
             if (style.drawMarker === true){
                 markerStyle = style;
                 break;
@@ -599,14 +599,14 @@ function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string
 }
 
 /**
- * Get an optionally defined popup template from a list of applied styles.
+ * Flatten a list of "applied styles" to a popup template, or null.
  * @param appliedStyles a list of styles applied to some feature.
- * @returns a string template, or null if no popup template is defined in any of the applied styles.
+ * @returns a string template, or null if no popup template is defined (and enabled) in any of the applied styles.
  */
 function getPopupTemplate(appliedStyles: Array<AppliedStyle>): string | null {
     let popupTemplate = null;
     for (let appliedStyle of appliedStyles){
-        if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== ""){
+        if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== "" && appliedStyle.styleOnLayer.drawPopup === true){
             popupTemplate = appliedStyle.popupTemplate;
         }
     }
@@ -657,19 +657,42 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
             const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
             const popupTemplate = getPopupTemplate(appliedStyles);
             const popupMetadata = getPopupMetadata(feature, popupTemplate);
-            // TODO: toggle popup here
             if (popupMetadata.__hasPopup === true && popupMetadata.__popupHTML !== null && popupMetadata.__popupOptions !== null){
                 layer.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
                 feature.properties = {...feature.properties, ...popupMetadata};
             }
 
+            // Flatten the list of applied styles to a single tooltip and apply it, if one is enabled.
+            let tooltip: Tooltip | null = null;
+            for (let appliedStyle of appliedStyles){
+                if (appliedStyle.styleOnLayer.drawTooltip === true){
+                    tooltip = appliedStyle.styleOnLayer.tooltip;
+                    break;
+                }
+            }
+            if (tooltip !== null){
+                const renderedTooltipLabel = Mustache.render(tooltip.label, feature.properties);
+                layer.bindTooltip(
+                    renderedTooltipLabel, 
+                    {
+                        offset: new L.Point(tooltip.offsetX, tooltip.offsetY),
+                        opacity: tooltip.opacity,
+                        direction: tooltip.direction as L.Direction,
+                        permanent: tooltip.permanent,
+                        sticky: tooltip.sticky,
+                        className: 'leaflet-label'
+                    }
+                );
+            }
+
+
             // Draw centroid icon markers when a marker icon style is applied to a polygon feature
             const isPolygon = feature.geometry.type === "MultiPolygon";
             if (isPolygon && anyMarkerStyles){
                 const multiPolygonFeature = feature as Feature<MultiPolygon, any>;
-                const markerStyles = appliedStyles.filter(appliedStyle => appliedStyle.style.drawMarker == true);
+                const markerStyles = appliedStyles.filter(appliedStyle => appliedStyle.styleOnLayer.style.drawMarker == true);
                 if (markerStyles.length > 0){
-                    const markerStyle = markerStyles[0].style; // Just take the first marker style if multiple applied.
+                    const markerStyle = markerStyles[0].styleOnLayer.style; // Just take the first marker style if multiple applied.
                     for (let polygonCoords of multiPolygonFeature.geometry.coordinates){
                         const coords = (polygonCoords[0] as unknown) as Position[]; // For some reason there is another nested array in here at runtime, idk why...
                         const points: Array<L.Point> = [];
