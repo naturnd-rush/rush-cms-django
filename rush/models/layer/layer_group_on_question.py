@@ -3,6 +3,8 @@ import uuid
 from django.db import models
 from django.db.models import Max
 
+from rush.models.utils import SummernoteTextCleaner
+
 
 class LayerGroupOnQuestion(models.Model):
     """
@@ -38,6 +40,9 @@ class LayerGroupOnQuestion(models.Model):
         if not max_order:
             return 0
         return max_order
+
+    def clean(self) -> None:
+        self.group_description = SummernoteTextCleaner.clean(self.group_description)
 
     def __str__(self):
         return self.group_name
