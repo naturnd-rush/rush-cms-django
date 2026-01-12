@@ -102,6 +102,7 @@ class SummernoteTextCleaner:
         "i",
         "button",
         "input",
+        "font",
     ]
 
     ALLOWED_ATTRIBUTES = [
@@ -112,6 +113,7 @@ class SummernoteTextCleaner:
         "href",
         "media",
         "style",
+        "align",
     ]
 
     # Which CSS properties are allowed in 'style' attributes (assuming style is
@@ -126,6 +128,8 @@ class SummernoteTextCleaner:
         "font-family",
         "font-weight",
         "font-size",
+        "background-color",
+        "color",
     ]
 
     @classmethod
