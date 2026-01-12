@@ -15,6 +15,7 @@ class Layer(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     name = models.CharField(max_length=255)
+    legendTitle = models.CharField("Legend Title", null=True, blank=True, help_text="A title what the legend description represents on the map.")
     description = models.TextField(
         help_text="The layer description that will appear in the map legend to help people understand what the layer data represents."
     )
