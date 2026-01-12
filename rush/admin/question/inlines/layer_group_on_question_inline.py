@@ -1,8 +1,24 @@
+from django.forms import ModelForm
 from nested_admin.forms import SortableHiddenMixin
 from nested_admin.nested import NestedTabularInline
 
 from rush.admin.question.inlines import LayerOnLayerGroupInline
+from rush.admin.widgets import SummernoteWidget
 from rush.models import LayerGroupOnQuestion
+
+
+class LayerGroupOnQuestionInlineForm(ModelForm):
+    class Meta:
+        model = LayerGroupOnQuestion
+        fields = [
+            "group_name",
+            "group_description",
+            "behaviour",
+            "display_order",
+        ]
+        widgets = {
+            "group_description": SummernoteWidget(),
+        }
 
 
 class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
@@ -11,6 +27,7 @@ class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
     """
 
     verbose_name_plural = "Layer Groups"
+    form = LayerGroupOnQuestionInlineForm
     model = LayerGroupOnQuestion
     extra = 0
     exclude = ["id"]
