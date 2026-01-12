@@ -17,7 +17,7 @@ class LayerGroupOnQuestionInlineForm(ModelForm):
             "display_order",
         ]
         widgets = {
-            "group_description": SummernoteWidget(),
+            "group_description": SummernoteWidget(height="300px"),
         }
 
 
@@ -65,3 +65,11 @@ class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
         if not request.user.is_superuser:
             fields = [x for x in fields if x != "behaviour"]
         return fields
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if db_field.name == "group_description":
+            formfield.initial = (
+                '<p class="rush-subtitle"><span style="font-size: 10px;">Example group title</span></p>'
+            )
+        return formfield
