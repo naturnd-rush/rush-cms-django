@@ -130,6 +130,17 @@ class SummernoteTextCleaner:
         "font-size",
         "background-color",
         "color",
+        "display",
+        "padding",
+        "padding-left",
+        "padding-right",
+        "padding-top",
+        "padding-bottom",
+        "margin",
+        "margin-left",
+        "margin-right",
+        "margin-top",
+        "margin-bottom",
     ]
 
     @classmethod
