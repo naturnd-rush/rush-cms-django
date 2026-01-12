@@ -17,7 +17,7 @@ class LayerGroupOnQuestionInlineForm(ModelForm):
             "display_order",
         ]
         widgets = {
-            "group_description": SummernoteWidget(height="300px"),
+            "group_description": SummernoteWidget(height="150px"),
         }
 
 
