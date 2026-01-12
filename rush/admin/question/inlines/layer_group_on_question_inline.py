@@ -17,7 +17,24 @@ class LayerGroupOnQuestionInlineForm(ModelForm):
             "display_order",
         ]
         widgets = {
-            "group_description": SummernoteWidget(height="150px"),
+            "group_description": SummernoteWidget(
+                toolbar=[
+                    ["style", ["style"]],
+                    ["font", ["bold", "underline", "clear"]],
+                    ["fontname", ["fontname"]],
+                    ["fontsize", ["fontsize"]],
+                    ["color", ["color"]],
+                    ["para", ["ul", "ol", "paragraph"]],
+                    [
+                        "insert",
+                        [
+                            "link",
+                            "picture",
+                        ],
+                    ],
+                    ["view", ["codeview"]],
+                ],
+            ),
         }
 
 
