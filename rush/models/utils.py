@@ -62,7 +62,7 @@ def compress_image(image: FieldFile, pixel_width=128) -> ContentFile:
         return ContentFile(img_io.getvalue(), name=compressed_name)
 
     except Exception as e:
-        logger.error(f"Failed to compress file: {image.name}.")
+        logger.error(f"Failed to compress file: {image.name}.", exc_info=e)
         raise CompressionFailed from e
 
 
