@@ -349,6 +349,17 @@ class LayerGroupOnQuestionType(DjangoObjectType):
             "display_order",
         ]
 
+    group_description = graphene.String()
+
+    def resolve_group_description(self, info) -> str:
+        if not isinstance(self, models.LayerGroupOnQuestion):
+            raise ValueError("Expected object to be of type LayerGroupOnQuestion when resolving query.")
+        if not isinstance(self.group_description, str):
+            # Not sure why but the linter thinks self.group_description here is potentially
+            # graphene.String() when the same code works for MapData.geojson.
+            raise ValueError("Expected page.group_description to be of type string at runtime.")
+        return convert_relative_images_to_absolute(html=self.group_description, info=info)
+
     layers_on_layer_group = graphene.List(LayerOnLayerGroupType)
 
     def resolve_layers_on_layer_group(self, info):
