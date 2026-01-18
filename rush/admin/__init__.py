@@ -6,3 +6,4 @@ from rush.admin.question import QuestionAdmin
 from rush.admin.page import PageAdmin
 from rush.admin.question import QuestionSashAdmin
 from rush.admin.initiative import InitiativeAdmin, InitiativeTagAdmin
+from rush.admin.region import RegionAdmin
