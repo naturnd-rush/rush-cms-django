@@ -85,7 +85,6 @@ async function mapDataFromSpan(mapDataSelectSpan: HTMLSpanElement): Promise<MapD
     let mapDataId = null;
     for (let child of mapDataSelectSpan.childNodes){
         if (child instanceof HTMLOptionElement && child.selected){
-            console.log(child);
             mapDataId = child.value;
         }
     }
@@ -328,34 +327,36 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
  * @param markerStyle the marker style.
  */
 function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
-    const markerBackgroundSize = 32;
-    const markerImageWidth = 26;
+    const markerImageWidth = markerStyle.markerSize;
+    const markerRadius = Math.sqrt(Math.pow(markerImageWidth / 2, 2) + Math.pow(markerImageWidth / 2, 2));
     return {
         html: `
-            <div 
-                style="
-                    width: ${markerBackgroundSize}px;
-                    height: ${markerBackgroundSize}px;
+            <div>
+                <div style="
+                    width: ${markerRadius * 2}px;
+                    height: ${markerRadius * 2}px;
                     background-color: ${markerStyle.markerBackgroundColor};
-                    opacity: ${markerStyle.markerIconOpacity};
+                    opacity: ${markerStyle.markerBackgroundOpacity};
                     border-radius: 50%;
                     display: flex;
-                    align-items: center;
-                    justify-content: center;
-                "
-            >
+                    position: absolute;
+                "></div>
                 <img 
                     src="${baseMediaUrl + markerStyle.markerIcon}"
                     style="
                         width: ${markerImageWidth}px; 
                         height: ${markerImageWidth}px;
+                        opacity: ${markerStyle.markerIconOpacity};
+                        position: relative;
+                        top: ${markerRadius - (markerImageWidth / 2)}px;
+                        left: ${markerRadius - (markerImageWidth / 2)}px;
                     "
                 />
-            <div/>
+            </div>
         `,
         className: '', // Disable default Leaflet styles
-        iconSize: [markerBackgroundSize, markerBackgroundSize],
-        iconAnchor: [markerBackgroundSize/2, markerBackgroundSize/2], // Center the icon around the latlng
+        iconSize: [markerRadius * 2, markerRadius * 2],
+        iconAnchor: [markerRadius, markerRadius], // Center the icon around the latlng
     };
 }
 
@@ -564,7 +565,6 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     // Update currentLayer if we are receiving new map data.
     if ("MapData" === update.type){
         const newGeoJson = (update as MapDataUpdate).newGeoJsonData;
-        console.log("Re-drawing map layer from new map data update: ", update);
         if (newGeoJson === null){
             state.currentLayer = null;
         } else {
@@ -774,7 +774,6 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         if (document.visibilityState === 'visible') {
             const mapData = await mapDataFromSpan(mapDataSelectSpan);
             if (mapData?.providerState === "GEOJSON"){
-                console.log("REFOCUS SHOWS SPINERNERNENRN");
                 mapPreviewState.isUpdating = true;
                 showSpinnerAfter(1, mapPreviewState);
                 getStyleUpdate().then(styleUpdate => {
@@ -795,7 +794,6 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         const showMapPreview = () => {
             mapPreviewEl.style.display = 'block';
         };
-        console.log(mapData?.providerState);
         if (mapData?.providerState === "GEOJSON"){
             showMapPreview();
             mapPreviewState.isUpdating = true;

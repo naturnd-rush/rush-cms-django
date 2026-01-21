@@ -25,7 +25,7 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
         "slug",
         "image_preview",
         "sash_preview",
-        "get_initiatives",
+        "get_question_tabs",
         "display_order",
     ]
     prepopulated_fields = {"slug": ("title",)}
@@ -53,19 +53,20 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
             return image_html(obj.image.url)
         return "No image"
 
-    @admin.display(description="Initiatives")
-    def get_initiatives(self, obj):
-        if obj.initiatives.count() > 0:
-            return ", ".join([initiative.title for initiative in obj.initiatives.all()])
-        return "No Initiatives"
+    @admin.display(description="Question Tabs")
+    def get_question_tabs(self, obj):
+        tabs = obj.tabs.all()
+        if tabs:
+            return ", ".join([tab.title for tab in tabs])
+        return "-"
 
     def get_queryset(self, request):
         """
         Optimize queryset to prevent loading massive JSONFields from related Layer objects.
         """
         qs = super().get_queryset(request)
-        # Prefetch initiatives to avoid N+1 queries in get_initiatives() display method
-        return qs.prefetch_related("initiatives")
+        # Prefetch question tabs to avoid N+1 queries in get_question_tabs() display method
+        return qs.prefetch_related("tabs")
 
     @admin.action(description="Duplicate selected items")
     def duplicate_object(self, request, queryset):

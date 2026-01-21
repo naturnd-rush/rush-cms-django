@@ -62,7 +62,7 @@ def compress_image(image: FieldFile, pixel_width=128) -> ContentFile:
         return ContentFile(img_io.getvalue(), name=compressed_name)
 
     except Exception as e:
-        logger.error(f"Failed to compress file: {image.name}.")
+        logger.error(f"Failed to compress file: {image.name}.", exc_info=e)
         raise CompressionFailed from e
 
 
@@ -102,6 +102,7 @@ class SummernoteTextCleaner:
         "i",
         "button",
         "input",
+        "font",
     ]
 
     ALLOWED_ATTRIBUTES = [
@@ -112,6 +113,7 @@ class SummernoteTextCleaner:
         "href",
         "media",
         "style",
+        "align",
     ]
 
     # Which CSS properties are allowed in 'style' attributes (assuming style is
@@ -126,6 +128,19 @@ class SummernoteTextCleaner:
         "font-family",
         "font-weight",
         "font-size",
+        "background-color",
+        "color",
+        "display",
+        "padding",
+        "padding-left",
+        "padding-right",
+        "padding-top",
+        "padding-bottom",
+        "margin",
+        "margin-left",
+        "margin-right",
+        "margin-top",
+        "margin-bottom",
     ]
 
     @classmethod

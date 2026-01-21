@@ -44,7 +44,9 @@ class FiletypeValidator:
         )
 
     def deconstruct(self):
-        """Required for migration serialization."""
+        """
+        Required for migration serialization.
+        """
         return (
             "rush.models.validators.FiletypeValidator",
             [],

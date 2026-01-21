@@ -388,8 +388,10 @@ class StyleForm(forms.ModelForm):
             # Icon data
             "draw_marker",
             "marker_background_color",
+            "marker_background_opacity",
             "marker_icon",
             "marker_icon_opacity",
+            "marker_size",
             # "fill_rule", <-- gonna handle this later. Seems like an extreme edge-case for using the admin site.
             # I put the style name at end of submission because I feel like people will want to create
             # the style, and then name it after they have a solid idea of what it will look like, but that's just me.
@@ -401,7 +403,9 @@ class StyleForm(forms.ModelForm):
             "stroke_dash_offset": utils.SliderAndTextboxNumberInput(max=100, step=1),
             "fill_opacity": utils.SliderAndTextboxNumberInput(),
             "marker_icon_opacity": utils.SliderAndTextboxNumberInput(),
+            "marker_background_opacity": utils.SliderAndTextboxNumberInput(),
             "marker_icon": forms.FileInput(),
+            "marker_size": utils.SliderAndTextboxNumberInput(min=10, max=150),
         }
 
     class Media:

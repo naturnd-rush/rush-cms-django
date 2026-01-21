@@ -62,7 +62,7 @@ class Style(models.Model):
     stroke_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
-        default=Decimal(1),
+        default=Decimal(1.0),
         verbose_name="Transparency",
     )
     stroke_line_cap = models.CharField(
@@ -107,7 +107,7 @@ class Style(models.Model):
     fill_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
-        default=Decimal(1),
+        default=Decimal(0.8),
         null=True,
         blank=True,
     )
@@ -133,7 +133,14 @@ class Style(models.Model):
     marker_icon_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
-        default=Decimal(1),
+        default=Decimal(0.8),
+        null=True,
+        blank=True,
+    )
+    marker_size = models.DecimalField(
+        max_digits=6,  # 6 instead of 5 here to support sizes with triple digits begfore the decimal place, e.g., 101.23. I suppose the decimal place counts as a digit?
+        decimal_places=3,
+        default=Decimal(22),
         null=True,
         blank=True,
     )
@@ -142,6 +149,13 @@ class Style(models.Model):
         null=True,
         blank=True,
         verbose_name="Background Color",
+    )
+    marker_background_opacity = models.DecimalField(
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal(0.8),
+        null=True,
+        blank=True,
     )
 
     # TODO: Add _hover style and _active style recursive foreign keys.
