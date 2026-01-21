@@ -13,19 +13,4 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name='Region',
-            fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(help_text="Region name (e.g., 'Downtown', 'Victoria', 'Vancouver')", max_length=255, unique=True)),
-                ('latitude', models.FloatField(help_text='Latitude coordinate for default map center', validators=[django.core.validators.MinValueValidator(-90.0), django.core.validators.MaxValueValidator(90.0)])),
-                ('longitude', models.FloatField(help_text='Longitude coordinate for default map center', validators=[django.core.validators.MinValueValidator(-180.0), django.core.validators.MaxValueValidator(180.0)])),
-                ('default_zoom', models.FloatField(help_text='Default zoom level for map view (e.g., 12.0 for city level)')),
-            ],
-        ),
-        migrations.AddField(
-            model_name='question',
-            name='region',
-            field=models.ForeignKey(blank=True, help_text='Primary region where this question appears', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='questions', to='rush.region'),
-        ),
     ]
