@@ -10,4 +10,21 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.CreateModel(
+            name='Region',
+            fields=[
+                ('id', models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, serialize=False)),
+                ('name', models.CharField(max_length=255)),
+            ],
+        ),
+        migrations.AddField(
+            model_name='question',
+            name='region',
+            field=models.ForeignKey(
+                to='rush.region',
+                null=True,
+                blank=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+            ),
+        ),
     ]
