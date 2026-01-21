@@ -229,6 +229,7 @@ class LayerType(DjangoObjectType):
         fields = [
             "id",
             "name",
+            "legendTitle",
             "map_data",
             "description",
             "styles_on_layer",
