@@ -38,11 +38,13 @@ class Question(models.Model):
         help_text="A decorative sash that can be added to questions for flair.",
         related_name="questions",
     )
-    regions = models.ManyToManyField(
+    region = models.ForeignKey(
         to="Region",
-        related_name="questions_in_region",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="questions",
         blank=True,
-        help_text="Regions where this question appears"
+        help_text="Primary region where this question appears"
     )
 
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
