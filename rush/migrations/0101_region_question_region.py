@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('rush', '0099_alter_layergrouponquestion_group_description'),
+        ('rush', '0100_merge_20260120_2156'),
     ]
 
     operations = [
