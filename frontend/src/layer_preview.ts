@@ -672,17 +672,18 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
             }
             if (tooltip !== null){
                 const renderedTooltipLabel = Mustache.render(tooltip.label, feature.properties);
-                layer.bindTooltip(
-                    renderedTooltipLabel, 
-                    {
-                        offset: new L.Point(tooltip.offsetX, tooltip.offsetY),
-                        opacity: tooltip.opacity,
-                        direction: tooltip.direction as L.Direction,
-                        permanent: tooltip.permanent,
-                        sticky: tooltip.sticky,
-                        className: 'leaflet-label'
-                    }
-                );
+                const tooltipOptions = {
+                    offset: new L.Point(tooltip.offsetX, tooltip.offsetY),
+                    opacity: tooltip.opacity,
+                    direction: tooltip.direction as L.Direction,
+                    permanent: tooltip.permanent,
+                    sticky: tooltip.sticky,
+                    className: 'leaflet-label'
+                };
+                layer.bindTooltip(renderedTooltipLabel, tooltipOptions);
+                feature.properties = {...feature.properties, "__hasTooltip": true, "__tooltipHTML": renderedTooltipLabel, "__tooltipOptions": tooltipOptions};
+            } else {
+                feature.properties = {...feature.properties, "__hasTooltip": false};
             }
 
 
