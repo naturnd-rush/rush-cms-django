@@ -1,8 +1,41 @@
+from django.forms import ModelForm
 from nested_admin.forms import SortableHiddenMixin
 from nested_admin.nested import NestedTabularInline
 
 from rush.admin.question.inlines import LayerOnLayerGroupInline
+from rush.admin.widgets import SummernoteWidget
 from rush.models import LayerGroupOnQuestion
+
+
+class LayerGroupOnQuestionInlineForm(ModelForm):
+    class Meta:
+        model = LayerGroupOnQuestion
+        fields = [
+            "group_name",
+            "group_description",
+            "behaviour",
+            "display_order",
+        ]
+        widgets = {
+            "group_description": SummernoteWidget(
+                toolbar=[
+                    ["style", ["style"]],
+                    ["font", ["bold", "underline", "clear"]],
+                    ["fontname", ["fontname"]],
+                    ["fontsize", ["fontsize"]],
+                    ["color", ["color"]],
+                    ["para", ["ul", "ol", "paragraph"]],
+                    [
+                        "insert",
+                        [
+                            "link",
+                            "picture",
+                        ],
+                    ],
+                    ["view", ["codeview"]],
+                ],
+            ),
+        }
 
 
 class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
@@ -11,6 +44,7 @@ class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
     """
 
     verbose_name_plural = "Layer Groups"
+    form = LayerGroupOnQuestionInlineForm
     model = LayerGroupOnQuestion
     extra = 0
     exclude = ["id"]
@@ -48,3 +82,11 @@ class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
         if not request.user.is_superuser:
             fields = [x for x in fields if x != "behaviour"]
         return fields
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        formfield = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if db_field.name == "group_description":
+            formfield.initial = (
+                '<p class="rush-subtitle"><span style="font-size: 10px;">Example group title</span></p>'
+            )
+        return formfield
