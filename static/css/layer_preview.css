@@ -52,7 +52,7 @@
 
 .leaflet-label::before {
   display: 'none'
-
+}
 /**
  * Styles for rendering text content in the leaflet popups!
  */
