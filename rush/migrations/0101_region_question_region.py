@@ -18,7 +18,10 @@ class Migration(migrations.Migration):
             name='Region',
             fields=[
                 ('id', models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, serialize=False)),
-                ('name', models.CharField(max_length=255)),
+                ('name', models.CharField(max_length=255, unique=True)),
+                ('latitude', models.FloatField()),
+                ('longitude', models.FloatField()),
+                ('default_zoom', models.IntegerField()),
             ],
         ),
         migrations.AddField(
