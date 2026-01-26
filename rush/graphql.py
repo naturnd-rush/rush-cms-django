@@ -279,7 +279,7 @@ class LayerType(DjangoObjectType):
             for feature in data_obj["featureCollection"]["features"]:
                 if "properties" in feature:
                     properties = feature["properties"]
-                    if "__popupHTML" in properties:
+                    if "__popupHTML" in properties and properties["__popupHTML"] is not None:
                         properties["__popupHTML"] = convert_relative_images_to_absolute(
                             html=properties["__popupHTML"],
                             info=info,
@@ -287,6 +287,7 @@ class LayerType(DjangoObjectType):
                     if (
                         "__pointDivIconStyleProps" in properties
                         and "html" in properties["__pointDivIconStyleProps"]
+                        and properties["__pointDivIconStyleProps"]["html"] is not None
                     ):
                         properties["__pointDivIconStyleProps"]["html"] = convert_relative_images_to_absolute(
                             html=properties["__pointDivIconStyleProps"]["html"],
