@@ -57,11 +57,16 @@ The most popular way to set up the RUSH Initiative development environment, and 
 5. Run `poety install` to install the project's Python dependencies.
 6. Make Django migrations: `poetry run python manage.py makemigrations`.
 7. Migrate your database using Django's migration system: `poetry run python manage.py migrate`.
-8. Start the development server: `poetry run python manage.py runserver`.
-9. Create a superuser so you can login to the development RUSH Admin Site: `poetry run python manage.py createsuperuser`.
-10. Visit `http://127.0.0.1:8000/` and try logging into the admin site with your superuser credentials.
-11. That's it! You should now have a working version of the RUSH Admin Site's development server :)
+8. Download and install [Node.js](https://nodejs.org/en/download), `cd` into the `frontend` folder, and run `npm install` to install our JavaScript dependencies.
+9. You can run `npx vite build --watch` inside the `frontend` directory to live-reload any TypeScript file changes, e.g., changes to `frontend/src/layer_preview.ts`
+10. Start the development server: `poetry run python manage.py runserver`.
+11. Create a superuser so you can login to the development RUSH Admin Site: `poetry run python manage.py createsuperuser`.
+12. Visit `http://127.0.0.1:8000/` and try logging into the admin site with your superuser credentials.
+13. That's it! You should now have a working version of the RUSH Admin Site's development server :)
 
+## RUSH Developer FAQ:
+Q: **I'm editing TypeScript files but don't see any changes on the Django frontend.**
+A: Our TypeScript files for the Django admin site are transpiled and bundled by a tool called [Vite](https://github.com/vitejs/vite). If you are developing using our Docker Compose project, you will need to shell into the Django container, `cd` into the `frontend` folder, and run `npx vite build --watch`. On the other hand, if you are developing using a manual configuration, you can simple run `npx vite build --watch` from the repository's `frontend` folder. In both cases, the `npx` command will watch for changes to the TypeScript files and automatically transpile and minify them to plain JavaScript in `static/js/compiled`. The JavaScript files should then be automatically picked-up by Django's development server and appear in the browser.
 
 ## Contributing
 We welcome any, and all, contributions to the RUSH project. If you see something that you think could be better, don't hesitate to open a pull-request and we will do our best to look at it. Our goal is to create a [FOSS](https://en.wikipedia.org/wiki/Free_and_open-source_software) geospatial content management system, and we hope that it will be useful beyond what we're building specifically at the RUSH Initiative.

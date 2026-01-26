@@ -26,7 +26,6 @@
 
             // Parse the MapDataAdminFormConfig object to JS
             const config = JSON.parse("{{ map_data_admin_form_config|escapejs }}");
-            console.log(config);
 
             // Get constant elements
             const providerStateInputEl = document.getElementById("id_provider_state");
@@ -71,7 +70,6 @@
                     // if (errorList === null){
                     //     geojsonInput.insertBefore("<div class='errorlist'>" + e + "</div>")
                     // }
-                    // console.log(errorList);
                 }
             };
             geojsonInput.addEventListener('input', reDrawMapPreview);

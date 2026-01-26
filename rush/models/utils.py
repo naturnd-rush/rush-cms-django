@@ -100,6 +100,7 @@ class SummernoteTextCleaner:
         "del",
         "b",
         "i",
+        "u",
         "button",
         "input",
         "font",

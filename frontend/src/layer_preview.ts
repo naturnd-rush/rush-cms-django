@@ -1,23 +1,41 @@
 import {type Style, type MapData, getStyleById, getMapDataById} from "./graphql"
-import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygon } from 'geojson';
+import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygon, Polygon } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
-import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid, cyrb53 } from "./utils/math";
+import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid } from "./utils/math";
 import { waitForElementById, expectEl, ThrottledSignalReceiver, expectQuerySelector } from "./utils/timing";
 import { Parser } from 'expr-eval';
 import Mustache from "mustache";
 import { DynamicSubscriberManager } from './utils/events'
+import centerOfMass from "@turf/center-of-mass";
 
 /************
  * This script draws a map layer preview based on the currently selected map-data object and
  * the combination of style on layer objects currently being applied to the map layer.
  ************/
 
+interface Tooltip {
+    label: string,
+    offsetX: number,
+    offsetY: number,
+    opacity: number,
+    direction: string,
+    permanent: boolean,
+    sticky: boolean,
+}
+
 export interface StyleOnLayer{
+    
     style: Style,
     feature_mapping: string,
-    popupTemplate: string | null,
     inlineRow: Element,
+
+    drawPopup: boolean,
+    popupTemplate: string | null,
+
+    drawTooltip: boolean,
+    tooltip: Tooltip,
+
 }
 
 export interface MapPreviewState {
@@ -25,6 +43,7 @@ export interface MapPreviewState {
     stylesOnLayer: Array<StyleOnLayer>,
     currentLayer: L.GeoJSON<any, Geometry> | null,
     centroidMarkers: L.LayerGroup,
+    centroidTooltips: L.LayerGroup,
 }
 
 /**
@@ -41,7 +60,7 @@ export interface MapDataUpdate extends MapPreviewUpdate {
 }
 
 interface AppliedStyle{
-    style: Style,
+    styleOnLayer: StyleOnLayer,
     popupTemplate: string | null,
 }
 
@@ -52,27 +71,83 @@ interface PopupMetadata {
 }
 
 /**
- * Get the currently configured style data for this layer.
+ * Search all style-on-layer inlines and collect their form data + any related data that may exist.
+ * Returns a list of style-on-layers to be rendered.
  */
 export async function getStyleUpdate(): Promise<StyleUpdate> {
     const stylesOnLayers: Array<StyleOnLayer> = [];
-    for (let inlineRow of document.querySelectorAll("tr[id*='stylesonlayer_set-']")){
+    for (let inlineRow of document.querySelectorAll("[id^='stylesonlayer_set-']:not([id$='-group'])")){
         // for each styleOnLayer inline group
         const styleId = (inlineRow.querySelector("select[id*='-style']") as HTMLSelectElement)?.value;
         const featureMapping = (inlineRow.querySelector("textarea[id*='feature_mapping']") as HTMLInputElement | null)?.value;
         const popupTemplate = (inlineRow.querySelector("textarea[id*='popup']") as HTMLInputElement | null)?.value;
+        const drawPopupChecked = (inlineRow.querySelector("input[id*='-draw_popup']") as HTMLInputElement | null)?.checked;
+        const drawTooltipChecked = (inlineRow.querySelector("input[id*='-draw_tooltip']") as HTMLInputElement | null)?.checked;
+        const tooltipLabel = (inlineRow.querySelector("textarea[id*='label']") as HTMLInputElement | null)?.value;
+        const tooltipOffsetX = (inlineRow.querySelector("input[id*='offset_x']") as HTMLInputElement | null)?.value;
+        const tooltipOffsetY = (inlineRow.querySelector("input[id*='offset_y']") as HTMLInputElement | null)?.value;
+        const tooltipOpacity = (inlineRow.querySelector("input[id*='opacity']") as HTMLInputElement | null)?.value;
+        const tooltipDirection = (inlineRow.querySelector("select[id*='direction']") as HTMLInputElement | null)?.value;
+        const tooltipPermanent = (inlineRow.querySelector("input[id*='permanent']") as HTMLInputElement | null)?.checked;
+        const tooltipSticky = (inlineRow.querySelector("input[id*='sticky']") as HTMLInputElement | null)?.checked;
         if (!(styleId && featureMapping)){
             // most likely an empty inline
             continue;
         }
         const style = await getStyleById(styleId);
-        if (style !== null){
-            stylesOnLayers.push({
+        if (
+            style !== null && 
+            featureMapping !== undefined && 
+            popupTemplate !== undefined && 
+            drawPopupChecked !== undefined && 
+            drawTooltipChecked !== undefined &&
+            tooltipLabel !== undefined &&
+            tooltipOffsetX !== undefined &&
+            tooltipOffsetY !== undefined &&
+            tooltipOpacity !== undefined &&
+            tooltipDirection !== undefined &&
+            tooltipPermanent !== undefined &&
+            tooltipSticky !== undefined
+        ){
+            const tooltipData = {
+                label: tooltipLabel,
+                offsetX: Number.parseFloat(tooltipOffsetX),
+                offsetY: Number.parseFloat(tooltipOffsetY),
+                opacity: Number.parseFloat(tooltipOpacity),
+                direction: tooltipDirection,
+                permanent: tooltipPermanent,
+                sticky: tooltipSticky,
+            };
+            const styleOnLayerData = {
                 style: style,
                 feature_mapping: featureMapping,
-                popupTemplate: popupTemplate !== undefined ? popupTemplate : null,
                 inlineRow: inlineRow,
-            });
+                drawPopup: drawPopupChecked,
+                popupTemplate: popupTemplate,
+                drawTooltip: drawTooltipChecked,
+                tooltip: tooltipData,
+            };
+            stylesOnLayers.push(styleOnLayerData);
+        } else {
+            const tooltipData = {
+                label: tooltipLabel,
+                offsetX: tooltipOffsetX !== undefined ? Number.parseFloat(tooltipOffsetX) : Number.NaN,
+                offsetY: tooltipOffsetY !== undefined ? Number.parseFloat(tooltipOffsetY) : Number.NaN,
+                opacity: tooltipOpacity !== undefined ? Number.parseFloat(tooltipOpacity) : Number.NaN,
+                direction: tooltipDirection,
+                permanent: tooltipPermanent,
+                sticky: tooltipSticky,
+            };
+            const styleOnLayerData = {
+                style: style,
+                feature_mapping: featureMapping,
+                inlineRow: inlineRow,
+                drawPopup: drawPopupChecked,
+                popupTemplate: popupTemplate,
+                drawTooltip: drawTooltipChecked,
+                tooltip: tooltipData,
+            };
+            console.warn("One or more expected values in a StyleOnLayer inline is missing: ", styleOnLayerData);
         }
     }
     return {
@@ -179,7 +254,7 @@ function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<
         try{
             const expr = parser.parse(styleOnLayer.feature_mapping);
             if (expr.evaluate(coerceNumbersDeep(feature.properties)) === true){
-                applied.push({style: styleOnLayer.style, popupTemplate: styleOnLayer.popupTemplate});
+                applied.push({styleOnLayer: styleOnLayer, popupTemplate: styleOnLayer.popupTemplate});
                 if (fieldMappingErrors && fieldMappingContainer){
                     fieldMappingContainer.removeChild(fieldMappingErrors);
                 }
@@ -260,7 +335,7 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
         let strokeLineJoin = "round";
 
         for (let appliedStyle of appliedStyles){
-            const style = appliedStyle.style;
+            const style = appliedStyle.styleOnLayer.style;
 
             // If one style draws something then the combined style will also draw that thing
             if (style.drawFill === true){
@@ -373,8 +448,8 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
         let markerStyle: Style | null = null;
         const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
         for (let appliedStyle of appliedStyles){
-            const style = appliedStyle.style;
-            if (style.drawMarker && style.markerIcon.trimStart().trimEnd() !== ""){
+            const style = appliedStyle.styleOnLayer.style;
+            if (style.drawMarker === true){
                 markerStyle = style;
                 break;
             }
@@ -412,6 +487,7 @@ function getPolygonCentroid(polygonCoords: Position[]): L.Point{
 
 async function showSpinner(){
 
+    // Don't let users submit the form while the map-preview is loading.
     const saveBtn = expectQuerySelector(document.body, "input[name='_save']") as HTMLInputElement;
     const addAnotherBtn = expectQuerySelector(document.body, "input[name='_addanother']") as HTMLInputElement;
     const continueBtn = expectQuerySelector(document.body, "input[name='_continue']") as HTMLInputElement;
@@ -428,20 +504,6 @@ async function showSpinner(){
         console.error("Couldn't find map-preview and map-spinner in the DOM!");
     }
 
-    // THIS IS BAD: SPINNER SHOWING QUERIES AN ASYNC REQUEST!!!
-    // const mapDataSelectSpan = await waitForElementById("id_map_data");
-    // const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
-    // if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON"){
-    //     console.log("SHOWING SPINNER");
-    //     const mapPreviewEl = document.getElementById("map-preview");
-    //     const spinnerEl = document.getElementById("map-spinner");
-    //     if (mapPreviewEl !== null && spinnerEl !== null){
-    //         mapPreviewEl.classList.add('blur');
-    //         spinnerEl.classList.remove('hidden');
-    //     } else {
-    //         console.error("Couldn't find map-preview and map-spinner in the DOM!");
-    //     }
-    // }
 }
 
 function hideSpinner(){
@@ -539,14 +601,14 @@ function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string
 }
 
 /**
- * Get an optionally defined popup template from a list of applied styles.
+ * Flatten a list of "applied styles" to a popup template, or null.
  * @param appliedStyles a list of styles applied to some feature.
- * @returns a string template, or null if no popup template is defined in any of the applied styles.
+ * @returns a string template, or null if no popup template is defined (and enabled) in any of the applied styles.
  */
 function getPopupTemplate(appliedStyles: Array<AppliedStyle>): string | null {
     let popupTemplate = null;
     for (let appliedStyle of appliedStyles){
-        if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== ""){
+        if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== "" && appliedStyle.styleOnLayer.drawPopup === true){
             popupTemplate = appliedStyle.popupTemplate;
         }
     }
@@ -561,6 +623,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         map.removeLayer(state.currentLayer);
     }
     state.centroidMarkers.clearLayers();
+    state.centroidTooltips.clearLayers();
 
     // Update currentLayer if we are receiving new map data.
     if ("MapData" === update.type){
@@ -587,7 +650,6 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         return;
     }
     
-    
     const baseMediaUrl = expectEl('injected-media-url').innerHTML;
     const anyMarkerStyles = state.stylesOnLayer.filter(styleOnLayer => styleOnLayer.style.drawMarker == true).length > 0;
     const styledGeoJsonData = L.geoJSON(state.currentLayer.toGeoJSON(), {
@@ -603,26 +665,47 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                 feature.properties = {...feature.properties, ...popupMetadata};
             }
 
-            // Draw centroid icon markers when a marker icon style is applied to a polygon feature
-            const isPolygon = feature.geometry.type === "MultiPolygon";
-            if (isPolygon && anyMarkerStyles){
-                const multiPolygonFeature = feature as Feature<MultiPolygon, any>;
-                const markerStyles = appliedStyles.filter(appliedStyle => appliedStyle.style.drawMarker == true);
-                if (markerStyles.length > 0){
-                    const markerStyle = markerStyles[0].style; // Just take the first marker style if multiple applied.
-                    for (let polygonCoords of multiPolygonFeature.geometry.coordinates){
-                        const coords = (polygonCoords[0] as unknown) as Position[]; // For some reason there is another nested array in here at runtime, idk why...
-                        const points: Array<L.Point> = [];
-                        for (let coord of coords){
-                            points.push(new L.Point(coord[0], coord[1]))
-                        }
-                        const centroid = getCentroid(points);
-                        const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
+            const [featureCenterLng, featureCenterLat] = centerOfMass(feature).geometry.coordinates;
 
+            // Flatten the list of applied styles to a single tooltip and apply it, if one is enabled.
+            let tooltip: Tooltip | null = null;
+            for (let appliedStyle of appliedStyles){
+                if (appliedStyle.styleOnLayer.drawTooltip === true){
+                    tooltip = appliedStyle.styleOnLayer.tooltip;
+                    break;
+                }
+            }
+            if (tooltip !== null){
+                const renderedTooltipLabel = Mustache.render(tooltip.label, feature.properties);
+                const tooltipOptions = {
+                    offset: new L.Point(tooltip.offsetX, tooltip.offsetY),
+                    opacity: tooltip.opacity,
+                    direction: tooltip.direction as L.Direction,
+                    permanent: tooltip.permanent,
+                    sticky: tooltip.sticky,
+                    className: 'leaflet-label'
+                };
+                const leafletTooltip = L.tooltip(tooltipOptions);
+                leafletTooltip.setLatLng([featureCenterLat, featureCenterLng]);
+                leafletTooltip.setContent(renderedTooltipLabel);
+                leafletTooltip.addTo(state.centroidTooltips);
+                feature.properties = {...feature.properties, "__hasTooltip": true, "__tooltipLat": featureCenterLat, "__tooltipLng": featureCenterLng, "__tooltipHTML": renderedTooltipLabel, "__tooltipOptions": tooltipOptions};
+            } else {
+                feature.properties = {...feature.properties, "__hasTooltip": false};
+            }
+
+            // Draw centroid icon markers when a marker icon style is applied to a polygon feature
+            const isPolygon = feature.geometry.type === "MultiPolygon" || feature.geometry.type == "Polygon";
+            if (isPolygon && anyMarkerStyles){
+                const markerStyles = appliedStyles.filter(appliedStyle => appliedStyle.styleOnLayer.style.drawMarker == true);
+                if (markerStyles.length > 0){
+                    const markerStyle = markerStyles[0].styleOnLayer.style; // Just take the first marker style if multiple applied.
+                    const bindCentroidMarkerIcon = (lat: Number, lng: Number) => {
+                        const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
                         // Build the centroid marker icon feature with serializable divIcon and popup metadata
                         const centroidMarkerIconFeature = {
                             type: "Feature",
-                            geometry: { type: "Point", coordinates: [centroid.x, centroid.y] },
+                            geometry: { type: "Point", coordinates: [lng, lat] },
                             properties: {
                                 // Serialize leaflet markerDivIcon properties
                                 __pointDivIconStyleProps: markerDivIconProps,
@@ -644,7 +727,8 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                             marker.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
                         }
                         marker.addTo(state.centroidMarkers);
-                    }
+                    };
+                    bindCentroidMarkerIcon(featureCenterLat, featureCenterLng);
                 }
             }
         },
@@ -674,6 +758,163 @@ function serializeLayer(state: MapPreviewState): string {
     });
 }
 
+/**
+ * Add hooks for current and future styles-on-layer inlnes that show/hide element groups when specific checkboxes are selected.
+ */
+const initStylesOnLayerResponsiveUI = (subscriberManager: DynamicSubscriberManager) => {
+
+    const getFormRowsWithLabelText = (stylesOnLayerInline: HTMLElement, labelText: string): Array<HTMLElement> => {
+        // All child form-rows of the inline that themselves have child labels whose text includes labelText.
+        const allFormRows = Array.from(stylesOnLayerInline.querySelectorAll('div[class*="form-row"]'));
+        const formRowsWithLabel = allFormRows.filter(div => div.querySelector('label')?.textContent.includes(labelText));
+        return formRowsWithLabel as Array<HTMLElement>;
+    };
+
+    const registerCheckbox = (
+        checkboxSelector: string, 
+        affectedLabelsSubstring: string, 
+        callback: (checkboxFormRow: HTMLElement | null, formRows: Array<HTMLElement>, isChecked: boolean) => void,
+    ) => {
+        subscriberManager.subscribeEventListener("input", checkboxSelector, (event) => {
+            if (event.target !== null && event.target instanceof HTMLInputElement){
+                // Grab parent inline when checkbox clicked
+                const inline = event.target.closest("div[id*='stylesonlayer_set-']");
+                if (inline === null || !(inline instanceof HTMLElement)){
+                    throw new Error("Could not find 'draw_tooltip' form-field parent row!");
+                }
+                // Run callback on matching labelled form-rows
+                const labelledFormRows = getFormRowsWithLabelText(inline, affectedLabelsSubstring)
+                callback(event.target.closest("div[class*='form-row']"), labelledFormRows, event.target.checked);
+            }
+        });
+        // Simulate an initial event to show/hide based on initial checkbox value on page-load (does not change checkbox value).
+        document.querySelectorAll<HTMLInputElement>(checkboxSelector).forEach(
+            checkbox => checkbox.dispatchEvent(new Event('input', { bubbles: true }))
+        );
+    };
+
+    const COLLAPSE_BG_COLOR = "#FFFFFF";
+    const EXPAND_BG_COLOR_CHECKBOX = "#E2DBC4";
+    const EXPAND_BG_COLOR = "#f6f6f6";
+
+    // Register the draw-tooltip checkbox
+    registerCheckbox("input[id*='-draw_tooltip']", "Tooltip", (checkboxFormRow, formRows, checked) => {
+        for (let formRow of formRows){
+            if (checked === true){
+                formRow.style.display = "block";
+                formRow.style.setProperty("background-color", EXPAND_BG_COLOR);
+                checkboxFormRow?.style.setProperty("background-color", EXPAND_BG_COLOR_CHECKBOX);
+            }
+            else {
+                formRow.style.display = "none";
+                formRow.style.setProperty("background-color", COLLAPSE_BG_COLOR);
+                checkboxFormRow?.style.setProperty("background-color", COLLAPSE_BG_COLOR);
+            }
+        }
+    });
+
+    // Register the draw-tooltip checkbox
+    registerCheckbox("input[id*='-draw_popup']", "Popup", (checkboxFormRow, formRows, checked) => {
+        for (let formRow of formRows){
+            if (checked === true){
+                formRow.style.display = "block";
+                formRow.style.setProperty("background-color", EXPAND_BG_COLOR);
+                checkboxFormRow?.style.setProperty("background-color", EXPAND_BG_COLOR_CHECKBOX);
+            }
+            else {
+                formRow.style.display = "none";
+                formRow.style.setProperty("background-color", COLLAPSE_BG_COLOR);
+                checkboxFormRow?.style.setProperty("background-color", COLLAPSE_BG_COLOR);
+            }
+        }
+    });
+
+};
+
+/**
+ * Initialize various inputs that trigger "style updates" for the layer preview.
+ * There are four basic categories that should generally trigger a re-drawing of
+ * the map based on changing styles:
+ *  1.  Inline textareas and number input sliders -- These need to be throttled to avoid 
+ *      updating too frequently as people type or "slide".
+ *  2.  Inline summernote fields -- These need to be polled in order for us to get an event
+ *      callback at all. This is because the summernote rich text field lives inside an <iframe>
+ *      where DOM events don't "bubble-up".
+ *  3.  Inline checkboxes and dropdowns -- These are the simplest and only require a callback (although
+ *      it still has to be subscribed to in case new inlines are added when editing).
+ *  4.  Non-inline events -- For example, when re-focusing the webpage. It is possible the user is returning
+ *      from another django form page, e.g., style, where the changes need to be reflected in the layer preview.
+ */
+const initStyleUpdateTriggers = (subscriberManager: DynamicSubscriberManager, map: L.Map, mapDataSelectSpan: HTMLSpanElement, mapPreviewState: MapPreviewState) => {
+    
+    // Shorthand for redrawing the map by fetching new styles / popup info
+    const doStyleUpdate = () => {
+        mapDataFromSpan(mapDataSelectSpan).then((mapData) => {
+            if (mapData?.providerState === "GEOJSON"){
+                mapPreviewState.isUpdating = true;
+                showSpinnerAfter(1, mapPreviewState);
+                getStyleUpdate().then(styleUpdate => {
+                    drawMapPreview(map, mapPreviewState, styleUpdate);
+                });
+            }
+        });
+    };
+    
+    // We want to throttle the updates for continous input types (like sliders)
+    const throttledStyleUpdate = new ThrottledSignalReceiver(1000, doStyleUpdate);
+
+    // 1. Textareas and input sliders
+    subscriberManager.subscribeEventListener("input", "textarea[id*='-feature_mapping']", (e) => throttledStyleUpdate.trigger());
+    subscriberManager.subscribeEventListener("input", "input[id*='-offset_x']", (e) => throttledStyleUpdate.trigger());
+    subscriberManager.subscribeEventListener("input", "input[id*='-offset_y']", (e) => throttledStyleUpdate.trigger());
+    subscriberManager.subscribeEventListener("input", "input[id*='-opacity']", (e) => throttledStyleUpdate.trigger());
+
+    // 2. Summernote editors
+    // 
+    // NOTE: This only works when the user clicks outside the editor, after entering text. I've spent too many
+    // hours trying to get it to update automatically by trying to use the real summernote js library with jquery, and also by
+    // trying hacky methods like simulating the click, none of which worked. This is shit, but good enough for now...
+    // 
+    // Hours wasted: 6
+    //               ^^--- Update me if you work on this.
+    let previousEditorText = "";
+    let currentEditorText = "";
+    const summernoteTextAreaSelectors = ["textarea[id*='popup']", "textarea[id*='label']"];
+    const pollSummernoteEditorChanges = () => {
+        currentEditorText = "";
+        for (let selector of summernoteTextAreaSelectors){
+            for (let el of document.querySelectorAll(selector)){
+                if (el instanceof HTMLTextAreaElement){
+                    currentEditorText += el.value;
+                }
+            }
+        }
+        if (currentEditorText !== previousEditorText){
+            doStyleUpdate();
+            previousEditorText = currentEditorText;
+        }
+        setTimeout(pollSummernoteEditorChanges, 1000);
+    };
+    pollSummernoteEditorChanges();
+
+    // 3. Checkboxes and dropdowns
+    subscriberManager.subscribeMutationObserver({childList: true, subtree: true}, "span[id*='select2-id_stylesonlayer_set']", doStyleUpdate); // Select-2 (autocomplete) dropdown needs DOM observer
+    subscriberManager.subscribeEventListener("input", "input[id*='-draw_popup']", doStyleUpdate);
+    subscriberManager.subscribeEventListener("input", "input[id*='-draw_tooltip']", doStyleUpdate);
+    subscriberManager.subscribeEventListener("change", "select[id*='-direction']", doStyleUpdate);
+    subscriberManager.subscribeEventListener("input", "input[id*='-permanent']", doStyleUpdate);
+    subscriberManager.subscribeEventListener("input", "input[id*='-sticky']", doStyleUpdate);
+
+    // 4. Non-inline events
+    document.addEventListener('visibilitychange', async function () {
+        if (document.visibilityState === 'visible') {
+            // Listen to redraw the map when the tab is refocused (the user leaves and then comes back).
+            // This can happen after a user edits one of the inline styles and then clicks on the layer edit tab.
+            doStyleUpdate();
+        }
+    });    
+};
+
 document.addEventListener("DOMContentLoaded", () => {(async () => {
     
     const TILE_LAYER_OPTS = {
@@ -700,8 +941,10 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         stylesOnLayer: [],
         currentLayer: null,
         centroidMarkers: new L.LayerGroup(),
+        centroidTooltips: new L.LayerGroup(),
     };
     mapPreviewState.centroidMarkers.addTo(map);
+    mapPreviewState.centroidTooltips.addTo(map);
 
     // Move spinner from top of page to inside the map preview box and show the spinner initially as the map preview is drawn
     const mapDataSelectSpan = await waitForElementById("id_map_data");
@@ -713,75 +956,9 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         showSpinner();
     }
     
-    // Shorthand for redrawing the map by fetching new styles / popup info
-    const doStyleUpdate = () => {
-        mapDataFromSpan(mapDataSelectSpan).then((mapData) => {
-            if (mapData?.providerState === "GEOJSON"){
-                mapPreviewState.isUpdating = true;
-                showSpinnerAfter(1, mapPreviewState);
-                getStyleUpdate().then(styleUpdate => {
-                    drawMapPreview(map, mapPreviewState, styleUpdate);
-                });
-            }
-        });
-    };
-
-    // Some update events need to be throttled for performance
-    const throttledStyleUpdate = new ThrottledSignalReceiver(1000, doStyleUpdate);
-
-    // Manage events declaratively, since new inline rows can be added 
     const subscriberManager = new DynamicSubscriberManager(document.body);
-
-    // Style select dropdowns
-    subscriberManager.subscribeMutationObserver({childList: true, subtree: true}, "span[id*='select2-id_stylesonlayer_set']", (_) => {
-        doStyleUpdate();
-    });
-
-    // Feature mapping textareas
-    subscriberManager.subscribeEventListener("input", "textarea[id*='-feature_mapping']", (_) => {
-        throttledStyleUpdate.trigger();
-    });
-
-    // // Popup editors
-    // subscriberManager.subscribeMutationObserver({childList: true, subtree: true, characterData: true}, "textarea[id*='popup']", (_) => {
-    //     console.log('POPUP CHANGED: ', _);
-    //     throttledStyleUpdate.trigger();
-    // });
-    // ^^^ not sure why this doesnt work but the below code does...
-
-    // HACK FOR DFG PRESENTATION TODAY
-    // I just want to get popup editing to refresh the map preview!
-    // This is ineffecient!!! TODO: Fix me...
-    let previousHash = 0;
-    const pollPopupChanges = () => {
-        const popupTemplates = [];
-        for (let inlineRow of document.querySelectorAll("tr[id*='stylesonlayer_set-']")){
-            const popupTemplate = (inlineRow.querySelector("textarea[id*='popup']") as HTMLInputElement | null)?.value;
-            popupTemplates.push(popupTemplate);
-        }
-        const hash = cyrb53(JSON.stringify(popupTemplates));
-        if (hash !== previousHash){
-            previousHash = hash;
-            doStyleUpdate();
-        }
-        setTimeout(pollPopupChanges, 1000);
-    };
-    pollPopupChanges();
-    
-    // Listen to redraw the map when the tab is refocused (the user leaves and then comes back).
-    // This can happen after a user edits one of the inline styles and then clicks on the layer edit tab.
-    document.addEventListener('visibilitychange', async function () {
-        if (document.visibilityState === 'visible') {
-            const mapData = await mapDataFromSpan(mapDataSelectSpan);
-            if (mapData?.providerState === "GEOJSON"){
-                mapPreviewState.isUpdating = true;
-                showSpinnerAfter(1, mapPreviewState);
-                getStyleUpdate().then(styleUpdate => {
-                    drawMapPreview(map, mapPreviewState, styleUpdate);
-                });
-            }
-        }
-    });
+    initStyleUpdateTriggers(subscriberManager, map, mapDataSelectSpan, mapPreviewState);
+    initStylesOnLayerResponsiveUI(subscriberManager);
 
     // Listen to redraw the map when the map-data is changed.
     const mapPreviewEl = await waitForElementById("map-preview");
@@ -805,7 +982,7 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         }
     };
     onMapDataDropdownChange(); // for initial load
-    mapDataSelectSpan.addEventListener("change", onMapDataDropdownChange);
+    mapDataSelectSpan.addEventListener("change", onMapDataDropdownChange); // When new map data is selected
 
     // Draw the initial map using the current map-data and style info.
     Promise.all([

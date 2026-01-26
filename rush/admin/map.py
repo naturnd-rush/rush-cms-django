@@ -1,6 +1,7 @@
 import json
 import logging
 from dataclasses import asdict, dataclass
+from decimal import Decimal
 from typing import Any, List
 
 import adminsortable2.admin as sortable_admin
@@ -15,17 +16,36 @@ from rush import models
 from rush.admin import utils
 from rush.admin.utils import truncate_admin_text_from
 from rush.admin.widgets import SummernoteWidget
+from rush.models.style.tooltip import Direction
 
 logger = logging.getLogger(__name__)
 
 
 class StylesOnLayerInlineForm(forms.ModelForm):
+
+    # Popup toggle
+    draw_popup = forms.BooleanField(required=False)
+
+    # Tooltip toggle (mostly aesthetic, but also lets the save() function know when
+    # to attempt to create a related tooltip object on the styles-on-layer).
+    draw_tooltip = forms.BooleanField(required=False)
+
+    # Related Tooltip fields
+    label = forms.CharField(required=False, label="Tooltip Label")
+    offset_x = forms.DecimalField(required=False, label="Tooltip offset X")
+    offset_y = forms.DecimalField(required=False, label="Tooltip offset Y")
+    opacity = forms.DecimalField(required=False, label="Tooltip Opacity")
+    direction = forms.ChoiceField(choices=Direction.choices, required=False, label="Tooltip Direction")
+    permanent = forms.BooleanField(required=False, label="Tooltip Permanent")
+    sticky = forms.BooleanField(required=False, label="Tooltip Sticky")
+
     class Meta:
         model = models.StylesOnLayer
         fields = [
             "style",
             "feature_mapping",
             "legend_description",
+            "draw_popup",  # only on form, not the model
             "popup",
         ]
         widgets = {
@@ -33,8 +53,139 @@ class StylesOnLayerInlineForm(forms.ModelForm):
             "feature_mapping": forms.Textarea(attrs={"rows": 1, "cols": 50}),
         }
 
+    def _init_tooltip_fields(self) -> None:
+        """
+        Initialize form widgets for related 'tooltip' object's form fields, and
+        set the help-text for some of the form fields.
+        """
+        self.fields["label"].widget = SummernoteWidget(
+            width="250px",
+            height="100px",
+            styleTags=[],
+            toolbar=[["font", ["bold", "italic", "underline"]]],
+        )
+        self.fields["offset_x"].widget = utils.SliderAndTextboxNumberInput(min=-100, max=100, step=1)
+        self.fields["offset_y"].widget = utils.SliderAndTextboxNumberInput(min=-100, max=100, step=1)
+        self.fields["opacity"].widget = utils.SliderAndTextboxNumberInput(max=1, step=0.01)
 
-class StyleOnLayerInline(sortable_admin.SortableTabularInline, admin.TabularInline):
+        # Setting help text is done here instead of on the model because we're using custom form fields and
+        # Django cannot automatically relate the tooltip formfields (on this form) to the tooltip model's fields.
+        self.fields["direction"].help_text = "Where to draw the label relative to the marker."
+        self.fields["permanent"].help_text = (
+            "Turn this off if you only want the label to be visible when a user hovers their mouse over the marker area."
+        )
+        self.fields["sticky"].help_text = "Whether text attaches to the cursor when nearby."
+
+    def _populate_initial_tooltip_fields(self, tooltip: models.Tooltip) -> None:
+        """
+        This function assumes that a related 'tooltip' object exists at form-initialization
+        time, and uses its field values to populate the form fields for this inline form.
+        """
+        self.fields["label"].initial = tooltip.label
+        self.fields["offset_x"].initial = tooltip.offset_x
+        self.fields["offset_y"].initial = tooltip.offset_y
+        self.fields["opacity"].initial = tooltip.opacity
+        self.fields["direction"].initial = tooltip.direction
+        self.fields["permanent"].initial = tooltip.permanent
+        self.fields["sticky"].initial = tooltip.sticky
+
+    def _set_initial_tooltip_defaults(self) -> None:
+        """
+        This function assumes that there is no related "tooltip" object at form-initialization
+        time, so it sets the form field values to their defaults, which are defined below.
+        """
+        self.fields["label"].initial = "Tooltip Text"
+        self.fields["offset_x"].initial = Decimal(0.0)
+        self.fields["offset_y"].initial = Decimal(0.0)
+        self.fields["opacity"].initial = Decimal(0.8)
+        self.fields["direction"].initial = Direction.CENTER
+        self.fields["permanent"].initial = True
+        self.fields["sticky"].initial = False
+
+    def _save_tooltip_with_form_field_values(self, tooltip: models.Tooltip) -> None:
+        """
+        This function assumes that the 'draw_tooltip' form field is 'True', and that it is being
+        run at "save time", after the form has been fully-cleaned. It then saves the relevant form
+        field values to the given tooltip object.
+        """
+        try:
+
+            # set tooltip field values
+            tooltip.label = self.cleaned_data["label"]
+            tooltip.offset_x = self.cleaned_data["offset_x"]
+            tooltip.offset_y = self.cleaned_data["offset_y"]
+            tooltip.opacity = self.cleaned_data["opacity"]
+            tooltip.direction = self.cleaned_data["direction"]
+            tooltip.permanent = self.cleaned_data["permanent"]
+            tooltip.sticky = self.cleaned_data["sticky"]
+
+            # set tooltip object on styles-on-layer
+            if self.instance is None:
+                tooltip.delete()
+                raise ValueError("Cannot save related tooltip if no styles-on-layer object exists on the form.")
+            self.instance.tooltip = tooltip
+
+            tooltip.full_clean()
+            tooltip.save()
+
+        except Exception as e:
+            raise ValueError(
+                "Could not save related tooltip on styles on layer",
+                {"tooltip": tooltip.id, "styles_on_layer": self.instance.id if self.instance else None},
+            ) from e
+
+    def _get_related_tooltip_or_none(self) -> models.Tooltip | None:
+        if self.instance and hasattr(self.instance, "tooltip"):
+            return self.instance.tooltip
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Tooltip fields are pulled from related tooltip model
+        self._init_tooltip_fields()
+        if tooltip := self._get_related_tooltip_or_none():
+            self.fields["draw_tooltip"].initial = True
+            self._populate_initial_tooltip_fields(tooltip)
+        else:
+            self.fields["draw_tooltip"].initial = False
+            self._set_initial_tooltip_defaults()
+
+        # Draw-popup checkbox should be checked initially if the popup input box has any content
+        if self.instance is None:
+            # By default, don't draw a popup
+            self.fields["draw_popup"].initial = False
+        else:
+            if self.instance.popup is not None and str(self.instance.popup).strip() != "":
+                # If the popup already contains text, then check the box
+                self.fields["draw_popup"].initial = True
+            else:
+                # If the popup contains nothing or is null then don't check the box
+                self.fields["draw_popup"].initial = False
+
+    def save(self, commit=True) -> Any:
+
+        if self.cleaned_data["draw_tooltip"] == False:
+            if tooltip := self._get_related_tooltip_or_none():
+                # Delete existing tooltip (we no longer want to draw it)
+                tooltip.delete()
+        else:
+            if tooltip := self._get_related_tooltip_or_none():
+                # Update existing tooltip
+                self._save_tooltip_with_form_field_values(tooltip)
+            else:
+                # create new tooltip
+                tooltip = models.Tooltip.objects.create(label="")
+                self._save_tooltip_with_form_field_values(tooltip)
+
+        # If draw_popup checkbox is False then clear any saved popup text
+        if self.cleaned_data["draw_popup"] == False:
+            if self.instance:
+                self.instance.popup = None
+
+        return super().save(commit)
+
+
+class StyleOnLayerInline(sortable_admin.SortableStackedInline, admin.StackedInline):
     form = StylesOnLayerInlineForm
     verbose_name_plural = "Styles applied to this Layer"
     model = models.StylesOnLayer
@@ -251,19 +402,6 @@ class MapDataAdminForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Inject field information on provider so the frontend can know which
-        # provider fields to show depending on what value is selected in the dropdown.
-        # TODO: Should probably move this to the admin "render changeform" method and use context[VAR_NAME]
-        #       to inject this data, instead of hackily putting JSON data into HTML elements like this...
-        # self.fields["provider_state"].widget.attrs["show-fields-map"] = json.dumps(
-        #     models.MapData.get_formfield_map()
-        # )
-        # all_fields = []
-        # for fieldlist in models.MapData.get_formfield_map().values():
-        #     for field in fieldlist:
-        #         all_fields.append(field["name"])
-        # self.fields["provider_state"].widget.attrs["all-fields"] = json.dumps({"fieldnames": all_fields})
-
         # Remove "UNSET" option from dropdown menu
         self.fields["provider_state"].choices = [
             (value, label)
@@ -407,13 +545,6 @@ class StyleForm(forms.ModelForm):
             "marker_icon": forms.FileInput(),
             "marker_size": utils.SliderAndTextboxNumberInput(min=10, max=150),
         }
-
-    class Media:
-        js = [
-            # "style_preview.js",
-            # "slider_textbox_input_sync.js",
-            # "live_image_preview_refresh.js",
-        ]
 
 
 @admin.register(models.Style)
