@@ -1,12 +1,13 @@
 import {type Style, type MapData, getStyleById, getMapDataById} from "./graphql"
-import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygon } from 'geojson';
+import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygon, Polygon } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
-import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid, cyrb53 } from "./utils/math";
+import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid } from "./utils/math";
 import { waitForElementById, expectEl, ThrottledSignalReceiver, expectQuerySelector } from "./utils/timing";
 import { Parser } from 'expr-eval';
 import Mustache from "mustache";
 import { DynamicSubscriberManager } from './utils/events'
+import centerOfMass from "@turf/center-of-mass";
 
 /************
  * This script draws a map layer preview based on the currently selected map-data object and
@@ -42,6 +43,7 @@ export interface MapPreviewState {
     stylesOnLayer: Array<StyleOnLayer>,
     currentLayer: L.GeoJSON<any, Geometry> | null,
     centroidMarkers: L.LayerGroup,
+    centroidTooltips: L.LayerGroup,
 }
 
 /**
@@ -621,6 +623,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         map.removeLayer(state.currentLayer);
     }
     state.centroidMarkers.clearLayers();
+    state.centroidTooltips.clearLayers();
 
     // Update currentLayer if we are receiving new map data.
     if ("MapData" === update.type){
@@ -662,6 +665,8 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                 feature.properties = {...feature.properties, ...popupMetadata};
             }
 
+            const [featureCenterLng, featureCenterLat] = centerOfMass(feature).geometry.coordinates;
+
             // Flatten the list of applied styles to a single tooltip and apply it, if one is enabled.
             let tooltip: Tooltip | null = null;
             for (let appliedStyle of appliedStyles){
@@ -680,32 +685,36 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                     sticky: tooltip.sticky,
                     className: 'leaflet-label'
                 };
-                layer.bindTooltip(renderedTooltipLabel, tooltipOptions);
+                const leafletTooltip = L.tooltip(tooltipOptions);
+                leafletTooltip.setLatLng([featureCenterLat, featureCenterLng]);
+                leafletTooltip.setContent(renderedTooltipLabel);
+                leafletTooltip.addTo(state.centroidTooltips);
+                // const tooltipOptions = {
+                //     offset: new L.Point(tooltip.offsetX, tooltip.offsetY),
+                //     opacity: tooltip.opacity,
+                //     direction: tooltip.direction as L.Direction,
+                //     permanent: tooltip.permanent,
+                //     sticky: tooltip.sticky,
+                //     className: 'leaflet-label'
+                // };
+                // layer.bindTooltip(renderedTooltipLabel, tooltipOptions);
                 feature.properties = {...feature.properties, "__hasTooltip": true, "__tooltipHTML": renderedTooltipLabel, "__tooltipOptions": tooltipOptions};
             } else {
                 feature.properties = {...feature.properties, "__hasTooltip": false};
             }
 
             // Draw centroid icon markers when a marker icon style is applied to a polygon feature
-            const isPolygon = feature.geometry.type === "MultiPolygon";
+            const isPolygon = feature.geometry.type === "MultiPolygon" || feature.geometry.type == "Polygon";
             if (isPolygon && anyMarkerStyles){
-                const multiPolygonFeature = feature as Feature<MultiPolygon, any>;
                 const markerStyles = appliedStyles.filter(appliedStyle => appliedStyle.styleOnLayer.style.drawMarker == true);
                 if (markerStyles.length > 0){
                     const markerStyle = markerStyles[0].styleOnLayer.style; // Just take the first marker style if multiple applied.
-                    for (let polygonCoords of multiPolygonFeature.geometry.coordinates){
-                        const coords = (polygonCoords[0] as unknown) as Position[]; // For some reason there is another nested array in here at runtime, idk why...
-                        const points: Array<L.Point> = [];
-                        for (let coord of coords){
-                            points.push(new L.Point(coord[0], coord[1]))
-                        }
-                        const centroid = getCentroid(points);
+                    const bindCentroidMarkerIcon = (lat: Number, lng: Number) => {
                         const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
-
                         // Build the centroid marker icon feature with serializable divIcon and popup metadata
                         const centroidMarkerIconFeature = {
                             type: "Feature",
-                            geometry: { type: "Point", coordinates: [centroid.x, centroid.y] },
+                            geometry: { type: "Point", coordinates: [lng, lat] },
                             properties: {
                                 // Serialize leaflet markerDivIcon properties
                                 __pointDivIconStyleProps: markerDivIconProps,
@@ -727,7 +736,20 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                             marker.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
                         }
                         marker.addTo(state.centroidMarkers);
-                    }
+                    };
+                    bindCentroidMarkerIcon(featureCenterLat, featureCenterLng);
+
+                    // if (feature.geometry.type === "MultiPolygon"){
+                    //     const multiPolygonFeature = feature as Feature<MultiPolygon, any>;
+                    //     const test = centroid(multiPolygonFeature);
+                    //     for (let polygonCoords of multiPolygonFeature.geometry.coordinates){
+
+                    //     }
+                    // } else if (feature.geometry.type === "Polygon") {
+                    //     const polygonFeature = feature as Feature<Polygon, any>;
+                    //     const [lng, lat] = centroid(polygonFeature).geometry.coordinates;
+                    //     bindCentroidMarkerIcon(lng, lat);
+                    // }
                 }
             }
         },
@@ -940,8 +962,10 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         stylesOnLayer: [],
         currentLayer: null,
         centroidMarkers: new L.LayerGroup(),
+        centroidTooltips: new L.LayerGroup(),
     };
     mapPreviewState.centroidMarkers.addTo(map);
+    mapPreviewState.centroidTooltips.addTo(map);
 
     // Move spinner from top of page to inside the map preview box and show the spinner initially as the map preview is drawn
     const mapDataSelectSpan = await waitForElementById("id_map_data");

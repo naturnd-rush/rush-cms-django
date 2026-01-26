@@ -21,6 +21,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@turf/center-of-mass": "^7.3.2",
     "expr-eval": "^2.0.2",
     "fast-glob": "^3.3.3",
     "leaflet": "^1.9.4",
