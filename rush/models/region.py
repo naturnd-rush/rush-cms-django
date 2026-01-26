@@ -9,7 +9,6 @@ class Region(models.Model):
     Geographical region for grouping and filtering questions.
     """
 
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(
         max_length=255,
@@ -25,7 +24,8 @@ class Region(models.Model):
         validators=[MinValueValidator(-180.0), MaxValueValidator(180.0)]
     )
     default_zoom = models.FloatField(
-        help_text="Default zoom level for map view (e.g., 12.0 for city level)"
+        help_text="Default zoom level for map view (e.g., 12.0 for city level)",
+        validators=[MinValueValidator(0.0)],
     )
 
     def __str__(self):
