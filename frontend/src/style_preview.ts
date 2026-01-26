@@ -147,7 +147,6 @@ function getPreviewHTML(state: PreviewState): string {
         />'
         `
     }
-    //console.log("Drawing svg from preview state: ", html, state);
     return html
 }
 
@@ -225,19 +224,11 @@ export function readFile(file: File | Blob): Promise<string> {
 
 document.addEventListener('DOMContentLoaded', () => {(async () => {
 
-    const adminForm = document.querySelector('form');
-    if (adminForm) {
-        adminForm.addEventListener('submit', function () {
-            console.log('Form is being submitted!');  // You can also trigger a spinner, custom callback, etc.
-        });
-    }
-
     // Hooks into a preview box provided by the style admin class.
     const previewContainer = expectEl('style_preview') as HTMLDivElement;
     const styleId = expectEl("injected-style-id").innerHTML;
     const baseMediaUrl = expectEl("injected-media-url").innerHTML;
     const stylePreview = expectQuerySelector(document, ".field-style_preview");
-    console.log(stylePreview);
 
     // Define a default preview state (this is temporary because we will update the preview 
     // based on the admin form's currently selected style attributes on page load).
