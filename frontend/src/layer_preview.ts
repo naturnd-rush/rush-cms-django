@@ -689,7 +689,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                 leafletTooltip.setLatLng([featureCenterLat, featureCenterLng]);
                 leafletTooltip.setContent(renderedTooltipLabel);
                 leafletTooltip.addTo(state.centroidTooltips);
-                feature.properties = {...feature.properties, "__hasTooltip": true, "__tooltipHTML": renderedTooltipLabel, "__tooltipOptions": tooltipOptions};
+                feature.properties = {...feature.properties, "__hasTooltip": true, "__tooltipLat": featureCenterLat, "__tooltipLng": featureCenterLng, "__tooltipHTML": renderedTooltipLabel, "__tooltipOptions": tooltipOptions};
             } else {
                 feature.properties = {...feature.properties, "__hasTooltip": false};
             }
@@ -729,18 +729,6 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                         marker.addTo(state.centroidMarkers);
                     };
                     bindCentroidMarkerIcon(featureCenterLat, featureCenterLng);
-
-                    // if (feature.geometry.type === "MultiPolygon"){
-                    //     const multiPolygonFeature = feature as Feature<MultiPolygon, any>;
-                    //     const test = centroid(multiPolygonFeature);
-                    //     for (let polygonCoords of multiPolygonFeature.geometry.coordinates){
-
-                    //     }
-                    // } else if (feature.geometry.type === "Polygon") {
-                    //     const polygonFeature = feature as Feature<Polygon, any>;
-                    //     const [lng, lat] = centroid(polygonFeature).geometry.coordinates;
-                    //     bindCentroidMarkerIcon(lng, lat);
-                    // }
                 }
             }
         },
