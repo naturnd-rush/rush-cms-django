@@ -13,7 +13,7 @@ from rush.admin.question.inlines import (
     QuestionTabInline,
 )
 from rush.admin.utils import image_html
-from rush.models import BasemapSource, BasemapSourceOnQuestion, Layer, Question
+from rush.models import BasemapSource, BasemapSourceOnQuestion, Question
 
 
 @admin.register(Question)
@@ -27,6 +27,7 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
         "sash_preview",
         "get_question_tabs",
         "display_order",
+        "published_state",
     ]
     prepopulated_fields = {"slug": ("title",)}
     autocomplete_fields = ["initiatives", "sash"]

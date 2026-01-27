@@ -4,6 +4,7 @@ from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
+from rush.models import PublishedState
 from rush.models.utils import CompressionFailed, compress_image
 from rush.models.validators import FiletypeValidator
 
@@ -47,8 +48,12 @@ class Question(models.Model):
         help_text="Primary region where this question appears",
         related_name="questions",
     )
-
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
+    published_state = models.CharField(
+        max_length=255,
+        choices=PublishedState.choices,
+        help_text="WARNING: Changing this to 'Published' will make this Question appear on the website immediately.",
+    )
 
     def __str__(self):
         return self.title
