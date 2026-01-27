@@ -3,6 +3,7 @@ import uuid
 from django.core.validators import URLValidator
 from django.db import models
 
+from rush.models import PublishedState
 from rush.models.utils import SummernoteTextCleaner
 
 
@@ -17,6 +18,11 @@ class Initiative(models.Model):
     title = models.CharField(max_length=255)
     content = models.TextField()
     tags = models.ManyToManyField(to="InitiativeTag", related_name="initiatives")
+    published_state = models.CharField(
+        max_length=255,
+        choices=PublishedState.choices,
+        help_text="WARNING: Changing this to 'Published' will make this Initiative appear on the website immediately.",
+    )
 
     def clean(self) -> None:
         self.content = SummernoteTextCleaner.clean(self.content)

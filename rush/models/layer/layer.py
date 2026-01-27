@@ -5,6 +5,7 @@ from django.core.cache import cache
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from rush.models import PublishedState
 from rush.models.utils import SummernoteTextCleaner
 
 
@@ -32,6 +33,11 @@ class Layer(models.Model):
     )
     styles = models.ManyToManyField("Style", through="StylesOnLayer")
     serialized_leaflet_json = models.JSONField(default=dict, null=True, blank=True)
+    published_state = models.CharField(
+        max_length=255,
+        choices=PublishedState.choices,
+        help_text="WARNING: Changing this to 'Published' will make this Layer appear on the website immediately.",
+    )
 
     def clean(self) -> None:
         self.description = SummernoteTextCleaner.clean(self.description)
