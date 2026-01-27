@@ -13,3 +13,4 @@ from rush.models.page import *
 from rush.models.question import *
 from rush.models.signals import *
 from rush.models.style import *
+from rush.models.region import Region

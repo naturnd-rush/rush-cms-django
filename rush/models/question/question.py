@@ -39,6 +39,15 @@ class Question(models.Model):
         related_name="questions",
     )
 
+    region = models.ForeignKey(
+        to="Region",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Primary region where this question appears",
+        related_name="questions",
+    )
+
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 
     def __str__(self):
