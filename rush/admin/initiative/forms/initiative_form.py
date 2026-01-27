@@ -1,4 +1,5 @@
 from django import forms
+
 from rush import models
 from rush.admin import utils
 
@@ -10,7 +11,7 @@ class InitiativeForm(forms.ModelForm):
 
     class Meta:
         model = models.Initiative
-        fields = ["title", "link", "image", "content", "tags"]
+        fields = ["title", "link", "image", "content", "tags", "published_state"]
 
     def __init__(self, *args, **kwargs):
         """
