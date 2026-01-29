@@ -72,6 +72,16 @@ class SummernoteTextCleaner:
     gets saved to the database.
     """
 
+    ALLOWED_TOOLTIP_TAGS = [
+        "b",
+        "i",
+        "u",
+        "p",
+        "strong",
+        "em",
+        "a",
+    ]
+
     ALLOWED_TAGS = [
         "p",
         "ul",
@@ -155,4 +165,10 @@ class SummernoteTextCleaner:
                 allowed_css_properties=cls.BLEACH_ALLOWED_STYLES,
             ),
         )
+        return cleaned
+
+    @classmethod
+    def clean_tooltip(cls, text: str) -> str:
+        unescaped = text.replace("&quot;", "'")
+        cleaned = bleach.clean(text=unescaped, tags=cls.ALLOWED_TOOLTIP_TAGS)
         return cleaned

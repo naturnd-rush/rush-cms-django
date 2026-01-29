@@ -1,8 +1,9 @@
 from django.contrib import admin
 from django_summernote.admin import SummernoteModelAdmin
-from rush.admin.initiative.forms.initiative_form import InitiativeForm
+
 from rush import models
 from rush.admin import utils
+from rush.admin.initiative.forms.initiative_form import InitiativeForm
 
 
 @admin.register(models.Initiative)

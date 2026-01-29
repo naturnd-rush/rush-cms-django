@@ -37,22 +37,23 @@
   opacity: 1;
 }
 
-.leaflet-label {
+.leaflet-container .leaflet-label {
   padding: 0;
-  background-color: 'transparent';
-  border: 'unset';
-  box-shadow: 'unset';
-  font-size: '1.0rem';
-  opacity: '0.8 !important';
-  color: 'white';
-  font-weight: '700';
+  background-color: transparent;
+  border: unset;
+  box-shadow: unset;
+  font-size: 1.0rem;
+  opacity: 0.8 !important;
+  color: white;
+  font-weight: 700;
   font-family: 'Inter Variable', sans-serif;
-  text-shadow: '-2px -2px 0 black, 2px -2px 0 black, -2px 2px 0 black, 2px 2px 0 black;';
+  text-shadow: -2px -2px 0 black, 2px -2px 0 black, -2px 2px 0 black, 2px 2px 0 black;;
 }
 
-.leaflet-label::before {
+.leaflet-container .leaflet-label::before {
   display: 'none'
 }
+
 /**
  * Styles for rendering text content in the leaflet popups!
  */

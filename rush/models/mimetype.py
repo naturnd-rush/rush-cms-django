@@ -142,7 +142,6 @@ class MimeType(models.Model):
             existing_type = cls.objects.get(_values__contains=mime_type_value)
             return GuessedMimeType(filename, existing_type)
         except MimeType.DoesNotExist:
-            #
             return GuessedMimeType(filename, cls.UNSUPPORTED())
 
     def __str__(self):
