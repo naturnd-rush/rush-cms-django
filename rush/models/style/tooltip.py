@@ -46,7 +46,7 @@ class Tooltip(models.Model):
     sticky = models.BooleanField(default=True)
 
     def clean(self) -> None:
-        self.label = SummernoteTextCleaner.clean(self.label)
+        self.label = SummernoteTextCleaner.clean_tooltip(self.label)
 
     def __str__(self):
         return self.label
