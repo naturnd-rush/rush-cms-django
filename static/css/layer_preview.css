@@ -37,7 +37,7 @@
   opacity: 1;
 }
 
-.leaflet-label {
+.leaflet-container .leaflet-label {
   padding: 0;
   background-color: transparent;
   border: unset;
@@ -50,9 +50,10 @@
   text-shadow: -2px -2px 0 black, 2px -2px 0 black, -2px 2px 0 black, 2px 2px 0 black;;
 }
 
-.leaflet-label::before {
+.leaflet-container .leaflet-label::before {
   display: 'none'
 }
+
 /**
  * Styles for rendering text content in the leaflet popups!
  */
