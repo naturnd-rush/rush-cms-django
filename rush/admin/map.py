@@ -182,7 +182,7 @@ class StylesOnLayerInlineForm(forms.ModelForm):
             if self.instance:
                 self.instance.popup = None
 
-        return super().save(commit)
+        return super().save(commit=commit)
 
 
 class StyleOnLayerInline(sortable_admin.SortableStackedInline, admin.StackedInline):
@@ -300,16 +300,6 @@ class LayerAdmin(sortable_admin.SortableAdminBase, SummernoteModelAdmin):  # typ
         finally:
             return super().render_change_form(request, context, *args, **kwargs)
 
-    @silk_profile(name="LayerAdmin save_formset")
-    def save_formset(self, request, form, formset, change):
-        """Profile saving inline formsets (StylesOnLayer)"""
-        return super().save_formset(request, form, formset, change)
-
-    @silk_profile(name="LayerAdmin get_inline_instances")
-    def get_inline_instances(self, request, obj=None):
-        """Profile loading inline forms"""
-        return super().get_inline_instances(request, obj)
-
 
 @dataclass
 class MapDataAdminFormConfig:
@@ -380,16 +370,11 @@ class MapDataAdminForm(forms.ModelForm):
     For submitting `MapData` info.
     """
 
-    # provider_state = forms.ChoiceField(choices=models.MapData.ProviderState.choices, label="Data Type")
-
     class Meta:
         model = models.MapData
         fields = ["id", "name", "provider_state", *[field.fieldname for field in mdaf_config.get_fields()]]
-        labels = {
-            "provider_state": "Data Type",
-        }
+        labels = {"provider_state": "Data Type"}
 
-    @silk_profile(name="MapDataForm get_initial_for_field")
     def get_initial_for_field(self, field, field_name):
         if field_name == "_geojson":
             if self.instance and isinstance(self.instance, models.MapData):
@@ -398,7 +383,6 @@ class MapDataAdminForm(forms.ModelForm):
                     return {}
         return super().get_initial_for_field(field, field_name)
 
-    @silk_profile(name="MapDataForm __init__")
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -409,7 +393,6 @@ class MapDataAdminForm(forms.ModelForm):
             if value != models.MapData.ProviderState.UNSET
         ]
 
-    @silk_profile(name="MapDataForm clean")
     def clean(self) -> dict[str, Any]:
         cleaned_data = super().clean()
         provider = mdaf_config.get_provider(cleaned_data["provider_state"])
