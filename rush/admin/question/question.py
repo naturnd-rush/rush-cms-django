@@ -2,7 +2,6 @@ from uuid import uuid4
 
 from adminsortable2.admin import SortableAdminMixin
 from django.contrib import admin
-from django.db.models import Prefetch
 from django.utils.safestring import mark_safe
 from nested_admin.nested import NestedModelAdmin
 
@@ -68,6 +67,10 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
         qs = super().get_queryset(request)
         # Prefetch question tabs to avoid N+1 queries in get_question_tabs() display method
         return qs.prefetch_related("tabs")
+
+    @staticmethod
+    def _duplicate_question(question: Question) -> Question:
+        raise NotImplementedError()
 
     @admin.action(description="Duplicate selected items")
     def duplicate_object(self, request, queryset):
