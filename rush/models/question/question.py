@@ -28,7 +28,6 @@ class Question(models.Model):
     )
     is_image_compressed = models.BooleanField(default=False)
     initiatives = models.ManyToManyField(to="Initiative", blank=True)
-    questions = models.ManyToManyField(to="Layer", related_name="questions")
     slug = models.SlugField(max_length=255, unique=True)
     sash = models.ForeignKey(
         to="QuestionSash",
