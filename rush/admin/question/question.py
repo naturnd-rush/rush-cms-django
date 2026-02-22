@@ -13,6 +13,7 @@ from rush.admin.question.inlines import (
 )
 from rush.admin.utils import image_html
 from rush.models import BasemapSource, BasemapSourceOnQuestion, Question
+from rush.models.duplicators import QuestionDuplicator
 
 
 @admin.register(Question)
@@ -68,13 +69,11 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
         # Prefetch question tabs to avoid N+1 queries in get_question_tabs() display method
         return qs.prefetch_related("tabs")
 
-    @staticmethod
-    def _duplicate_question(question: Question) -> Question:
-        raise NotImplementedError()
-
     @admin.action(description="Duplicate selected items")
     def duplicate_object(self, request, queryset):
         for obj in queryset:
+            duplicator = QuestionDuplicator(obj)
+
             obj.pk = None  # Clear primary key (should auto-generate)
             obj.id = None  # Clear id (should auto-generate)
             obj.slug = f"{obj.slug}-copy-{uuid4().hex}"  # Avoid unique constraint violations
