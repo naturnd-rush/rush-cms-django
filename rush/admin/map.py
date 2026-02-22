@@ -14,6 +14,7 @@ from silk.profiling.dynamic import silk_profile
 
 from rush import models
 from rush.admin import utils
+from rush.admin.filters import PublishedStateFilter
 from rush.admin.utils import truncate_admin_text_from
 from rush.admin.widgets import SummernoteWidget
 from rush.models.style.tooltip import Direction
@@ -275,8 +276,13 @@ class LayerAdmin(sortable_admin.SortableAdminBase, SummernoteModelAdmin):  # typ
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]
     search_fields = ["name"]
-    list_display = ["name", "description_preview"]
+    list_display = ["name", "description_preview", "site_visibility"]
     description_preview = truncate_admin_text_from("description")
+    list_filter = [PublishedStateFilter]
+
+    @admin.display(description="Site Visibility")
+    def site_visibility(self, obj):
+        return obj.published_state
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

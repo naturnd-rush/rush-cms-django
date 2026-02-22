@@ -4,20 +4,23 @@ from rush.models import PublishedState
 
 
 class PublishedStateFilter(SimpleListFilter):
+    """
+    An admin filter for models with a "published_state" field.
+    """
 
     DEFAULT = PublishedState.PUBLISHED.value
 
     title = "Site Visibility"
     parameter_name = "published_state"
 
-    def lookups(self, request, model_admin):
+    def lookups(self, request, model_admin):  # type: ignore
         return (
             (None, "Published"),
             ("draft", "Draft"),
             ("all", "All"),
         )
 
-    def choices(self, cl):
+    def choices(self, cl):  # type: ignore
         for lookup, title in self.lookup_choices:
             yield {
                 "selected": self.value() == lookup,
