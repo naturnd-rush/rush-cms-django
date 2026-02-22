@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import Type
+from uuid import uuid4
 
 from django.db.models import Model
 
 from rush.models import (
     BasemapSourceOnQuestion,
-    Layer,
     LayerGroupOnQuestion,
     LayerOnLayerGroup,
     Question,
@@ -80,7 +80,7 @@ class QuestionDuplicator(DuplicatorBase):
             subtitle=self.instance.subtitle,
             image=self.instance.image,
             is_image_compressed=self.instance.is_image_compressed,
-            slug=f"{self.instance.slug}-copy",
+            slug=f"{self.instance.slug}-copy-{str(uuid4())[:4]}",
             sash=self.instance.sash,
             region=self.instance.region,
             display_order=0,
@@ -141,10 +141,4 @@ class QuestionDuplicator(DuplicatorBase):
 
     def duplication_cls(self) -> Type[Model]:
         return Question
-
-        duplicate.full_clean()
-        duplicate.save()
-        return duplicate
-
-    def duplication_cls(self) -> Type[Model]:
         return Question
