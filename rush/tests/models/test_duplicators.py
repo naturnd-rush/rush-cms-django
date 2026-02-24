@@ -1,24 +1,27 @@
-from pprint import pp
-
 from pytest import mark, raises
 
 from rush.models import (
     BasemapSourceOnQuestion,
     Initiative,
-    InitiativeTag,
+    Layer,
     LayerGroupOnQuestion,
     LayerOnLayerGroup,
     PublishedState,
     Question,
     QuestionTab,
+    Style,
+    StylesOnLayer,
+    Tooltip,
 )
 from rush.models.duplicators import (
     DuplicationFail,
     InitiativeDuplicator,
+    LayerDuplicator,
     QuestionDuplicator,
 )
 from rush.tests.models.helpers import (
     create_test_initiative,
+    create_test_layer,
     create_test_question,
     get_ids,
 )
@@ -448,8 +451,197 @@ def test_initiative_duplicator_copies_correct_number_of_initiative_tags():
 
 
 @mark.django_db
-def test_instance_duplicator_copies_initiative_tags_by_reference():
+def test_initiative_duplicator_copies_initiative_tags_by_reference():
     instance, duplicate = _duplicate_initiative()
     instance_tag_ids = [x.id for x in instance.tags.all()]
     for duplicate_tag in duplicate.tags.all():
         assert duplicate_tag.id in instance_tag_ids
+
+
+####################
+# Layer Duplicator #
+####################
+
+
+def _duplicate_layer() -> tuple[Layer, Layer]:
+    """
+    Create a test layer instance, and a duplicate version of it.
+    """
+    assert Layer.objects.count() == 0
+    instance = create_test_layer()
+    assert Layer.objects.count() == 1
+    duplicate = LayerDuplicator(instance).duplicate()
+    assert Layer.objects.count() == 2
+    assert Layer.objects.filter(id=instance.id).first() == instance
+    assert Layer.objects.filter(id=duplicate.id).first() == duplicate
+    return instance, duplicate
+
+
+@mark.django_db
+def test_layer_duplicator_copies_non_unique_primitive_fields_by_value():
+    """
+    The layer duplicator should copy the following non-unique primitive fields by value.
+    """
+    instance, duplicate = _duplicate_layer()
+    assert duplicate.name == f"DUPLICATE - {instance.name}"
+    assert duplicate.legend_title == instance.legend_title
+    assert duplicate.description == instance.description
+    assert duplicate.serialized_leaflet_json == instance.serialized_leaflet_json
+
+
+@mark.django_db
+def test_layer_duplicator_sets_published_state_to_draft():
+    """
+    The layer duplicator should always set the published state to draft so that clients don't see
+    duplicate data on the frontend.
+    """
+    instance, duplicate = _duplicate_layer()
+    assert instance.published_state == PublishedState.PUBLISHED
+    assert duplicate.published_state == PublishedState.DRAFT
+
+
+@mark.django_db
+@mark.parametrize(
+    "target, err_msg",
+    [
+        (None, "Duplication instance cannot be none for <LayerDuplicator>"),
+        (object(), "Wrong instance type for <LayerDuplicator>"),
+    ],
+)
+def test_layer_duplicator_raises_when_invalid_duplication_target(target, err_msg):
+    with raises(DuplicationFail, match=err_msg):
+        LayerDuplicator(target).duplicate()
+
+
+#
+# Layer Duplicator: Map-data.
+#
+
+
+@mark.django_db
+def test_layer_duplicator_copies_map_data_by_reference():
+    instance, duplicate = _duplicate_layer()
+    assert duplicate.map_data.id == instance.map_data.id
+
+
+#
+# Layer Duplicator: Styles-on-layer.
+#
+
+
+@mark.django_db
+def test_layer_duplicator_copies_the_correct_number_of_styles_on_layers():
+    instance, duplicate = _duplicate_layer()
+    duplicate_tooltips = StylesOnLayer.objects.filter(layer=duplicate)
+    instance_tooltips = StylesOnLayer.objects.filter(layer=instance)
+    assert duplicate_tooltips.count() != 0
+    assert instance_tooltips.count() != 0
+    assert duplicate_tooltips.count() == instance_tooltips.count()
+
+
+@mark.django_db
+def test_layer_duplicator_creates_new_styles_on_layer_instances():
+    instance, duplicate = _duplicate_layer()
+    duplicate_styles_on_layers = StylesOnLayer.objects.filter(layer=duplicate)
+    instance_styles_on_layer_ids = get_ids(StylesOnLayer.objects.filter(layer=instance))
+    for duplicate_id in get_ids(duplicate_styles_on_layers):
+        assert duplicate_id not in instance_styles_on_layer_ids
+
+
+@mark.django_db
+def test_layer_duplicator_copies_styles_on_layer_data_by_value():
+    instance, duplicate = _duplicate_layer()
+
+    data = lambda layer: [
+        x
+        for x in StylesOnLayer.objects.filter(layer=layer)
+        .values_list("style", "legend_description", "display_order", "feature_mapping", "popup")
+        .order_by("display_order")
+    ]
+
+    instance_data = data(instance)
+    for duplicate_data in data(duplicate):
+        assert duplicate_data in instance_data
+
+
+#
+# Layer Duplicator: Tooltip.
+#
+
+
+@mark.django_db
+def test_layer_duplicator_copies_correct_number_of_tooltips():
+    """
+    Tooltips are 1-1 with styles-on-layer, and therefore need to be copied over as well.
+    """
+
+    instance, duplicate = _duplicate_layer()
+    duplicate_tooltips = Tooltip.objects.filter(style_on_layer__layer=duplicate)
+    instance_tooltips = Tooltip.objects.filter(style_on_layer__layer=instance)
+    assert duplicate_tooltips.count() != 0
+    assert instance_tooltips.count() != 0
+    assert duplicate_tooltips.count() == instance_tooltips.count()
+
+
+@mark.django_db
+def test_layer_duplicator_creates_new_tooltip_instances():
+    instance, duplicate = _duplicate_layer()
+    duplicate_tooltips = Tooltip.objects.filter(style_on_layer__layer=duplicate)
+    instance_tooltip_ids = get_ids(Tooltip.objects.filter(style_on_layer__layer=instance))
+    for duplicate_id in get_ids(duplicate_tooltips):
+        assert duplicate_id not in instance_tooltip_ids
+
+
+@mark.django_db
+def test_layer_duplicator_copies_tooltip_data_by_value():
+
+    instance, duplicate = _duplicate_layer()
+
+    data = lambda layer: [
+        x
+        for x in Tooltip.objects.filter(style_on_layer__layer=layer)
+        .values_list(
+            # tooltip-data
+            "label",
+            "offset_x",
+            "offset_y",
+            "opacity",
+            "direction",
+            "permanent",
+            "sticky",
+            # styles-on-layer data (used as a fingerprint here) because the tooltip
+            # should be copied over onto the correct styles-on-layer, but we can't compare
+            # ids because both are deep-copied.
+            "style_on_layer__style",
+            "style_on_layer__legend_description",
+            "style_on_layer__display_order",
+            "style_on_layer__feature_mapping",
+            "style_on_layer__popup",
+        )
+        .order_by("style_on_layer__display_order")
+    ]
+
+    instance_data = data(instance)
+    for duplicate_data in data(duplicate):
+        assert duplicate_data in instance_data
+
+
+#
+# Layer Duplicator: Style.
+#
+
+
+@mark.django_db
+def test_layer_duplicator_copies_correct_number_of_styles():
+    instance, duplicate = _duplicate_layer()
+    assert duplicate.styles.count() != 0
+    assert instance.styles.count() != 0
+    assert duplicate.styles.count() == instance.styles.count()
+
+
+@mark.django_db
+def test_layer_duplicator_copies_styles_by_reference():
+    instance, duplicate = _duplicate_layer()
+    instance_style_ids = [x.id for x in instance.styles.all()]
+    for duplicate_tag in duplicate.styles.all():
+        assert duplicate_tag.id in instance_style_ids

@@ -7,12 +7,14 @@ from django.db.models import Model
 from rush.models import (
     BasemapSourceOnQuestion,
     Initiative,
-    InitiativeTag,
+    Layer,
     LayerGroupOnQuestion,
     LayerOnLayerGroup,
     PublishedState,
     Question,
     QuestionTab,
+    StylesOnLayer,
+    Tooltip,
 )
 
 """
@@ -150,7 +152,7 @@ class InitiativeDuplicator(DuplicatorBase):
 
     def duplicate(self) -> Initiative:
         """
-        Create and return a duplicate Question.
+        Create and return a duplicate Initiative.
         """
 
         assert isinstance(self.instance, Initiative)
@@ -166,3 +168,50 @@ class InitiativeDuplicator(DuplicatorBase):
 
     def duplication_cls(self) -> Type[Model]:
         return Initiative
+
+
+class LayerDuplicator(DuplicatorBase):
+
+    def duplicate(self) -> Layer:
+        """
+        Create and return a duplicate Layer.
+        """
+
+        assert isinstance(self.instance, Layer)
+        duplicate = Layer.objects.create(
+            name=f"DUPLICATE - {self.instance.name}",
+            legend_title=self.instance.legend_title,
+            description=self.instance.description,
+            map_data=self.instance.map_data,
+            serialized_leaflet_json=self.instance.serialized_leaflet_json,
+            published_state=PublishedState.DRAFT,
+        )
+        for styles_on_layer in StylesOnLayer.objects.filter(layer=self.instance):
+
+            # create related styles-on-layer
+            duplicate_style_on_layer = StylesOnLayer.objects.create(
+                layer=duplicate,
+                style=styles_on_layer.style,
+                legend_description=styles_on_layer.legend_description,
+                display_order=styles_on_layer.display_order,
+                feature_mapping=styles_on_layer.feature_mapping,
+                popup=styles_on_layer.popup,
+            )
+
+            # create double-related tooltip (if it exists)
+            if tooltip := Tooltip.objects.filter(style_on_layer__id=styles_on_layer.id).first():
+                Tooltip.objects.create(
+                    style_on_layer=duplicate_style_on_layer,
+                    label=tooltip.label,
+                    offset_x=tooltip.offset_x,
+                    offset_y=tooltip.offset_y,
+                    opacity=tooltip.opacity,
+                    direction=tooltip.direction,
+                    permanent=tooltip.permanent,
+                    sticky=tooltip.sticky,
+                )
+
+        return duplicate
+
+    def duplication_cls(self) -> Type[Model]:
+        return Layer

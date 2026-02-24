@@ -1,6 +1,7 @@
 import io
 import tempfile
 from contextlib import ExitStack
+from decimal import Decimal
 from functools import wraps
 from typing import Callable
 from unittest.mock import Mock
@@ -26,7 +27,12 @@ from rush.models import (
     QuestionSash,
     QuestionTab,
     Region,
+    Style,
+    StylesOnLayer,
+    Tooltip,
 )
+from rush.models.style import FillRule, LineCap, LineJoin
+from rush.models.style.tooltip import Direction
 
 
 class FakeFile(Mock):
@@ -317,8 +323,145 @@ def _get_singleton_test_map_data() -> MapData:
     return DEFAULT_MAP_DATA_SINGLETON
 
 
+DEFAULT_MARKER_ICON_IMAGE = create_test_image("test_marker_icon_image.png")
+
+
+def create_test_style(
+    name="Test Style",
+    # stroke
+    draw_stroke=True,
+    stroke_color="#4BEB32",
+    stroke_weight=Decimal(4.5),
+    stroke_opacity=Decimal(0.8),
+    stroke_line_cap=LineCap.ROUND,
+    stroke_line_join=LineJoin.ROUND,
+    stroke_dash_array="5 5 11",
+    stroke_dash_offset="2",
+    # fill
+    draw_fill=True,
+    fill_color="#1080AD",
+    fill_opacity=Decimal(0.8),
+    fill_rule=FillRule.EVENODD,
+    # marker
+    draw_marker=True,
+    marker_icon: SimpleUploadedFile | None = DEFAULT_MARKER_ICON_IMAGE,
+    is_marker_icon_compressed=False,
+    marker_icon_opacity=Decimal(0.8),
+    marker_size=Decimal(22),
+    marker_background_color="#EDF3F5",
+    marker_background_opacity=Decimal(0.8),
+) -> Style:
+    return Style.objects.create(
+        name=name,
+        # stroke
+        draw_stroke=draw_stroke,
+        stroke_color=stroke_color,
+        stroke_weight=stroke_weight,
+        stroke_opacity=stroke_opacity,
+        stroke_line_cap=stroke_line_cap,
+        stroke_line_join=stroke_line_join,
+        stroke_dash_array=stroke_dash_array,
+        stroke_dash_offset=stroke_dash_offset,
+        # fill
+        draw_fill=draw_fill,
+        fill_color=fill_color,
+        fill_opacity=fill_opacity,
+        fill_rule=fill_rule,
+        # marker
+        draw_marker=draw_marker,
+        marker_icon=marker_icon,
+        is_marker_icon_compressed=is_marker_icon_compressed,
+        marker_icon_opacity=marker_icon_opacity,
+        marker_size=marker_size,
+        marker_background_color=marker_background_color,
+        marker_background_opacity=marker_background_opacity,
+    )
+
+
+def create_test_tooltip(
+    styles_on_layer: StylesOnLayer,
+    label="Test Tooltip",
+    offset_x=Decimal(0),
+    offset_y=Decimal(0),
+    opacity=Decimal(0.8),
+    direction=Direction.CENTER,
+    permanent=True,
+    sticky=True,
+) -> Tooltip:
+    return Tooltip.objects.create(
+        style_on_layer=styles_on_layer,
+        label=label,
+        offset_x=offset_x,
+        offset_y=offset_y,
+        opacity=opacity,
+        direction=direction,
+        permanent=permanent,
+        sticky=sticky,
+    )
+
+
+DEFAULT_STYLE_PROVIDER = create_test_style
+DEFAULT_STYLES_ON_LAYER_DISPLAY_ORDER_PROVIDER = lambda layer: layer.styles.count()
+DEFAULT_TOOLTIP_PROVIDER = create_test_tooltip
+
+
+def create_test_styles_on_layer(
+    layer: Layer,
+    style: Style | Callable[[], Style] = DEFAULT_STYLE_PROVIDER,
+    legend_description="This is a test layer's legend description!",
+    display_order: int | Callable[[Layer], int] = DEFAULT_STYLES_ON_LAYER_DISPLAY_ORDER_PROVIDER,
+    feature_mapping="true",
+    popup="<h1>Popup text!</h1>",
+    tooltip: None | Callable[[StylesOnLayer], Tooltip] = DEFAULT_TOOLTIP_PROVIDER,
+) -> StylesOnLayer:
+    style = style if not isinstance(style, Callable) else style()
+    display_order = display_order if not isinstance(display_order, Callable) else display_order(layer)
+    styles_on_layer = StylesOnLayer.objects.create(
+        style=style,
+        layer=layer,
+        legend_description=legend_description,
+        display_order=display_order,
+        feature_mapping=feature_mapping,
+        popup=popup,
+    )
+    # by default we add a tooltip, but it can also be set to None
+    if tooltip is not None:
+        tooltip(styles_on_layer)
+    return styles_on_layer
+
+
+def _provide_test_styles_on_layers(layer: Layer) -> list[StylesOnLayer]:
+    return [
+        create_test_styles_on_layer(layer),
+        create_test_styles_on_layer(layer),
+        create_test_styles_on_layer(layer),
+    ]
+
+
 INCREMENTAL_LAYER_NAME_RESOLVER = lambda: f"Layer {Layer.objects.count()}"
 DEFAULT_MAP_DATA_PROVIDER = _get_singleton_test_map_data
+DEFAULT_STYLES_ON_LAYER_PROVIDER = _provide_test_styles_on_layers
+
+
+def create_test_layer(
+    name="Test Layer",
+    legend_title="Test legend title.",
+    description="This is a test layer!",
+    map_data: MapData | Callable[[], MapData] = DEFAULT_MAP_DATA_PROVIDER,
+    published_state=PublishedState.PUBLISHED,
+    styles_on_layer: Callable[[Layer], list[StylesOnLayer]] = DEFAULT_STYLES_ON_LAYER_PROVIDER,
+) -> Layer:
+    map_data = map_data if not isinstance(map_data, Callable) else map_data()
+    layer = Layer.objects.create(
+        name=name,
+        legend_title=legend_title,
+        description=description,
+        map_data=map_data,
+        published_state=published_state,
+    )
+    # should automatically link Layer <--> StylesOnLayer
+    styles_on_layer(layer)
+    return layer
 
 
 def _incremental_geojson_layer(
@@ -329,12 +472,11 @@ def _incremental_geojson_layer(
 ) -> Layer:
     name = name if not isinstance(name, Callable) else name()
     map_data = map_data if not isinstance(map_data, Callable) else map_data()
-    return Layer.objects.create(
+    return create_test_layer(
         name=name,
         legend_title=legend_title,
         description=description,
         map_data=map_data,
-        published_state=PublishedState.PUBLISHED,
     )
 
 
@@ -576,4 +718,5 @@ def get_question_dict(question: Question) -> dict:
 
 
 def get_ids(qs: QuerySet) -> set[str]:
+    return set(str(x.id) for x in qs.all().order_by("id"))
     return set(str(x.id) for x in qs.all().order_by("id"))
