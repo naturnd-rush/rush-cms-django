@@ -6,8 +6,11 @@ from django.db.models import Model
 
 from rush.models import (
     BasemapSourceOnQuestion,
+    Initiative,
+    InitiativeTag,
     LayerGroupOnQuestion,
     LayerOnLayerGroup,
+    PublishedState,
     Question,
     QuestionTab,
 )
@@ -84,7 +87,7 @@ class QuestionDuplicator(DuplicatorBase):
             sash=self.instance.sash,
             region=self.instance.region,
             display_order=0,
-            published_state=self.instance.published_state,
+            published_state=PublishedState.DRAFT,
         )
 
         # Copy initiatives by reference
@@ -141,4 +144,25 @@ class QuestionDuplicator(DuplicatorBase):
 
     def duplication_cls(self) -> Type[Model]:
         return Question
-        return Question
+
+
+class InitiativeDuplicator(DuplicatorBase):
+
+    def duplicate(self) -> Initiative:
+        """
+        Create and return a duplicate Question.
+        """
+
+        assert isinstance(self.instance, Initiative)
+        duplicate = Initiative.objects.create(
+            link=self.instance.link,
+            image=self.instance.image,
+            title=self.instance.title,
+            content=self.instance.content,
+            published_state=PublishedState.DRAFT,
+        )
+        duplicate.tags.set(self.instance.tags.all())
+        return duplicate
+
+    def duplication_cls(self) -> Type[Model]:
+        return Initiative

@@ -73,7 +73,7 @@ This section describes the preferred workflow for developing the RUSH webmap, wh
 5. Iterate step 4 until all tests pass.
 
 ### Testing
-* Use the `pytest` command to run the Python unit tests and `coverage report --skip-covered -m --sort=cover` to see the Python unit test coverage.
+* Use the `pytest` command to run the Python unit tests and `coverage run -m pytest && coverage report --omit=rush/tests/* -m --sort=cover` to see the Python unit test coverage.
 * Use the `npm run --prefix frontend test` command to run JavaScript tests and `npm run --prefix frontend coverage` to see the JavaScript unit test coverage.
 
 ## RUSH Developer FAQ:

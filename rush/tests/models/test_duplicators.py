@@ -1,18 +1,27 @@
 from pprint import pp
 
-from django.forms.models import model_to_dict
 from pytest import mark, raises
 
 from rush.models import (
     BasemapSourceOnQuestion,
     Initiative,
+    InitiativeTag,
     LayerGroupOnQuestion,
     LayerOnLayerGroup,
+    PublishedState,
     Question,
     QuestionTab,
 )
-from rush.models.duplicators import DuplicationFail, QuestionDuplicator
-from rush.tests.models.helpers import create_test_question, get_ids
+from rush.models.duplicators import (
+    DuplicationFail,
+    InitiativeDuplicator,
+    QuestionDuplicator,
+)
+from rush.tests.models.helpers import (
+    create_test_initiative,
+    create_test_question,
+    get_ids,
+)
 
 #######################
 # Question Duplicator #
@@ -45,7 +54,17 @@ def test_question_duplicator_copies_non_unique_primitive_fields_by_value():
     assert duplicate.is_image_compressed == instance.is_image_compressed
     assert duplicate.sash == instance.sash
     assert duplicate.region == instance.region
-    assert duplicate.published_state == instance.published_state
+
+
+@mark.django_db
+def test_question_duplicator_sets_published_state_to_draft():
+    """
+    The question duplicator should always set the published state to draft so that clients don't see
+    duplicate data on the frontend.
+    """
+    instance, duplicate = _duplicate_question()
+    assert instance.published_state == PublishedState.PUBLISHED
+    assert duplicate.published_state == PublishedState.DRAFT
 
 
 @mark.django_db
@@ -358,3 +377,79 @@ def test_question_duplicator_copies_layer_group_on_question_data_by_value():
     instance_data = data(instance)
     for duplicate_data in data(duplicate):
         assert duplicate_data in instance_data
+
+
+#########################
+# Initiative Duplicator #
+#########################
+
+
+def _duplicate_initiative() -> tuple[Initiative, Initiative]:
+    """
+    Create a test initiative instance, and a duplicate version of it.
+    """
+    assert Initiative.objects.count() == 0
+    instance = create_test_initiative()
+    assert Initiative.objects.count() == 1
+    duplicate = InitiativeDuplicator(instance).duplicate()
+    assert Initiative.objects.count() == 2
+    assert Initiative.objects.filter(id=instance.id).first() == instance
+    assert Initiative.objects.filter(id=duplicate.id).first() == duplicate
+    return instance, duplicate
+
+
+@mark.django_db
+def test_initiative_duplicator_copies_non_unique_primitive_fields_by_value():
+    """
+    The initiative duplicator should copy the following non-unique primitive fields by value.
+    """
+    instance, duplicate = _duplicate_initiative()
+    assert duplicate.link == instance.link
+    assert duplicate.image.url == instance.image.url
+    assert duplicate.title == instance.title
+    assert duplicate.content == instance.content
+
+
+@mark.django_db
+def test_initiative_duplicator_sets_published_state_to_draft():
+    """
+    The initiative duplicator should always set the published state to draft so that clients don't see
+    duplicate data on the frontend.
+    """
+    instance, duplicate = _duplicate_initiative()
+    assert instance.published_state == PublishedState.PUBLISHED
+    assert duplicate.published_state == PublishedState.DRAFT
+
+
+@mark.django_db
+@mark.parametrize(
+    "target, err_msg",
+    [
+        (None, "Duplication instance cannot be none for <InitiativeDuplicator>"),
+        (object(), "Wrong instance type for <InitiativeDuplicator>"),
+    ],
+)
+def test_initiative_duplicator_raises_when_invalid_duplication_target(target, err_msg):
+    with raises(DuplicationFail, match=err_msg):
+        InitiativeDuplicator(target).duplicate()
+
+
+#
+# Initiative Duplicator: Initiative-tag.
+#
+
+
+@mark.django_db
+def test_initiative_duplicator_copies_correct_number_of_initiative_tags():
+    instance, duplicate = _duplicate_initiative()
+    assert duplicate.tags.count() != 0
+    assert instance.tags.count() != 0
+    assert instance.tags.count() == duplicate.tags.count()
+
+
+@mark.django_db
+def test_instance_duplicator_copies_initiative_tags_by_reference():
+    instance, duplicate = _duplicate_initiative()
+    instance_tag_ids = [x.id for x in instance.tags.all()]
+    for duplicate_tag in duplicate.tags.all():
+        assert duplicate_tag.id in instance_tag_ids
