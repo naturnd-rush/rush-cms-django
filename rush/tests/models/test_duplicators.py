@@ -48,7 +48,7 @@ def test_question_duplicator_copies_non_unique_primitive_fields_by_value():
     The question duplicator should copy the following non-unique primitive fields by value.
     """
     instance, duplicate = _duplicate_question()
-    assert duplicate.title == instance.title
+    assert duplicate.title == f"DUPLICATE - {instance.title}"
     assert duplicate.subtitle == instance.subtitle
     assert duplicate.image.url == instance.image.url
     assert duplicate.is_image_compressed == instance.is_image_compressed
@@ -406,7 +406,7 @@ def test_initiative_duplicator_copies_non_unique_primitive_fields_by_value():
     instance, duplicate = _duplicate_initiative()
     assert duplicate.link == instance.link
     assert duplicate.image.url == instance.image.url
-    assert duplicate.title == instance.title
+    assert duplicate.title == f"DUPLICATE - {instance.title}"
     assert duplicate.content == instance.content
 
 

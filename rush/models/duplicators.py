@@ -79,7 +79,7 @@ class QuestionDuplicator(DuplicatorBase):
             question.save()
 
         duplicate = Question.objects.create(
-            title=self.instance.title,
+            title=f"DUPLICATE - {self.instance.title}",
             subtitle=self.instance.subtitle,
             image=self.instance.image,
             is_image_compressed=self.instance.is_image_compressed,
@@ -157,7 +157,7 @@ class InitiativeDuplicator(DuplicatorBase):
         duplicate = Initiative.objects.create(
             link=self.instance.link,
             image=self.instance.image,
-            title=self.instance.title,
+            title=f"DUPLICATE - {self.instance.title}",
             content=self.instance.content,
             published_state=PublishedState.DRAFT,
         )
