@@ -81,6 +81,7 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
         for obj in queryset:
             QuestionDuplicator(obj).duplicate()
         self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
+        return HttpResponseRedirect("?published_state=all")
 
     def save_related(self, request, form, formsets, change):
         """

@@ -7,7 +7,7 @@ from typing import Any, List
 import adminsortable2.admin as sortable_admin
 from django import forms
 from django.contrib import admin
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponseRedirect
 from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin
 from silk.profiling.dynamic import silk_profile
@@ -17,6 +17,7 @@ from rush.admin import utils
 from rush.admin.filters import PublishedStateFilter
 from rush.admin.utils import truncate_admin_text_from
 from rush.admin.widgets import SummernoteWidget
+from rush.models.duplicators import LayerDuplicator
 from rush.models.style.tooltip import Direction
 
 logger = logging.getLogger(__name__)
@@ -119,8 +120,6 @@ class StylesOnLayerInlineForm(forms.ModelForm):
             tooltip.direction = self.cleaned_data["direction"]
             tooltip.permanent = self.cleaned_data["permanent"]
             tooltip.sticky = self.cleaned_data["sticky"]
-
-            breakpoint()
 
             # set tooltip object on styles-on-layer
             if self.instance is None:
@@ -279,6 +278,14 @@ class LayerAdmin(sortable_admin.SortableAdminBase, SummernoteModelAdmin):  # typ
     list_display = ["name", "description_preview", "site_visibility"]
     description_preview = truncate_admin_text_from("description")
     list_filter = [PublishedStateFilter]
+    actions = ["duplicate_object"]
+
+    @admin.action(description="Duplicate selected items")
+    def duplicate_object(self, request, queryset):
+        for obj in queryset:
+            LayerDuplicator(obj).duplicate()
+        self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
+        return HttpResponseRedirect("?published_state=all")
 
     @admin.display(description="Site Visibility")
     def site_visibility(self, obj):
