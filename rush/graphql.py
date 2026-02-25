@@ -6,7 +6,6 @@ from urllib.parse import urljoin
 import graphene
 from bs4 import BeautifulSoup
 from django.conf import settings
-from django.core.cache import cache
 from django.db.models import Prefetch, QuerySet
 from graphene.types import ResolveInfo
 from graphene_django.types import DjangoObjectType
@@ -27,10 +26,9 @@ The GraphQL Schema for RUSH models. For more information see: https://docs.graph
 """
 
 
-def convert_relative_images_to_absolute(html: str, info) -> str:
+def convert_relative_images_to_absolute(html: str, info: ResolveInfo) -> str:
     """
     Convert all relative HTML image URLs to absolute ones (using Django's base media url).
-    The "info" parameter is graphql's query info object.
     """
 
     base_media_url = base_url_from_request(info.context)
@@ -140,7 +138,7 @@ class MapDataWithoutGeoJsonType(DjangoObjectType):
         model = models.MapData
         fields = [x for x in MapDataType._meta.fields if x != "geojson"]
 
-    # Still need this resolved and filed definition here because inheritance of
+    # Still need this resolved and field definition here because inheritance of
     # mapDataType in this class keeps geojson accessible for some reason...
     geotiff_link = graphene.String()
 
