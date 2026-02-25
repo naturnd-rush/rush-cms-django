@@ -8,6 +8,7 @@ class PublishedStateFilter(SimpleListFilter):
     An admin filter for models with a "published_state" field.
     """
 
+    # You need to edit the ordering of `lookups` if you change this default
     DEFAULT = PublishedState.PUBLISHED.value
 
     title = "Site Visibility"
@@ -34,7 +35,11 @@ class PublishedStateFilter(SimpleListFilter):
             }
 
     def queryset(self, request, queryset):
-        if self.value() == "draft":
-            return queryset.filter(published_state=self.value())
-        elif self.value() == None:
+        if self.value() == None:
             return queryset.filter(published_state=self.DEFAULT)
+        elif self.value() in PublishedState.values:
+            return queryset.filter(published_state=self.value())
+        elif self.value() == "all":
+            return queryset
+        else:
+            raise ValueError(f"Unknown published-state: {self.value()}")
