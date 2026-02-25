@@ -7,15 +7,17 @@ from typing import Any, List
 import adminsortable2.admin as sortable_admin
 from django import forms
 from django.contrib import admin
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponseRedirect
 from django.utils.safestring import mark_safe
 from django_summernote.admin import SummernoteModelAdmin
 from silk.profiling.dynamic import silk_profile
 
 from rush import models
 from rush.admin import utils
+from rush.admin.filters import PublishedStateFilter
 from rush.admin.utils import truncate_admin_text_from
 from rush.admin.widgets import SummernoteWidget
+from rush.models.duplicators import LayerDuplicator
 from rush.models.style.tooltip import Direction
 
 logger = logging.getLogger(__name__)
@@ -124,7 +126,10 @@ class StylesOnLayerInlineForm(forms.ModelForm):
                 tooltip.delete()
                 raise ValueError("Cannot save related tooltip if no styles-on-layer object exists on the form.")
             self.instance.tooltip = tooltip
+            tooltip.style_on_layer = self.instance
 
+            self.instance.full_clean()
+            self.instance.save()
             tooltip.full_clean()
             tooltip.save()
 
@@ -164,6 +169,21 @@ class StylesOnLayerInlineForm(forms.ModelForm):
 
     def save(self, commit=True) -> Any:
 
+        # If draw_popup checkbox is False then clear any saved popup text
+        if self.cleaned_data["draw_popup"] == False:
+            if self.instance:
+                self.instance.popup = None
+
+        return super().save(commit=commit)
+
+    def save_related_tooltips(self) -> None:
+        """
+        Save related tooltips on this inline form. Should ONLY be called after the styles-on-layer
+        has been saved, e.g., on the LayerAdmin the hook for this is `save_related`, because this is
+        called after all the related StyleOnLayers are saved. Only then can we save the doubly-related
+        tooltips, else Django complains with a very vague error message.
+        """
+
         if self.cleaned_data["draw_tooltip"] == False:
             if tooltip := self._get_related_tooltip_or_none():
                 # Delete existing tooltip (we no longer want to draw it)
@@ -176,13 +196,6 @@ class StylesOnLayerInlineForm(forms.ModelForm):
                 # create new tooltip
                 tooltip = models.Tooltip.objects.create(label="")
                 self._save_tooltip_with_form_field_values(tooltip)
-
-        # If draw_popup checkbox is False then clear any saved popup text
-        if self.cleaned_data["draw_popup"] == False:
-            if self.instance:
-                self.instance.popup = None
-
-        return super().save(commit)
 
 
 class StyleOnLayerInline(sortable_admin.SortableStackedInline, admin.StackedInline):
@@ -262,8 +275,21 @@ class LayerAdmin(sortable_admin.SortableAdminBase, SummernoteModelAdmin):  # typ
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]
     search_fields = ["name"]
-    list_display = ["name", "description_preview"]
+    list_display = ["name", "description_preview", "site_visibility"]
     description_preview = truncate_admin_text_from("description")
+    list_filter = [PublishedStateFilter]
+    actions = ["duplicate_object"]
+
+    @admin.action(description="Duplicate selected items")
+    def duplicate_object(self, request, queryset):
+        for obj in queryset:
+            LayerDuplicator(obj).duplicate()
+        self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
+        return HttpResponseRedirect("?published_state=all")
+
+    @admin.display(description="Site Visibility")
+    def site_visibility(self, obj):
+        return obj.published_state
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -300,15 +326,22 @@ class LayerAdmin(sortable_admin.SortableAdminBase, SummernoteModelAdmin):  # typ
         finally:
             return super().render_change_form(request, context, *args, **kwargs)
 
-    @silk_profile(name="LayerAdmin save_formset")
-    def save_formset(self, request, form, formset, change):
-        """Profile saving inline formsets (StylesOnLayer)"""
-        return super().save_formset(request, form, formset, change)
+    def save_related(
+        self,
+        request: HttpRequest,
+        form: forms.ModelForm,
+        formsets: forms.BaseModelFormSet,
+        change: bool,
+    ) -> None:
 
-    @silk_profile(name="LayerAdmin get_inline_instances")
-    def get_inline_instances(self, request, obj=None):
-        """Profile loading inline forms"""
-        return super().get_inline_instances(request, obj)
+        for formset in formsets:
+            if forms := getattr(formset, "forms", None):
+                for inline_form in forms:
+                    if isinstance(inline_form, StylesOnLayerInlineForm):
+                        # Save any related tooltips (if needed) on each styles-on-layer inline
+                        inline_form.save_related_tooltips()
+
+        return super().save_related(request, form, formsets, change)
 
 
 @dataclass
@@ -380,16 +413,11 @@ class MapDataAdminForm(forms.ModelForm):
     For submitting `MapData` info.
     """
 
-    # provider_state = forms.ChoiceField(choices=models.MapData.ProviderState.choices, label="Data Type")
-
     class Meta:
         model = models.MapData
         fields = ["id", "name", "provider_state", *[field.fieldname for field in mdaf_config.get_fields()]]
-        labels = {
-            "provider_state": "Data Type",
-        }
+        labels = {"provider_state": "Data Type"}
 
-    @silk_profile(name="MapDataForm get_initial_for_field")
     def get_initial_for_field(self, field, field_name):
         if field_name == "_geojson":
             if self.instance and isinstance(self.instance, models.MapData):
@@ -398,7 +426,6 @@ class MapDataAdminForm(forms.ModelForm):
                     return {}
         return super().get_initial_for_field(field, field_name)
 
-    @silk_profile(name="MapDataForm __init__")
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -409,7 +436,6 @@ class MapDataAdminForm(forms.ModelForm):
             if value != models.MapData.ProviderState.UNSET
         ]
 
-    @silk_profile(name="MapDataForm clean")
     def clean(self) -> dict[str, Any]:
         cleaned_data = super().clean()
         provider = mdaf_config.get_provider(cleaned_data["provider_state"])

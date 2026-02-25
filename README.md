@@ -64,6 +64,18 @@ The most popular way to set up the RUSH Initiative development environment, and 
 12. Visit `http://127.0.0.1:8000/` and try logging into the admin site with your superuser credentials.
 13. That's it! You should now have a working version of the RUSH Admin Site's development server :)
 
+## Development Workflow
+This section describes the preferred workflow for developing the RUSH webmap, which is as follows:
+1. Explore the code and think about what you're adding.
+2. Write some tests to test what you want to add, and watch them *error*.
+3. Write some [method-stubs](https://en.wikipedia.org/wiki/Method_stub) for your tests and watch them *fail*.
+4. Implement the features being tested and watch your tests (hopefully) pass.
+5. Iterate step 4 until all tests pass.
+
+### Testing
+* Use the `pytest` command to run the Python unit tests and `coverage run -m pytest && coverage report --omit=rush/tests/* -m --sort=cover` to see the Python unit test coverage.
+* Use the `npm run --prefix frontend test` command to run JavaScript tests and `npm run --prefix frontend coverage` to see the JavaScript unit test coverage.
+
 ## RUSH Developer FAQ:
 Q: **I'm editing TypeScript files but don't see any changes on the Django frontend.**
 A: Our TypeScript files for the Django admin site are transpiled and bundled by a tool called [Vite](https://github.com/vitejs/vite). If you are developing using our Docker Compose project, you will need to shell into the Django container, `cd` into the `frontend` folder, and run `npx vite build --watch`. On the other hand, if you are developing using a manual configuration, you can simple run `npx vite build --watch` from the repository's `frontend` folder. In both cases, the `npx` command will watch for changes to the TypeScript files and automatically transpile and minify them to plain JavaScript in `static/js/compiled`. The JavaScript files should then be automatically picked-up by Django's development server and appear in the browser.

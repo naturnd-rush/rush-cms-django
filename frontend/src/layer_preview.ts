@@ -445,6 +445,9 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
     const func = (feature: Feature<Point, any>, latlng: L.LatLng) => {
 
         // Grab the first applied style that has a non-empty marker icon configured to be drawn
+        // TODO:    When moving this style-resolution code down into the backend, remember to draw a marker
+        //          background color if there is no icon style but a background color is specified and 
+        //          draw-marker is true.
         let markerStyle: Style | null = null;
         const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
         for (let appliedStyle of appliedStyles){
@@ -456,8 +459,8 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
         }
 
         if (markerStyle === null){
-            // Return default leaflet marker style if no style is applied
-            return L.marker(latlng);
+            // Don't return a leaflet marker object if the style doesn't necessitate drawing anything to the screen
+            return new L.Marker(latlng, {opacity: 0});
         }
 
         // Inject marker div icon props into point feature properties for serialization

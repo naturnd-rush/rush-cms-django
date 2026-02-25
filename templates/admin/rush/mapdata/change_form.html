@@ -16,7 +16,7 @@
         };
 
         /**
-         * Move the element 'elToMove' directly below 'referenceEl' in the DOM.
+         * Move the element 'elToMove' directly above 'referenceEl' in the DOM.
          */
         const moveAbove = (referenceEl, elToMove) => {
             referenceEl.parentNode.insertBefore(elToMove, referenceEl.previousSibling);
@@ -48,6 +48,8 @@
                 geoJsonLayer = L.geoJSON(geojsonData).addTo(map);
                 map.fitBounds(geoJsonLayer.getBounds());
             }
+
+            // ARCGIS REST TODO: 
 
             // Monitor for live changes
             const geojsonInput = document.getElementById("id__geojson");

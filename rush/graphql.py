@@ -10,9 +10,11 @@ from django.core.cache import cache
 from django.db.models import Prefetch, QuerySet
 from graphene.types import ResolveInfo
 from graphene_django.types import DjangoObjectType
+from graphene_django.views import GraphQLView
 
 from rush import models
 from rush.context_processors import base_url_from_request
+from rush.models import PublishedState
 from rush.models.validators import (
     OGM_CAMPAIGN_RE,
     OGM_MAP_BROWSE_RE,
@@ -21,8 +23,7 @@ from rush.models.validators import (
 from rush.utils import log_execution_time_with_result
 
 """
-GraphQL Schema for RUSH models. This file defines what data GraphQL
-is allowed to query and communicate to the frontend.
+The GraphQL Schema for RUSH models. For more information see: https://docs.graphene-python.org/projects/django/en/latest/.
 """
 
 
@@ -514,11 +515,10 @@ class QuestionType(DjangoObjectType):
     basemaps = graphene.List(BasemapSourceOnQuestionType)
 
     def resolve_basemaps(self, info):
-        if prefetch_cache := getattr(self, "_prefetched_objects_cache", None):
-            if "basemaps" in prefetch_cache:
-                # use prefetched basemaps if available
-                return self.basemaps.all()  # type: ignore
         return models.BasemapSourceOnQuestion.objects.filter(question=self)
+
+    def resolve_initiatives(self, info):
+        return models.Initiative.objects.filter(published_state__in=info.context.published_state, question=self)
 
 
 class PageType(DjangoObjectType):
@@ -649,31 +649,10 @@ class Query(graphene.ObjectType):
         return base_url_from_request(info.context)
 
     def resolve_all_layers(self, info):
-        return optimized_layer_resolve_qs(info).all()
+        return optimized_layer_resolve_qs(info).filter(published_state__in=info.context.published_state)
 
     def resolve_layer(self, info, id):
-        """
-        Get a layer and make two types of cache entries:
-        1. A small one for when no serialized-leaflet-json is requested.
-        2. A larger one for when serialized-leaflet-json is requested.
-        """
-        large_key = f"graphql:resolve_layer_LARGE:{id}"
-        small_key = f"graphql:resolve_layer_SMALL:{id}"
-        requested_fields = get_requested_fields(info)
-        if "serializedLeafletJson" in requested_fields:
-            cached_data = cache.get(large_key)
-        else:
-            cached_data = cache.get(small_key)
-        if cached_data is not None:
-            return cached_data
-
-        layer = optimized_layer_resolve_qs(info).get(pk=id)
-        if "serializedLeafletJson" in requested_fields:
-            cache.set(large_key, layer, timeout=300)
-        else:
-            cache.set(small_key, layer, timeout=300)
-
-        return layer
+        return optimized_layer_resolve_qs(info).filter(published_state__in=info.context.published_state).get(pk=id)
 
     def resolve_layer_group(self, info, question_id):
         return (
@@ -683,10 +662,10 @@ class Query(graphene.ObjectType):
         )
 
     def resolve_all_questions(self, info):
-        return optimized_question_resolve_qs().all()
+        return optimized_question_resolve_qs().filter(published_state__in=info.context.published_state)
 
     def resolve_question(self, info, id):
-        return optimized_question_resolve_qs().get(pk=id)
+        return optimized_question_resolve_qs().filter(published_state__in=info.context.published_state).get(pk=id)
 
     def resolve_question_by_slug(self, info, slug: str):
         return models.Question.objects.get(slug=slug)
@@ -730,3 +709,21 @@ class Query(graphene.ObjectType):
 
 def get_schema() -> graphene.Schema:
     return graphene.Schema(query=Query)
+
+
+class PublishedStateGraphQLView(GraphQLView):
+
+    @staticmethod
+    def get_published_state_from_request_params(params: dict | None) -> list[PublishedState]:
+        if params is not None and "visibility" in params:
+            if params["visibility"] == "all":
+                return [PublishedState.PUBLISHED, PublishedState.DRAFT]
+            elif params["visibility"] == "draft":
+                return [PublishedState.DRAFT]
+        return [PublishedState.PUBLISHED]
+
+    def get_context(self, request):
+        context = super().get_context(request)
+        # add published state to every graphql request's context
+        context.published_state = self.get_published_state_from_request_params(request.GET)
+        return context

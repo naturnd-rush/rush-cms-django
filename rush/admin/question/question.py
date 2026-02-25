@@ -2,10 +2,11 @@ from uuid import uuid4
 
 from adminsortable2.admin import SortableAdminMixin
 from django.contrib import admin
-from django.db.models import Prefetch
+from django.http import HttpResponseRedirect
 from django.utils.safestring import mark_safe
 from nested_admin.nested import NestedModelAdmin
 
+from rush.admin import PublishedStateFilter
 from rush.admin.question.forms import QuestionForm
 from rush.admin.question.inlines import (
     BasemapSourceOnQuestionInline,
@@ -14,6 +15,7 @@ from rush.admin.question.inlines import (
 )
 from rush.admin.utils import image_html
 from rush.models import BasemapSource, BasemapSourceOnQuestion, Question
+from rush.models.duplicators import QuestionDuplicator
 
 
 @admin.register(Question)
@@ -27,8 +29,9 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
         "sash_preview",
         "get_question_tabs",
         "display_order",
-        "published_state",
+        "site_visibility",
     ]
+    list_filter = [PublishedStateFilter]
     prepopulated_fields = {"slug": ("title",)}
     autocomplete_fields = ["initiatives", "sash"]
     inlines = [
@@ -39,6 +42,10 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
     actions = ["duplicate_object"]
     sortable_field_name = "display_order"  # Enable drag-and-drop for Questions in the list view
     # filter_horizontal = ["initiatives"]  # better admin editing for many-to-many fields
+
+    @admin.display(description="Site Visibility")
+    def site_visibility(self, obj: Question):
+        return obj.published_state
 
     @admin.display(description="Sash")
     def sash_preview(self, obj: Question):
@@ -72,12 +79,9 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
     @admin.action(description="Duplicate selected items")
     def duplicate_object(self, request, queryset):
         for obj in queryset:
-            obj.pk = None  # Clear primary key (should auto-generate)
-            obj.id = None  # Clear id (should auto-generate)
-            obj.slug = f"{obj.slug}-copy-{uuid4().hex}"  # Avoid unique constraint violations
-            obj.save()
-
+            QuestionDuplicator(obj).duplicate()
         self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
+        return HttpResponseRedirect("?published_state=all")
 
     def save_related(self, request, form, formsets, change):
         """
