@@ -91,6 +91,7 @@ THIRD_PARTY_LIB_DEBUG_LOGS_TO_SILENCE = [
     "botocore",
     "boto3",
     "urllib3",
+    "PIL",
 ]
 for module_name in THIRD_PARTY_LIB_DEBUG_LOGS_TO_SILENCE:
     logging.getLogger(module_name).setLevel(logging.INFO)
