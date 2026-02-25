@@ -110,6 +110,3 @@ class QuestionAdmin(SortableAdminMixin, NestedModelAdmin):  # type: ignore
                 basemap.save()
             else:
                 raise ValueError("This should never happen! Basemap should exist here.")
-                raise ValueError("This should never happen! Basemap should exist here.")
-                raise ValueError("This should never happen! Basemap should exist here.")
-                raise ValueError("This should never happen! Basemap should exist here.")
