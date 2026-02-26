@@ -6,7 +6,6 @@ from urllib.parse import urljoin
 import graphene
 from bs4 import BeautifulSoup
 from django.conf import settings
-from django.core.cache import cache
 from django.db.models import Prefetch, QuerySet
 from graphene.types import ResolveInfo
 from graphene_django.types import DjangoObjectType
@@ -27,10 +26,9 @@ The GraphQL Schema for RUSH models. For more information see: https://docs.graph
 """
 
 
-def convert_relative_images_to_absolute(html: str, info) -> str:
+def convert_relative_images_to_absolute(html: str, info: ResolveInfo) -> str:
     """
     Convert all relative HTML image URLs to absolute ones (using Django's base media url).
-    The "info" parameter is graphql's query info object.
     """
 
     base_media_url = base_url_from_request(info.context)
@@ -140,7 +138,7 @@ class MapDataWithoutGeoJsonType(DjangoObjectType):
         model = models.MapData
         fields = [x for x in MapDataType._meta.fields if x != "geojson"]
 
-    # Still need this resolved and filed definition here because inheritance of
+    # Still need this resolved and field definition here because inheritance of
     # mapDataType in this class keeps geojson accessible for some reason...
     geotiff_link = graphene.String()
 
@@ -668,16 +666,25 @@ class Query(graphene.ObjectType):
         return optimized_question_resolve_qs().filter(published_state__in=info.context.published_state).get(pk=id)
 
     def resolve_question_by_slug(self, info, slug: str):
-        return models.Question.objects.get(slug=slug)
+        return models.Question.objects.filter(published_state__in=info.context.published_state).get(slug=slug)
 
     def resolve_question_tab_by_slug(self, info, question_slug: str, question_tab_slug: str):
-        return models.QuestionTab.objects.filter(slug=question_tab_slug, question__slug=question_slug).first()
+        return models.QuestionTab.objects.filter(
+            slug=question_tab_slug,
+            question__slug=question_slug,
+            question__published_state__in=info.context.published_state,
+        ).first()
 
     def resolve_default_question_tab(self, info, question_slug: str):
-        return models.QuestionTab.objects.filter(question__slug=question_slug).first()
+        return models.QuestionTab.objects.filter(
+            question__slug=question_slug,
+            question__published_state__in=info.context.published_state,
+        ).first()
 
     def resolve_question_tab_by_id(self, info, id):
-        return models.QuestionTab.objects.get(pk=id)
+        return models.QuestionTab.objects.filter(
+            question__published_state__in=info.context.published_state,
+        ).get(pk=id)
 
     def resolve_all_map_datas(self, info):
         return optimized_map_data_resolve_qs(info).all()
