@@ -498,6 +498,7 @@ class QuestionType(DjangoObjectType):
             "slug",
             "display_order",
             "basemaps",
+            "num_initiatives",
         ]
 
     # Link one half of the many-to-many through table in the graphql schema
@@ -517,6 +518,13 @@ class QuestionType(DjangoObjectType):
 
     def resolve_initiatives(self, info):
         return models.Initiative.objects.filter(published_state__in=info.context.published_state, question=self)
+
+    num_initiatives = graphene.Int()
+
+    def resolve_num_initiatives(self, info):
+        return models.Initiative.objects.filter(
+            published_state__in=info.context.published_state, question=self
+        ).count()
 
 
 class PageType(DjangoObjectType):
