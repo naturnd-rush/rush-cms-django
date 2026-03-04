@@ -89,6 +89,22 @@ def _relative_to_absolute_link_params(tag: str, key: str, closing=True) -> list[
             _tagify('"http://https://www.kagi.com/example.png"'),
             _tagify('"https://www.kagi.com/example.png"'),
         ),
+        (
+            # extra https:// is stripped
+            #
+            ######
+            #
+            # (FIXME the extra https:// is added by summernote when a template variable, e.g., {{ URL }} is formatted
+            # as a link by an admin user in the editor). Ideally this would be fixed before the data is saved. However, since
+            # we can't re-serialize all the map data at this moment without manually re-saving each layer on the admin site, I'm
+            # choosing to fix this issue in the data on the way out (via the GraphQL API).
+            #
+            # This fixme comment can be removed when https://linear.app/naturnd/issue/V3-182/ is completed.
+            #
+            #########
+            _tagify('"https://https://www.kagi.com/example.png"'),
+            _tagify('"https://www.kagi.com/example.png"'),
+        ),
         ############### DIFFERENT DOMAIN ####################
         (
             # HTTPS image URL remains unchanged
@@ -124,6 +140,22 @@ def _relative_to_absolute_link_params(tag: str, key: str, closing=True) -> list[
             #
             #########
             _tagify('"http://https://www.google.com/example.png"'),
+            _tagify('"https://www.google.com/example.png"'),
+        ),
+        (
+            # extra https:// is stripped
+            #
+            ######
+            #
+            # (FIXME the extra https:// is added by summernote when a template variable, e.g., {{ URL }} is formatted
+            # as a link by an admin user in the editor). Ideally this would be fixed before the data is saved. However, since
+            # we can't re-serialize all the map data at this moment without manually re-saving each layer on the admin site, I'm
+            # choosing to fix this issue in the data on the way out (via the GraphQL API).
+            #
+            # This fixme comment can be removed when https://linear.app/naturnd/issue/V3-182/ is completed.
+            #
+            #########
+            _tagify('"https://https://www.google.com/example.png"'),
             _tagify('"https://www.google.com/example.png"'),
         ),
     ]
