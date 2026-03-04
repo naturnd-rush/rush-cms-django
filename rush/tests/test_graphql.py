@@ -1,6 +1,6 @@
 from pytest import mark
 
-from rush.graphql import PublishedStateGraphQLView, convert_relative_images_to_absolute
+from rush.graphql import PublishedStateGraphQLView, convert_relative_links_to_absolute
 from rush.models import PublishedState
 
 
@@ -22,76 +22,122 @@ def test_get_published_state_from_request_params(params: dict | None, expected: 
     assert PublishedStateGraphQLView.get_published_state_from_request_params(params) == expected
 
 
-@mark.django_db
-@mark.parametrize(
-    "relative, expected",
-    [
+def _relative_to_absolute_link_params(tag: str, key: str, closing=True) -> list[tuple[str, str]]:
+
+    def _tagify(link: str):
+        if closing == True:
+            return f"<{tag} {key}={link}></{tag}>"
+        else:
+            return f"<{tag} {key}={link}/>"
+
+    return [
         ############ Same as BASE_MEDIA_URL ####################
         (
             # HTTPS image URL remains unchanged
-            '<img src="https://www.kagi.com/example.png"/>',
-            '<img src="https://www.kagi.com/example.png"/>',
+            _tagify('"https://www.kagi.com/example.png"'),
+            _tagify('"https://www.kagi.com/example.png"'),
         ),
         (
             # HTTP image URL changes to HTTPS
-            '<img src="http://www.kagi.com/example.png"/>',
-            '<img src="https://www.kagi.com/example.png"/>',
+            _tagify('"http://www.kagi.com/example.png"'),
+            _tagify('"https://www.kagi.com/example.png"'),
         ),
         (
             # protocol agnostic URL changes to HTTPS. See: https://stackoverflow.com/questions/28446314.
-            '<img src="//example.png"/>',
-            '<img src="https://www.kagi.com/example.png"/>',
+            _tagify('"//example.png"'),
+            _tagify('"https://www.kagi.com/example.png"'),
         ),
         (
             # protocol agnostic URL changes to HTTPS (even when double forward-slash present in url)
-            '<img src="//something//example.png"/>',
-            '<img src="https://www.kagi.com/something//example.png"/>',
+            _tagify('"//something//example.png"'),
+            _tagify('"https://www.kagi.com/something//example.png"'),
         ),
         (
             # HTTPS is appended if missing
-            '<img src="www.kagi.com/example.png"/>',
-            '<img src="https://www.kagi.com/example.png"/>',
+            _tagify('"www.kagi.com/example.png"'),
+            _tagify('"https://www.kagi.com/example.png"'),
         ),
         (
             # HTTPS and www are appended if missing
-            '<img src="kagi.com/example.png"/>',
-            '<img src="https://www.kagi.com/example.png"/>',
+            _tagify('"kagi.com/example.png"'),
+            _tagify('"https://www.kagi.com/example.png"'),
         ),
         (
             # HTTPS, www, and base media url are appended if missing
-            '<img src="example.png"/>',
-            '<img src="https://www.kagi.com/example.png"/>',
+            _tagify('"example.png"'),
+            _tagify('"https://www.kagi.com/example.png"'),
         ),
         (
             # HTTPS, www, and base media url are appended if missing (even when resource is prefixed by a
             # forward-slash)
-            '<img src="/example.png"/>',
-            '<img src="https://www.kagi.com/example.png"/>',
+            _tagify('"/example.png"'),
+            _tagify('"https://www.kagi.com/example.png"'),
+        ),
+        (
+            # extra http:// is stripped
+            #
+            ######
+            #
+            # (FIXME the extra http:// is added by summernote when a template variable, e.g., {{ URL }} is formatted
+            # as a link by an admin user in the editor). Ideally this would be fixed before the data is saved. However, since
+            # we can't re-serialize all the map data at this moment without manually re-saving each layer on the admin site, I'm
+            # choosing to fix this issue in the data on the way out (via the GraphQL API).
+            #
+            # This fixme comment can be removed when https://linear.app/naturnd/issue/V3-182/ is completed.
+            #
+            #########
+            _tagify('"http://https://www.kagi.com/example.png"'),
+            _tagify('"https://www.kagi.com/example.png"'),
         ),
         ############### DIFFERENT DOMAIN ####################
         (
             # HTTPS image URL remains unchanged
-            '<img src="https://www.google.com/example.png"/>',
-            '<img src="https://www.google.com/example.png"/>',
+            _tagify('"https://www.google.com/example.png"'),
+            _tagify('"https://www.google.com/example.png"'),
         ),
         (
             # HTTP image URL changes to HTTPS
-            '<img src="http://www.google.com/example.png"/>',
-            '<img src="https://www.google.com/example.png"/>',
+            _tagify('"http://www.google.com/example.png"'),
+            _tagify('"https://www.google.com/example.png"'),
         ),
         (
             # HTTPS is appended if missing
-            '<img src="www.google.com/example.png"/>',
-            '<img src="https://www.google.com/example.png"/>',
+            _tagify('"www.google.com/example.png"'),
+            _tagify('"https://www.google.com/example.png"'),
         ),
         (
             # HTTPS and www are appended if missing
-            '<img src="google.com/example.png"/>',
-            '<img src="https://www.google.com/example.png"/>',
+            _tagify('"google.com/example.png"'),
+            _tagify('"https://www.google.com/example.png"'),
         ),
+        (
+            # extra https// is stripped
+            #
+            ######
+            #
+            # (FIXME the extra https// is added by summernote when a template variable, e.g., {{ URL }} is formatted
+            # as a link by an admin user in the editor). Ideally this would be fixed before the data is saved. However, since
+            # we can't re-serialize all the map data at this moment without manually re-saving each layer on the admin site, I'm
+            # choosing to fix this issue in the data on the way out (via the GraphQL API).
+            #
+            # This fixme comment can be removed when https://linear.app/naturnd/issue/V3-182/ is completed.
+            #
+            #########
+            _tagify('"http://https://www.google.com/example.png"'),
+            _tagify('"https://www.google.com/example.png"'),
+        ),
+    ]
+
+
+@mark.django_db
+@mark.parametrize(
+    "relative, expected",
+    [
+        *_relative_to_absolute_link_params(tag="img", key="src", closing=False),
+        *_relative_to_absolute_link_params(tag="a", key="href", closing=True),
     ],
 )
-def test_convert_relative_images_to_absolute(relative, expected):
+def test_convert_relative_links_to_absolute(relative, expected):
     base_media_url = "https://www.kagi.com/"
-    absolute = convert_relative_images_to_absolute(relative, base_media_url=base_media_url)
+    absolute = convert_relative_links_to_absolute(relative, base_media_url=base_media_url)
     assert expected == absolute

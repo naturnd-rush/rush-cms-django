@@ -29,46 +29,57 @@ The GraphQL Schema for RUSH models. For more information see: https://docs.graph
 logger = logging.getLogger(__name__)
 
 
-def convert_relative_images_to_absolute(html: str, base_media_url: str) -> str:
+def convert_relative_links_to_absolute(html: str, base_media_url: str) -> str:
     """
-    Convert all relative HTML image URLs to absolute ones (using Django's base media url).
+    Convert all relative HTML <img> src and <a> href to absolute paths using HTTPS. External links should
+    be preserved while unspecified domains should automatically resolve to the site's base-media-url.
     """
     base_media_domain = base_media_url.removeprefix("https://www.")
     soup = None
     try:
         soup = BeautifulSoup(html, "html.parser")
-        for img in soup.find_all("img"):
 
-            src = img.get("src")
-            if not isinstance(src, str):
-                logger.error("Expected HTML image link to be a string!", {"link": src})
-                continue
+        def _convert(html_tag: str, key: str):
+            for element in soup.find_all(html_tag):
+                link = element.get(key)
+                if not isinstance(link, str):
+                    logger.error("Expected HTML link to be a string!", {"link": link})
+                    continue
 
-            if src.startswith("https://"):
-                continue
-            elif src.startswith("http://"):
-                src = src.replace("http://", "https://", 1)
-            elif src.startswith("www."):
-                src = src.replace("www.", "https://www.", 1)
-            elif src.startswith("//"):
-                src = src.replace("//", base_media_url, 1)
-            elif src.startswith(base_media_domain):
-                # e.g., src = "admin.whatstherush.earth/example.png".
-                src = urljoin(base_media_url, src.replace(base_media_domain, "", 1).lstrip("/"))
-            elif "." in src.split("/")[0]:
-                if MimeType.guess(src.split("/")[0]).guessed.is_valid:
-                    # NOTE: This uses mime-type model to differentiate between a domain and a supported filetype.
-                    # e.g., src = "example.png".
-                    src = urljoin(base_media_url, src)
+                print(link)
+
+                if link.startswith("https://"):
+                    continue
+                elif link.startswith("http://https://"):
+                    link = link.replace("http://https://", "https://", 1)
+                elif link.startswith("http://"):
+                    link = link.replace("http://", "https://", 1)
+                elif link.startswith("www."):
+                    link = link.replace("www.", "https://www.", 1)
+                elif link.startswith("//"):
+                    link = link.replace("//", base_media_url, 1)
+                elif link.startswith(base_media_domain):
+                    # e.g., src = "admin.whatstherush.earth/example.png".
+                    link = urljoin(base_media_url, link.replace(base_media_domain, "", 1).lstrip("/"))
+                elif "." in link.split("/")[0]:
+                    if MimeType.guess(link.split("/")[0]).guessed.is_valid:
+                        # NOTE: This uses mime-type model to differentiate between a domain and a supported filetype.
+                        # e.g., src = "example.png".
+                        link = urljoin(base_media_url, link)
+                    else:
+                        # e.g., src = "google.com/example.png".
+                        link = f"https://www.{link.lstrip("/")}"
                 else:
-                    # e.g., src = "google.com/example.png".
-                    src = f"https://www.{src.lstrip("/")}"
-            else:
-                # internal resource location with trailing slash
-                # e.g., src = "/example.png".
-                src = urljoin(base_media_url, src.lstrip("/"))
+                    # internal resource location with trailing slash
+                    # e.g., src = "/example.png".
+                    link = urljoin(base_media_url, link.lstrip("/"))
 
-            img["src"] = src
+                element[key] = link
+
+        tag_keys = {"img": "src", "a": "href"}
+        for tag in tag_keys:
+            key = tag_keys[tag]
+            _convert(html_tag=tag, key=key)
 
         return str(soup)
     finally:
@@ -204,7 +215,7 @@ class StylesOnLayersType(DjangoObjectType):
             raise ValueError("Expected StylesOnLayer.legend_description to be of type string at runtime.")
 
         base_media_url = base_url_from_request(info.context)
-        return convert_relative_images_to_absolute(html=self.legend_description, base_media_url=base_media_url)
+        return convert_relative_links_to_absolute(html=self.legend_description, base_media_url=base_media_url)
 
 
 class StyleType(DjangoObjectType):
@@ -268,7 +279,7 @@ class LayerType(DjangoObjectType):
             raise ValueError("Expected Layer.description to be of type string at runtime.")
 
         base_media_url = base_url_from_request(info.context)
-        return convert_relative_images_to_absolute(html=self.description, base_media_url=base_media_url)
+        return convert_relative_links_to_absolute(html=self.description, base_media_url=base_media_url)
 
     serialized_leaflet_json = graphene.String()
 
@@ -294,7 +305,7 @@ class LayerType(DjangoObjectType):
                 if "properties" in feature:
                     properties = feature["properties"]
                     if "__popupHTML" in properties and properties["__popupHTML"] is not None:
-                        properties["__popupHTML"] = convert_relative_images_to_absolute(
+                        properties["__popupHTML"] = convert_relative_links_to_absolute(
                             html=properties["__popupHTML"],
                             base_media_url=base_media_url,
                         )
@@ -303,7 +314,7 @@ class LayerType(DjangoObjectType):
                         and "html" in properties["__pointDivIconStyleProps"]
                         and properties["__pointDivIconStyleProps"]["html"] is not None
                     ):
-                        properties["__pointDivIconStyleProps"]["html"] = convert_relative_images_to_absolute(
+                        properties["__pointDivIconStyleProps"]["html"] = convert_relative_links_to_absolute(
                             html=properties["__pointDivIconStyleProps"]["html"],
                             base_media_url=base_media_url,
                         )
@@ -338,7 +349,7 @@ class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
             raise ValueError("Expected Layer.description to be of type string at runtime.")
 
         base_media_url = base_url_from_request(info.context)
-        return convert_relative_images_to_absolute(html=self.description, base_media_url=base_media_url)
+        return convert_relative_links_to_absolute(html=self.description, base_media_url=base_media_url)
 
 
 class LayerOnLayerGroupType(DjangoObjectType):
@@ -378,7 +389,7 @@ class LayerGroupOnQuestionType(DjangoObjectType):
             raise ValueError("Expected page.group_description to be of type string at runtime.")
 
         base_media_url = base_url_from_request(info.context)
-        return convert_relative_images_to_absolute(html=self.group_description, base_media_url=base_media_url)
+        return convert_relative_links_to_absolute(html=self.group_description, base_media_url=base_media_url)
 
     layers_on_layer_group = graphene.List(LayerOnLayerGroupType)
 
@@ -436,7 +447,7 @@ class QuestionTabType(DjangoObjectType):
             raise ValueError("Expected QuestionTab.content to be of type string at runtime.")
 
         base_media_url = base_url_from_request(info.context)
-        return convert_relative_images_to_absolute(html=self.content, base_media_url=base_media_url)
+        return convert_relative_links_to_absolute(html=self.content, base_media_url=base_media_url)
 
 
 class InitiativeTagType(DjangoObjectType):
@@ -468,7 +479,7 @@ class InitiativeType(DjangoObjectType):
             raise ValueError("Expected initiative.content to be of type string at runtime.")
 
         base_media_url = base_url_from_request(info.context)
-        return convert_relative_images_to_absolute(html=self.content, base_media_url=base_media_url)
+        return convert_relative_links_to_absolute(html=self.content, base_media_url=base_media_url)
 
 
 class QuestionSashType(DjangoObjectType):
@@ -571,7 +582,7 @@ class PageType(DjangoObjectType):
             raise ValueError("Expected page.content to be of type string at runtime.")
 
         base_media_url = base_url_from_request(info.context)
-        return convert_relative_images_to_absolute(html=self.content, base_media_url=base_media_url)
+        return convert_relative_links_to_absolute(html=self.content, base_media_url=base_media_url)
 
 
 def get_requested_fields(info: ResolveInfo) -> List[str]:
