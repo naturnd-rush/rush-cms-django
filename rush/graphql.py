@@ -46,12 +46,13 @@ def convert_relative_links_to_absolute(html: str, base_media_url: str) -> str:
                     logger.error("Expected HTML link to be a string!", {"link": link})
                     continue
 
-                print(link)
-
-                if link.startswith("https://"):
-                    continue
+                if link.startswith("https://https://"):
+                    link = link.replace("https://https://", "https://", 1)
                 elif link.startswith("http://https://"):
                     link = link.replace("http://https://", "https://", 1)
+                elif link.startswith("https://"):
+                    # link is already formatted correctly
+                    continue
                 elif link.startswith("http://"):
                     link = link.replace("http://", "https://", 1)
                 elif link.startswith("www."):
