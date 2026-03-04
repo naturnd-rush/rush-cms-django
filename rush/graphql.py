@@ -13,7 +13,7 @@ from graphene_django.views import GraphQLView
 
 from rush import models
 from rush.context_processors import base_url_from_request
-from rush.models import PublishedState
+from rush.models import MimeType, PublishedState
 from rush.models.validators import (
     OGM_CAMPAIGN_RE,
     OGM_MAP_BROWSE_RE,
@@ -26,40 +26,49 @@ The GraphQL Schema for RUSH models. For more information see: https://docs.graph
 """
 
 
-def convert_relative_images_to_absolute(html: str, info: ResolveInfo) -> str:
+logger = logging.getLogger(__name__)
+
+
+def convert_relative_images_to_absolute(html: str, base_media_url: str) -> str:
     """
     Convert all relative HTML image URLs to absolute ones (using Django's base media url).
     """
-
-    base_media_url = base_url_from_request(info.context)
-
+    base_media_domain = base_media_url.removeprefix("https://www.")
     soup = None
     try:
         soup = BeautifulSoup(html, "html.parser")
-
         for img in soup.find_all("img"):
 
             src = img.get("src")
             if not isinstance(src, str):
-                # LOG TODO: Log a warning here!
+                logger.error("Expected HTML image link to be a string!", {"link": src})
                 continue
 
-            if not src:
-                # LOG TODO: Log a warning here!
+            if src.startswith("https://"):
                 continue
+            elif src.startswith("http://"):
+                src = src.replace("http://", "https://", 1)
+            elif src.startswith("www."):
+                src = src.replace("www.", "https://www.", 1)
+            elif src.startswith("//"):
+                src = src.replace("//", base_media_url, 1)
+            elif src.startswith(base_media_domain):
+                # e.g., src = "admin.whatstherush.earth/example.png".
+                src = urljoin(base_media_url, src.replace(base_media_domain, "", 1).lstrip("/"))
+            elif "." in src.split("/")[0]:
+                if MimeType.guess(src.split("/")[0]).guessed.is_valid:
+                    # NOTE: This uses mime-type model to differentiate between a domain and a supported filetype.
+                    # e.g., src = "example.png".
+                    src = urljoin(base_media_url, src)
+                else:
+                    # e.g., src = "google.com/example.png".
+                    src = f"https://www.{src.lstrip("/")}"
+            else:
+                # internal resource location with trailing slash
+                # e.g., src = "/example.png".
+                src = urljoin(base_media_url, src.lstrip("/"))
 
-            if (
-                src.startswith("http://")
-                or src.startswith("https://")
-                # the "//" is for protocol-agnostic urls
-                or src.startswith("//")
-                or src.startswith(base_media_url)
-            ):
-                # Skip if already absolute URL or already prefixed with the base-media-url
-                continue
-
-            # Build full absolute URL
-            img["src"] = urljoin(base_media_url, src.lstrip("/"))
+            img["src"] = src
 
         return str(soup)
     finally:
@@ -193,7 +202,9 @@ class StylesOnLayersType(DjangoObjectType):
             # Not sure why but the linter thinks self.content here is potentially
             # graphene.String() when the same code works for MapData.geojson.
             raise ValueError("Expected StylesOnLayer.legend_description to be of type string at runtime.")
-        return convert_relative_images_to_absolute(html=self.legend_description, info=info)
+
+        base_media_url = base_url_from_request(info.context)
+        return convert_relative_images_to_absolute(html=self.legend_description, base_media_url=base_media_url)
 
 
 class StyleType(DjangoObjectType):
@@ -255,7 +266,9 @@ class LayerType(DjangoObjectType):
             # Not sure why but the linter thinks self.content here is potentially
             # graphene.String() when the same code works for MapData.geojson.
             raise ValueError("Expected Layer.description to be of type string at runtime.")
-        return convert_relative_images_to_absolute(html=self.description, info=info)
+
+        base_media_url = base_url_from_request(info.context)
+        return convert_relative_images_to_absolute(html=self.description, base_media_url=base_media_url)
 
     serialized_leaflet_json = graphene.String()
 
@@ -273,6 +286,8 @@ class LayerType(DjangoObjectType):
 
             data_obj = self.serialized_leaflet_json
 
+            base_media_url = base_url_from_request(info.context)
+
             # Jeez, I can't wait until I move the serialization code to the backend...
             # HACK: This is for cleaning the image src to make sure it uses the absolute media url.
             for feature in data_obj["featureCollection"]["features"]:
@@ -281,7 +296,7 @@ class LayerType(DjangoObjectType):
                     if "__popupHTML" in properties and properties["__popupHTML"] is not None:
                         properties["__popupHTML"] = convert_relative_images_to_absolute(
                             html=properties["__popupHTML"],
-                            info=info,
+                            base_media_url=base_media_url,
                         )
                     if (
                         "__pointDivIconStyleProps" in properties
@@ -290,7 +305,7 @@ class LayerType(DjangoObjectType):
                     ):
                         properties["__pointDivIconStyleProps"]["html"] = convert_relative_images_to_absolute(
                             html=properties["__pointDivIconStyleProps"]["html"],
-                            info=info,
+                            base_media_url=base_media_url,
                         )
             return json.dumps(data_obj)
 
@@ -321,7 +336,9 @@ class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
             # Not sure why but the linter thinks self.content here is potentially
             # graphene.String() when the same code works for MapData.geojson.
             raise ValueError("Expected Layer.description to be of type string at runtime.")
-        return convert_relative_images_to_absolute(html=self.description, info=info)
+
+        base_media_url = base_url_from_request(info.context)
+        return convert_relative_images_to_absolute(html=self.description, base_media_url=base_media_url)
 
 
 class LayerOnLayerGroupType(DjangoObjectType):
@@ -359,7 +376,9 @@ class LayerGroupOnQuestionType(DjangoObjectType):
             # Not sure why but the linter thinks self.group_description here is potentially
             # graphene.String() when the same code works for MapData.geojson.
             raise ValueError("Expected page.group_description to be of type string at runtime.")
-        return convert_relative_images_to_absolute(html=self.group_description, info=info)
+
+        base_media_url = base_url_from_request(info.context)
+        return convert_relative_images_to_absolute(html=self.group_description, base_media_url=base_media_url)
 
     layers_on_layer_group = graphene.List(LayerOnLayerGroupType)
 
@@ -415,7 +434,9 @@ class QuestionTabType(DjangoObjectType):
             # Not sure why but the linter thinks self.content here is potentially
             # graphene.String() when the same code works for MapData.geojson.
             raise ValueError("Expected QuestionTab.content to be of type string at runtime.")
-        return convert_relative_images_to_absolute(html=self.content, info=info)
+
+        base_media_url = base_url_from_request(info.context)
+        return convert_relative_images_to_absolute(html=self.content, base_media_url=base_media_url)
 
 
 class InitiativeTagType(DjangoObjectType):
@@ -445,7 +466,9 @@ class InitiativeType(DjangoObjectType):
             # Not sure why but the linter thinks self.content here is potentially
             # graphene.String() when the same code works for MapData.geojson.
             raise ValueError("Expected initiative.content to be of type string at runtime.")
-        return convert_relative_images_to_absolute(html=self.content, info=info)
+
+        base_media_url = base_url_from_request(info.context)
+        return convert_relative_images_to_absolute(html=self.content, base_media_url=base_media_url)
 
 
 class QuestionSashType(DjangoObjectType):
@@ -546,7 +569,9 @@ class PageType(DjangoObjectType):
             # Not sure why but the linter thinks self.content here is potentially
             # graphene.String() when the same code works for MapData.geojson.
             raise ValueError("Expected page.content to be of type string at runtime.")
-        return convert_relative_images_to_absolute(html=self.content, info=info)
+
+        base_media_url = base_url_from_request(info.context)
+        return convert_relative_images_to_absolute(html=self.content, base_media_url=base_media_url)
 
 
 def get_requested_fields(info: ResolveInfo) -> List[str]:
@@ -741,4 +766,5 @@ class PublishedStateGraphQLView(GraphQLView):
         context = super().get_context(request)
         # add published state to every graphql request's context
         context.published_state = self.get_published_state_from_request_params(request.GET)
+        return context
         return context
