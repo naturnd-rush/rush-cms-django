@@ -15,6 +15,7 @@ from rush.models.validators import (
     validate_arcgis_feature_server_link,
 )
 from rush.storage import BackblazeStorageFactory
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 def get_raster_storage() -> S3Storage | FileSystemStorage:
@@ -77,6 +78,21 @@ class MapData(models.Model):
         null=True,
         blank=True,
         validators = [URLValidator(schemes=["https"]), validate_arcgis_feature_server_link],
+    )
+
+    arcgis_cache_seconds = models.IntegerField(
+        null=True,
+        blank=True,
+        default=86400,
+        validators=[
+            MinValueValidator(1800),
+            MaxValueValidator(2592000)
+        ],
+    )
+
+    arcgis_last_fetched_at = models.DateTimeField(
+        null=True,
+        blank=True,
     )
 
     @property
