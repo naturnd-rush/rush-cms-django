@@ -12,6 +12,7 @@ from rush.models.validators import (
     FiletypeValidator,
     validate_ogm_campaign_link,
     validate_ogm_map_link,
+    validate_arcgis_feature_server_link,
 )
 from rush.storage import BackblazeStorageFactory
 
@@ -38,6 +39,7 @@ class MapData(models.Model):
         GEOJSON = "geojson"
         GEOTIFF = "geotiff"  # for raster image data
         OPEN_GREEN_MAP = "open_green_map"
+        ARCGIS_REST = "arcgis_rest"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     name = models.CharField(max_length=255, unique=True)
@@ -67,6 +69,14 @@ class MapData(models.Model):
         storage=get_raster_storage,
         validators=[FiletypeValidator(valid_names=["TIFF"])],
         help_text="A GeoTIFF file to upload. It may take up to a couple minutes to upload depending on the file size.",
+    )
+
+    # ArcGIS REST provider fields
+    arcgis_feature_server_link = models.CharField(
+        max_length=2000,
+        null=True,
+        blank=True,
+        validators = [URLValidator(schemes=["https"]), validate_arcgis_feature_server_link],
     )
 
     @property

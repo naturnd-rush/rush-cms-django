@@ -104,3 +104,32 @@ def test_validate_only_integers_and_whitespace(value: str, raises: bool):
             validate_only_integers_and_whitespace(value)
     else:
         validate_only_integers_and_whitespace(value)
+
+@pytest.mark.parametrize(
+    "value, raises",
+    [
+        (
+            "https://google.com",
+            True
+        ), #http not allowed
+        (
+            "http://services6.arcgis.com/ubm4tcTYICKBpist/ArcGIS/rest/services/hpai_dashboard/FeatureServer/0",
+            True
+        ), 
+        (
+            "https://services6.arcgis.com/ubm4tcTYICKBpist/ArcGIS/rest/services/hpai_dashboard/FeatureServer/0",
+            False            
+        ),
+        (
+            "https://mapservices.crd.bc.ca/arcgis/rest/services/LandCoverAnalysis/MapServer/0",
+            True
+        ),
+    ],
+)
+
+def test_validate_arcgis_feature_server_link(value: str, raises: bool):
+    if raises:
+        with pytest.raises(ValidationError):
+            validate_arcgis_feature_server_link(value)
+    else:
+        validate_arcgis_feature_server_link(value)
