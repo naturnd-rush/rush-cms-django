@@ -111,8 +111,9 @@ def test_validate_only_integers_and_whitespace(value: str, raises: bool):
         (
             "https://google.com",
             True
-        ), #http not allowed
+        ),
         (
+            # http not allowed
             "http://services6.arcgis.com/ubm4tcTYICKBpist/ArcGIS/rest/services/hpai_dashboard/FeatureServer/0",
             True
         ), 
