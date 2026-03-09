@@ -6,7 +6,6 @@ from django.db.models.fields.files import FieldFile
 
 from rush.models import MimeType
 
-
 class FiletypeValidator:
     """
     Args:
@@ -103,5 +102,23 @@ def validate_ogm_campaign_link(value: str) -> None:
                         '"https://greenmap.org/explore/survey/<random-letters-and-numbers>"',
                     ]
                 )
+            )
+        )
+
+ARCGIS_FEATURE_SERVER_RE = re.compile(
+    r"^https:\/\/services\d+\.arcgis\.com\/[A-Za-z0-9]+\/ArcGIS\/rest\/services\/[A-Za-z0-9_]+\/FeatureServer\/\d+$"
+)
+
+def validate_arcgis_feature_server_link(value: str) -> None:
+    """
+    Validate that the string looks like a valid ArcGIS FeatureServer URL.
+    i.e., in the format:
+        https://servicesX.arcgis.com/<org_id>/ArcGIS/rest/services/<service_name>/FeatureServer/<layer_id>
+    """
+
+    if not ARCGIS_FEATURE_SERVER_RE.match(value):
+        raise ValidationError(
+            "Invalid ArcGIS FeatureServer link. It should look like: {}.".format(
+                "https://servicesX.arcgis.com/<org_id>/ArcGIS/rest/services/<service_name>/FeatureServer/<positive_integer>"
             )
         )
