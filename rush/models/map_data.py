@@ -83,8 +83,10 @@ class MapData(models.Model):
     arcgis_cache_seconds = models.IntegerField(
         null=True,
         blank=True,
+        # one day
         default=86400,
         validators=[
+            # allowed between 30 mins and ~1 month
             MinValueValidator(1800),
             MaxValueValidator(2592000)
         ],
