@@ -580,7 +580,7 @@ class StyleForm(forms.ModelForm):
             "marker_background_opacity": utils.SliderAndTextboxNumberInput(),
             "marker_icon": forms.FileInput(),
             "marker_size": utils.SliderAndTextboxNumberInput(min=10, max=150),
-            "circle_radius": utils.SliderAndTextboxNumberInput(min=0, max=1000, step=1),
+            "circle_radius": utils.SliderAndTextboxNumberInput(min=0, max=250, step=1),
             "circle_weight": utils.SliderAndTextboxNumberInput(max=30, step=0.05, attrs={"class": "inline-field"}),
             "circle_opacity": utils.SliderAndTextboxNumberInput(),
             "circle_dash_offset": utils.SliderAndTextboxNumberInput(max=100, step=1),

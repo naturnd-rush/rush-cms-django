@@ -43,7 +43,7 @@ type PreviewState = {
  * Declarative source for preview updates.
  */
 type UpdateSource = {
-    groupName: "Toggle" | "Stroke" | "Fill" | "Marker", // For collapsing and expanding admin field groups
+    groupName: "Toggle" | "Stroke" | "Fill" | "Marker" | "Circle", // For collapsing and expanding admin field groups
     eventName: "input" | "change", // For registering HTMLInputElement event listeners
     el: HTMLInputElement | null, // The element to listen to for updates
     update: (el: HTMLInputElement) => void, // A function that knows how to update the preview state based on the data from an HTMLInputElement.
@@ -271,6 +271,15 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
             },
             eventName: "input",
         },
+        {
+            groupName: "Toggle",
+            el: document.querySelector('#id_draw_circle'),
+            update: (el) => {
+                el.checked ? expandGroup("Circle", el, sources) : collapseGroup("Circle", el, sources);
+                previewState.drawMarker = el.checked;
+            },
+            eventName: "input",
+        },
 
         // Stroke fields
         {
@@ -400,6 +409,56 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
                 previewState.markerOptions.markerSize = Number(el.value);
 
             },
+            eventName: "input",
+        },
+
+        // Circle fields
+        {
+            groupName: "Circle",
+            el: document.querySelector('#id_circle_color'),
+            update: (el) => previewState.strokeOptions.color = el.value,
+            eventName: "input",
+        },
+        {
+            groupName: "Circle",
+            el: document.querySelector('#id_circle_radius'),
+            update: (el) => previewState.strokeOptions.color = el.value,
+            eventName: "input",
+        },
+        {
+            groupName: "Circle",
+            el: document.querySelector('#id_circle_weight'),
+            update: (el) => previewState.strokeOptions.weight = Number(el.value),
+            eventName: "input",
+        },
+        {
+            groupName: "Circle",
+            el: document.querySelector('#id_circle_opacity'),
+            update: (el) => previewState.strokeOptions.opacity = Number(el.value),
+            eventName: "input",
+        },
+        {
+            groupName: "Circle",
+            el: document.querySelector('#id_circle_line_cap'),
+            update: (el) => previewState.strokeOptions.lineCap = el.value,
+            eventName: "input",
+        },
+        {
+            groupName: "Circle",
+            el: document.querySelector('#id_circle_line_join'),
+            update: (el) => previewState.strokeOptions.lineJoin = el.value,
+            eventName: "input",
+        },
+        {
+            groupName: "Circle",
+            el: document.querySelector('#id_circle_dash_array'),
+            update: (el) => previewState.strokeOptions.dashArray = el.value,
+            eventName: "input",
+        },
+        {
+            groupName: "Circle",
+            el: document.querySelector('#id_circle_dash_offset'),
+            update: (el) => previewState.strokeOptions.dashOffset = el.value,
             eventName: "input",
         },
     ];
