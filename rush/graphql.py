@@ -247,6 +247,7 @@ class StyleType(DjangoObjectType):
             "marker_size",
             # circle fields
             "draw_circle",
+            "circle_radius",
             "circle_stroke_color",
             "circle_stroke_weight",
             "circle_stroke_opacity",

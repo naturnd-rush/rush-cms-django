@@ -66,6 +66,20 @@ export interface Style{
     markerBackgroundColor: string,
     markerBackgroundOpacity: number,
     markerSize: number,
+
+    // circle options
+    drawCircle: boolean,
+    circleRadius: number,
+    circleStrokeColor: string,
+    circleStrokeWeight: number,
+    circleStrokeOpacity: number,
+    circleStrokeLineJoin: string,
+    circleStrokeLineCap: string,
+    circleStrokeDashArray: string | null,
+    circleStrokeDashOffset: string | null,
+    circleFillColor: string,
+    circleFillOpacity: number,
+
 }
 
 export async function getStyleById(styleId: string): Promise<Style | null> {
@@ -89,6 +103,17 @@ export async function getStyleById(styleId: string): Promise<Style | null> {
                 markerBackgroundColor
                 markerBackgroundOpacity
                 markerSize
+                drawCircle
+                circleRadius
+                circleFillColor
+                circleFillOpacity
+                circleStrokeColor
+                circleStrokeDashArray
+                circleStrokeDashOffset
+                circleStrokeLineCap
+                circleStrokeLineJoin
+                circleStrokeOpacity
+                circleStrokeWeight
             }
         }
     `;

@@ -1,6 +1,6 @@
 import {type Style, type MapData, getStyleById, getMapDataById} from "./graphql"
 import type { FeatureCollection, Geometry, Feature, Point, Position } from 'geojson';
-import type {PathOptions, StyleFunction} from "leaflet"
+import type {PathOptions, StyleFunction, CircleMarkerOptions} from "leaflet"
 import * as L from 'leaflet';
 import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid } from "./utils/math";
 import { waitForElementById, expectEl, ThrottledSignalReceiver, expectQuerySelector } from "./utils/timing";
@@ -8,6 +8,7 @@ import { Parser } from 'expr-eval';
 import Mustache from "mustache";
 import { DynamicSubscriberManager } from './utils/events'
 import centerOfMass from "@turf/center-of-mass";
+import { circle } from "turf";
 
 /************
  * This script draws a map layer preview based on the currently selected map-data object and
@@ -308,6 +309,11 @@ function getDefaultPolygonStyle(): PathOptions{
 function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
     const func = (feature: Feature<Geometry, any>) => {
 
+        // point styles are handled by getPointStyleFunc (we don't want to override them here!)
+        if (feature.geometry.type === 'Point' || feature.geometry.type === 'MultiPoint') {
+            return {};
+        }
+
         // If no stylesOnLayers are in the map preview state, just return a default polygon styling.
         if (state.stylesOnLayer.length == 0 && !state.isUpdating){
             return getDefaultPolygonStyle();
@@ -449,28 +455,47 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
         //          background color if there is no icon style but a background color is specified and 
         //          draw-marker is true.
         let markerStyle: Style | null = null;
+        let circleStyle: Style | null = null;  // grab the first applied circle style as well
         const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
         for (let appliedStyle of appliedStyles){
             const style = appliedStyle.styleOnLayer.style;
             if (style.drawMarker === true){
                 markerStyle = style;
-                break;
+            }
+            else if (style.drawCircle === true){
+                circleStyle = style;
             }
         }
 
-        if (markerStyle === null){
+        if (markerStyle === null && circleStyle === null){
             // Don't return a leaflet marker object if the style doesn't necessitate drawing anything to the screen
             return new L.Marker(latlng, {opacity: 0});
         }
 
-        // Inject marker div icon props into point feature properties for serialization
-        const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
-        feature.properties.__pointDivIconStyleProps = markerDivIconProps;
-
-        // Otherwise return the styled marker
-        return L.marker(latlng, {
-            icon: new L.DivIcon(markerDivIconProps),
-        });
+        else if (circleStyle !== null){
+            // inject circle props for serialization and return a circle
+            const circleOptions = {
+                radius: circleStyle.circleRadius,
+                fill: true,
+                fillColor: circleStyle.circleFillColor,
+                fillOpacity: circleStyle.circleFillOpacity,
+                stroke: true,
+                color: circleStyle.circleStrokeColor,
+                weight: circleStyle.circleStrokeWeight,
+                lineCap: circleStyle.circleStrokeLineCap,
+                lineJoin: circleStyle.circleStrokeLineJoin,
+                dashArray: circleStyle.circleStrokeDashArray,
+                dashOffset: circleStyle.circleStrokeDashOffset,
+            } as CircleMarkerOptions;
+            feature.properties.__circleOptions = circleOptions;
+            return L.circle(latlng, circleOptions);
+        }
+        else if (markerStyle !== null){
+            // inject marker div icon props for serialization and return a marker div icon
+            const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
+            feature.properties.__pointDivIconStyleProps = markerDivIconProps;
+            return L.marker(latlng, {icon: new L.DivIcon(markerDivIconProps)});
+        }
     };
     return func;
 }
