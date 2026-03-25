@@ -56,18 +56,27 @@ class Style(models.Model):
         help_text="Check this box when you want to draw the line. Unchecking this box, for example, "
         + "will remove the borders from a polygon."
     )
-    stroke_color = ColorField(default="#FFFFFF", verbose_name="Color")
+    stroke_color = ColorField(
+        default="#FFFFFF",
+        verbose_name="Color",
+        null=True,
+        blank=True,
+    )
     stroke_weight = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=Decimal(1),
         verbose_name="Thickness",
+        null=True,
+        blank=True,
     )
     stroke_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
         default=Decimal(1.0),
         verbose_name="Transparency",
+        null=True,
+        blank=True,
     )
     stroke_line_cap = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-linecap#usage_notes.
@@ -75,6 +84,8 @@ class Style(models.Model):
         choices=LineCap.choices,
         default=LineCap.ROUND,
         help_text="The shape of the end of a stroke. Options: butt, round, or square.",
+        null=True,
+        blank=True,
     )
     stroke_line_join = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-linejoin#usage_context.
@@ -82,6 +93,8 @@ class Style(models.Model):
         choices=LineJoin.choices,
         default=LineJoin.ROUND,
         help_text="The shape used to join two lines. Options: arcs, bevel, miter, miter clip, or round.",
+        null=True,
+        blank=True,
     )
     stroke_dash_array = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-dasharray#example.
@@ -183,38 +196,50 @@ class Style(models.Model):
         decimal_places=2,
         default=Decimal(5),
         verbose_name="Radius",
+        null=True,
+        blank=True,
     )
-    circle_color = ColorField(
+    circle_stroke_color = ColorField(
         default="#032697",
-        verbose_name="Color",
+        verbose_name="Stroke color",
+        null=True,
+        blank=True,
     )
-    circle_weight = models.DecimalField(
+    circle_stroke_weight = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=Decimal(1),
-        verbose_name="Thickness",
+        verbose_name="Stroke thickness",
+        null=True,
+        blank=True,
     )
-    circle_opacity = models.DecimalField(
+    circle_stroke_opacity = models.DecimalField(
         max_digits=5,
         decimal_places=3,
         default=Decimal(1.0),
-        verbose_name="Transparency",
+        verbose_name="Stroke transparency",
+        null=True,
+        blank=True,
     )
-    circle_line_cap = models.CharField(
+    circle_stroke_line_cap = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-linecap#usage_notes.
         max_length=32,
         choices=LineCap.choices,
         default=LineCap.ROUND,
         help_text="The shape of the end of a stroke. Options: butt, round, or square.",
+        null=True,
+        blank=True,
     )
-    circle_line_join = models.CharField(
+    circle_stroke_line_join = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-linejoin#usage_context.
         max_length=32,
         choices=LineJoin.choices,
         default=LineJoin.ROUND,
         help_text="The shape used to join two lines. Options: arcs, bevel, miter, miter clip, or round.",
+        null=True,
+        blank=True,
     )
-    circle_dash_array = models.CharField(
+    circle_stroke_dash_array = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-dasharray#example.
         max_length=32,
         validators=[validate_only_integers_and_whitespace],
@@ -223,12 +248,24 @@ class Style(models.Model):
         help_text="The pattern of dashes and gaps for the outline, e.g., '5 5' for 5 pixel long lines "
         + "separated by 5 pixels of whiespace. Only digits and whitespace are allowed (e.g., '12 34 56')",
     )
-    circle_dash_offset = models.CharField(
+    circle_stroke_dash_offset = models.CharField(
         # See Mozilla docs: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-dashoffset#example.
         max_length=32,
         null=True,
         blank=True,
         help_text="Offset where the dash pattern starts along the outline path.",
+    )
+    circle_fill_color = ColorField(
+        default="#FFFFFF",
+        null=True,
+        blank=True,
+    )
+    circle_fill_opacity = models.DecimalField(
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal(0.8),
+        null=True,
+        blank=True,
     )
 
     # TODO: Add _hover style and _active style recursive foreign keys.

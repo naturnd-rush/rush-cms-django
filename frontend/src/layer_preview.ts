@@ -1,5 +1,5 @@
 import {type Style, type MapData, getStyleById, getMapDataById} from "./graphql"
-import type { FeatureCollection, Geometry, Feature, Point, Position, MultiPolygon, Polygon } from 'geojson';
+import type { FeatureCollection, Geometry, Feature, Point, Position } from 'geojson';
 import type {PathOptions, StyleFunction} from "leaflet"
 import * as L from 'leaflet';
 import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid } from "./utils/math";

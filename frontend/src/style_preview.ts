@@ -37,6 +37,20 @@ type PreviewState = {
         markerOpacity: number,
         markerSize: number,
     },
+    // Draw the leaflet circle
+    drawCircle: boolean,
+    circleOptions: {
+        radius: number,
+        strokeColor: string,
+        strokeWeight: number,
+        strokeOpacity: number,
+        strokeLineJoin: string,
+        strokeLineCap: string,
+        strokeDashOffset: string | null,
+        strokeDashArray: string | null,
+        fillColor: string,
+        fillOpacity: number,
+    },
 };
 
 /**
@@ -48,6 +62,53 @@ type UpdateSource = {
     el: HTMLInputElement | null, // The element to listen to for updates
     update: (el: HTMLInputElement) => void, // A function that knows how to update the preview state based on the data from an HTMLInputElement.
 };
+
+/**
+ * Test whether a point lies inside a polygon using ray casting.
+ */
+function isPointInPolygon(point: Point, polygon: Array<Point>): boolean {
+    let inside = false;
+    const { x, y } = point;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].x, yi = polygon[i].y;
+        const xj = polygon[j].x, yj = polygon[j].y;
+        const intersect = (yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+/**
+ * Return circle centers packed in a hexagonal grid inside the polygon.
+ * Uses the given display radius to control spacing; centres whose circle would
+ * stray outside the bounding box are still kept as long as the centre itself
+ * is inside the polygon (matching how Leaflet places circles regardless of
+ * viewport clipping).
+ * @param polygon the polygon to fill.
+ * @param displayRadius the SVG pixel radius of each circle.
+ */
+function getCirclePackingCenters(polygon: Array<Point>, displayRadius: number): Array<Point> {
+    if (displayRadius <= 0) return [];
+    const minX = Math.min(...polygon.map(p => p.x));
+    const maxX = Math.max(...polygon.map(p => p.x));
+    const minY = Math.min(...polygon.map(p => p.y));
+    const maxY = Math.max(...polygon.map(p => p.y));
+
+    const step = displayRadius * 2;                    // distance between circle centres
+    const rowHeight = step * (Math.sqrt(3) / 2);      // hexagonal row height
+    const centers: Array<Point> = [];
+    let row = 0;
+    for (let y = minY + displayRadius; y <= maxY - displayRadius + step; y += rowHeight, row++) {
+        const xOffset = (row % 2) * displayRadius;    // stagger alternate rows
+        for (let x = minX + displayRadius + xOffset; x <= maxX + step; x += step) {
+            const pt = new Point(x, y);
+            if (isPointInPolygon(pt, polygon)) {
+                centers.push(pt);
+            }
+        }
+    }
+    return centers;
+}
 
 /**
  * Build "points string" to use in SVG <polygon> element.
@@ -128,6 +189,31 @@ function getPreviewHTML(state: PreviewState): string {
         />
         `
     }
+    // Pack leaflet circles inside the polygon.
+    // The admin radius (0–250 m) is mapped to a display radius (5–70 px) so that
+    // increasing the radius reduces the number of circles, mimicking real Leaflet rendering.
+    if (state.drawCircle){
+        const MIN_DISPLAY_R = 5;
+        const MAX_DISPLAY_R = 70;
+        const displayRadius = MIN_DISPLAY_R + (state.circleOptions.radius / 250) * (MAX_DISPLAY_R - MIN_DISPLAY_R);
+        const circleCenters = getCirclePackingCenters(polygonPoints, displayRadius);
+        const circleAttrs = `
+            r="${displayRadius}"
+            stroke="${state.circleOptions.strokeColor}"
+            stroke-width="${state.circleOptions.strokeWeight}"
+            stroke-opacity="${state.circleOptions.strokeOpacity}"
+            stroke-linecap="${state.circleOptions.strokeLineCap}"
+            stroke-linejoin="${state.circleOptions.strokeLineJoin}"
+            stroke-dasharray="${state.circleOptions.strokeDashArray}"
+            stroke-dashoffset="${state.circleOptions.strokeDashOffset}"
+            fill="${state.circleOptions.fillColor}"
+            fill-opacity="${state.circleOptions.fillOpacity}"
+        `;
+        for (const center of circleCenters) {
+            html += `<circle cx="${center.x}" cy="${center.y}" ${circleAttrs}/>`;
+        }
+    }
+
     html += '</svg>' // End of SVG
 
     // Add marker icon inside circle / background
@@ -236,9 +322,11 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
         drawStroke: false,
         drawFill: false,
         drawMarker: false,
+        drawCircle: false,
         strokeOptions: {color: "#FFFFFF", opacity: 1, weight: 1, lineJoin: "", lineCap: "ROUND", dashArray: "", dashOffset: "0"},
         fillOptions: {color: "#FFFFFF", opacity: 1},
         markerOptions: {bgColor: "#FFFFFF", bgOpacity: 1, data: null, markerOpacity: 1, markerSize: 22},
+        circleOptions: {radius: 50, strokeColor: "#3388FF", strokeWeight: 3, strokeOpacity: 1, strokeLineJoin: "", strokeLineCap: "ROUND", strokeDashArray: "", strokeDashOffset: "0"},
     };
 
     const sources:  Array<UpdateSource> = [
@@ -276,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
             el: document.querySelector('#id_draw_circle'),
             update: (el) => {
                 el.checked ? expandGroup("Circle", el, sources) : collapseGroup("Circle", el, sources);
-                previewState.drawMarker = el.checked;
+                previewState.drawCircle = el.checked;
             },
             eventName: "input",
         },
@@ -415,50 +503,62 @@ document.addEventListener('DOMContentLoaded', () => {(async () => {
         // Circle fields
         {
             groupName: "Circle",
-            el: document.querySelector('#id_circle_color'),
-            update: (el) => previewState.strokeOptions.color = el.value,
+            el: document.querySelector('#id_circle_stroke_color'),
+            update: (el) => previewState.circleOptions.strokeColor = el.value,
             eventName: "input",
         },
         {
             groupName: "Circle",
             el: document.querySelector('#id_circle_radius'),
-            update: (el) => previewState.strokeOptions.color = el.value,
+            update: (el) => previewState.circleOptions.radius = Number(el.value),
             eventName: "input",
         },
         {
             groupName: "Circle",
-            el: document.querySelector('#id_circle_weight'),
-            update: (el) => previewState.strokeOptions.weight = Number(el.value),
+            el: document.querySelector('#id_circle_stroke_weight'),
+            update: (el) => previewState.circleOptions.strokeWeight = Number(el.value),
             eventName: "input",
         },
         {
             groupName: "Circle",
-            el: document.querySelector('#id_circle_opacity'),
-            update: (el) => previewState.strokeOptions.opacity = Number(el.value),
+            el: document.querySelector('#id_circle_stroke_opacity'),
+            update: (el) => previewState.circleOptions.strokeOpacity = Number(el.value),
             eventName: "input",
         },
         {
             groupName: "Circle",
-            el: document.querySelector('#id_circle_line_cap'),
-            update: (el) => previewState.strokeOptions.lineCap = el.value,
+            el: document.querySelector('#id_circle_stroke_line_cap'),
+            update: (el) => previewState.circleOptions.strokeLineCap = el.value,
             eventName: "input",
         },
         {
             groupName: "Circle",
-            el: document.querySelector('#id_circle_line_join'),
-            update: (el) => previewState.strokeOptions.lineJoin = el.value,
+            el: document.querySelector('#id_circle_stroke_line_join'),
+            update: (el) => previewState.circleOptions.strokeLineJoin = el.value,
             eventName: "input",
         },
         {
             groupName: "Circle",
-            el: document.querySelector('#id_circle_dash_array'),
-            update: (el) => previewState.strokeOptions.dashArray = el.value,
+            el: document.querySelector('#id_circle_stroke_dash_array'),
+            update: (el) => previewState.circleOptions.strokeDashArray = el.value,
             eventName: "input",
         },
         {
             groupName: "Circle",
-            el: document.querySelector('#id_circle_dash_offset'),
-            update: (el) => previewState.strokeOptions.dashOffset = el.value,
+            el: document.querySelector('#id_circle_stroke_dash_offset'),
+            update: (el) => previewState.circleOptions.strokeDashOffset = el.value,
+            eventName: "input",
+        },
+        {
+            groupName: "Circle",
+            el: document.querySelector('#id_circle_fill_color'),
+            update: (el) => previewState.circleOptions.fillColor = el.value,
+            eventName: "input",
+        },
+        {
+            groupName: "Circle",
+            el: document.querySelector('#id_circle_fill_opacity'),
+            update: (el) => previewState.circleOptions.fillOpacity = Number(el.value),
             eventName: "input",
         },
     ];
