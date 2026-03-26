@@ -447,7 +447,9 @@ function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
  * @param state the current map preview state.
  * @returns a function that returns a leaflet marker object.
  */
-function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (feature: Feature<Point, any>, latlng: L.LatLng) => L.Marker {
+function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (feature: Feature<Point, any>, latlng: L.LatLng) => L.Marker | L.Circle | undefined{
+    // canvas is initialized once per render-cycle, since this executes at function-build time.
+    const circleCanvas = L.canvas()
     const func = (feature: Feature<Point, any>, latlng: L.LatLng) => {
 
         // Grab the first applied style that has a non-empty marker icon configured to be drawn
@@ -469,9 +471,8 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
 
         if (markerStyle === null && circleStyle === null){
             // Don't return a leaflet marker object if the style doesn't necessitate drawing anything to the screen
-            return new L.Marker(latlng, {opacity: 0});
+            return undefined;
         }
-
         else if (circleStyle !== null){
             // inject circle props for serialization and return a circle
             const circleOptions = {
@@ -482,13 +483,14 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
                 stroke: true,
                 color: circleStyle.circleStrokeColor,
                 weight: circleStyle.circleStrokeWeight,
+                opacity: circleStyle.circleStrokeOpacity,
                 lineCap: circleStyle.circleStrokeLineCap,
                 lineJoin: circleStyle.circleStrokeLineJoin,
                 dashArray: circleStyle.circleStrokeDashArray,
                 dashOffset: circleStyle.circleStrokeDashOffset,
             } as CircleMarkerOptions;
             feature.properties.__circleOptions = circleOptions;
-            return L.circle(latlng, circleOptions);
+            return L.circle(latlng, {...circleOptions, renderer: circleCanvas});
         }
         else if (markerStyle !== null){
             // inject marker div icon props for serialization and return a marker div icon
@@ -681,6 +683,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     const baseMediaUrl = expectEl('injected-media-url').innerHTML;
     const anyMarkerStyles = state.stylesOnLayer.filter(styleOnLayer => styleOnLayer.style.drawMarker == true).length > 0;
     const styledGeoJsonData = L.geoJSON(state.currentLayer.toGeoJSON(), {
+        renderer: L.canvas(),
         style: getPolygonStyleFunc(state),
         pointToLayer: getPointStyleFunc(baseMediaUrl, state),
         onEachFeature: (feature, layer) => {
