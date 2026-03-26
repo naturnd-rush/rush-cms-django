@@ -224,6 +224,8 @@ class StyleType(DjangoObjectType):
         model = models.Style
         fields = [
             "id",
+            "name",
+            # stroke fields
             "draw_stroke",
             "stroke_color",
             "stroke_weight",
@@ -232,16 +234,29 @@ class StyleType(DjangoObjectType):
             "stroke_line_join",
             "stroke_dash_array",
             "stroke_dash_offset",
+            # fill fields
             "draw_fill",
             "fill_color",
             "fill_opacity",
+            # marker fields
             "draw_marker",
             "marker_icon",
             "marker_icon_opacity",
             "marker_background_color",
             "marker_background_opacity",
             "marker_size",
-            "name",
+            # circle fields
+            "draw_circle",
+            "circle_radius",
+            "circle_stroke_color",
+            "circle_stroke_weight",
+            "circle_stroke_opacity",
+            "circle_stroke_line_cap",
+            "circle_stroke_line_join",
+            "circle_stroke_dash_array",
+            "circle_stroke_dash_offset",
+            "circle_fill_color",
+            "circle_fill_opacity",
         ]
 
 

@@ -557,6 +557,18 @@ class StyleForm(forms.ModelForm):
             "marker_icon_opacity",
             "marker_size",
             # "fill_rule", <-- gonna handle this later. Seems like an extreme edge-case for using the admin site.
+            # Circle data
+            "draw_circle",
+            "circle_radius",
+            "circle_fill_color",
+            "circle_fill_opacity",
+            "circle_stroke_color",
+            "circle_stroke_weight",
+            "circle_stroke_opacity",
+            "circle_stroke_line_cap",
+            "circle_stroke_line_join",
+            "circle_stroke_dash_array",
+            "circle_stroke_dash_offset",
             # I put the style name at end of submission because I feel like people will want to create
             # the style, and then name it after they have a solid idea of what it will look like, but that's just me.
             "name",
@@ -570,6 +582,13 @@ class StyleForm(forms.ModelForm):
             "marker_background_opacity": utils.SliderAndTextboxNumberInput(),
             "marker_icon": forms.FileInput(),
             "marker_size": utils.SliderAndTextboxNumberInput(min=10, max=150),
+            "circle_radius": utils.SliderAndTextboxNumberInput(min=5, max=250, step=1),
+            "circle_stroke_weight": utils.SliderAndTextboxNumberInput(
+                max=30, step=0.05, attrs={"class": "inline-field"}
+            ),
+            "circle_stroke_opacity": utils.SliderAndTextboxNumberInput(),
+            "circle_fill_opacity": utils.SliderAndTextboxNumberInput(),
+            "circle_stroke_dash_offset": utils.SliderAndTextboxNumberInput(max=100, step=1),
         }
 
 
