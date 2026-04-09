@@ -707,7 +707,11 @@ class Query(graphene.ObjectType):
         return base_url_from_request(info.context)
 
     def resolve_all_layers(self, info):
-        return optimized_layer_resolve_qs(info).filter(published_state__in=info.context.published_state)
+        return (
+            optimized_layer_resolve_qs(info)
+            .filter(published_state__in=info.context.published_state)
+            .order_by("name")
+        )
 
     def resolve_layer(self, info, id):
         return optimized_layer_resolve_qs(info).filter(published_state__in=info.context.published_state).get(pk=id)
@@ -793,5 +797,4 @@ class PublishedStateGraphQLView(GraphQLView):
         context = super().get_context(request)
         # add published state to every graphql request's context
         context.published_state = self.get_published_state_from_request_params(request.GET)
-        return context
         return context
