@@ -414,7 +414,7 @@ class LayerGroupOnQuestionType(DjangoObjectType):
             if prefetch_cache := getattr(self, "_prefetched_objects_cache", None):
                 if "layers" in prefetch_cache:
                     # use prefetched layers if available
-                    return self.layers.all()  # type: ignore
+                    return self.layers.all().filter(layer__published_state__in=info.context.published_state)  # type: ignore
             return (
                 models.LayerOnLayerGroup.objects.filter(layer_group_on_question=self)
                 .distinct()
@@ -422,6 +422,7 @@ class LayerGroupOnQuestionType(DjangoObjectType):
                 .defer(
                     "layer__serialized_leaflet_json",
                 )
+                .filter(layer__published_state__in=info.context.published_state)
             )
         raise ValueError("Expected LayerGroupOnQuestion object while resolving query!")
 
