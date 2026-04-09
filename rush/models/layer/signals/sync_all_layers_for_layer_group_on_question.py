@@ -56,3 +56,10 @@ def add_layer_when_layer_created(sender, instance, created, **kwargs):
             layer_group_on_question=group,
             display_order=group.max_display_order() + 1,
         )
+        # order layer-on-layer-groups in the layer group alphabetically
+        display_order = 0
+        for layer_on_layer_group in sorted(group.layers.all(), key=lambda x: x.layer.name):  # type: ignore
+            layer_on_layer_group.display_order = display_order
+            layer_on_layer_group.full_clean()
+            layer_on_layer_group.save()
+            display_order += 1
