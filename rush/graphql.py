@@ -673,7 +673,6 @@ class Query(graphene.ObjectType):
 
     base_admin_url = graphene.Field(graphene.String)
 
-    all_layers = graphene.List(LayerTypeWithoutSerializedLeafletJSON)
     layer = graphene.Field(LayerType, id=graphene.UUID(required=True))
 
     all_questions = graphene.List(QuestionType)
@@ -705,13 +704,6 @@ class Query(graphene.ObjectType):
 
     def resolve_base_admin_url(self, info):
         return base_url_from_request(info.context)
-
-    def resolve_all_layers(self, info):
-        return (
-            optimized_layer_resolve_qs(info)
-            .filter(published_state__in=info.context.published_state)
-            .order_by("name")
-        )
 
     def resolve_layer(self, info, id):
         return optimized_layer_resolve_qs(info).filter(published_state__in=info.context.published_state).get(pk=id)
