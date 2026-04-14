@@ -29,6 +29,8 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_DATABASE_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql
+    ports:
+      - "5432:5432"
 
 volumes:
   djangodata:
