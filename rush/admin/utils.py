@@ -9,6 +9,19 @@ from django.utils.html import format_html
 from django.utils.safestring import SafeString, SafeText, mark_safe
 
 
+class SuperuserStrictCleanMixin:
+    """
+    Mixin for ModelAdmin and InlineAdmin classes that hides all fields ending with
+    `_strict_clean` from non-superusers. Superusers can still see and edit these fields.
+    """
+
+    def get_fields(self, request, obj=None):
+        fields = super().get_fields(request, obj)
+        if not request.user.is_superuser:
+            fields = [f for f in fields if not f.endswith("_strict_clean")]
+        return fields
+
+
 def get_decimal(obj: Any) -> Decimal:
     """
     Convert any object to a Decimal. If the object is numeric, then it will

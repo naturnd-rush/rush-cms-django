@@ -16,6 +16,7 @@ class BasemapSourceForm(forms.ModelForm):
             "name",
             "tile_url",
             "attribution",
+            "attribution_strict_clean",
             "max_zoom",
             "is_default",
         ]

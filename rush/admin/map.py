@@ -14,7 +14,7 @@ from silk.profiling.dynamic import silk_profile
 from rush import models
 from rush.admin import utils
 from rush.admin.filters import PublishedStateFilter
-from rush.admin.utils import truncate_admin_text_from
+from rush.admin.utils import SuperuserStrictCleanMixin, truncate_admin_text_from
 from rush.admin.widgets import SummernoteWidget
 from rush.models.duplicators import LayerDuplicator
 from rush.models.style.tooltip import Direction
@@ -33,6 +33,7 @@ class StylesOnLayerInlineForm(forms.ModelForm):
 
     # Related Tooltip fields
     label = forms.CharField(required=False, label="Tooltip Label")
+    label_strict_clean = forms.BooleanField(required=False, label="Tooltip Label Strict Clean")
     offset_x = forms.DecimalField(required=False, label="Tooltip offset X")
     offset_y = forms.DecimalField(required=False, label="Tooltip offset Y")
     opacity = forms.DecimalField(required=False, label="Tooltip Opacity")
@@ -46,6 +47,7 @@ class StylesOnLayerInlineForm(forms.ModelForm):
             "style",
             "feature_mapping",
             "legend_description",
+            "legend_description_strict_clean",
             "draw_popup",  # only on form, not the model
             "popup",
         ]
@@ -83,6 +85,7 @@ class StylesOnLayerInlineForm(forms.ModelForm):
         time, and uses its field values to populate the form fields for this inline form.
         """
         self.fields["label"].initial = tooltip.label
+        self.fields["label_strict_clean"].initial = tooltip.label_strict_clean
         self.fields["offset_x"].initial = tooltip.offset_x
         self.fields["offset_y"].initial = tooltip.offset_y
         self.fields["opacity"].initial = tooltip.opacity
@@ -96,6 +99,7 @@ class StylesOnLayerInlineForm(forms.ModelForm):
         time, so it sets the form field values to their defaults, which are defined below.
         """
         self.fields["label"].initial = "Tooltip Text"
+        self.fields["label_strict_clean"].initial = True
         self.fields["offset_x"].initial = Decimal(0.0)
         self.fields["offset_y"].initial = Decimal(0.0)
         self.fields["opacity"].initial = Decimal(0.8)
@@ -113,6 +117,7 @@ class StylesOnLayerInlineForm(forms.ModelForm):
 
             # set tooltip field values
             tooltip.label = self.cleaned_data["label"]
+            tooltip.label_strict_clean = self.cleaned_data["label_strict_clean"]
             tooltip.offset_x = self.cleaned_data["offset_x"]
             tooltip.offset_y = self.cleaned_data["offset_y"]
             tooltip.opacity = self.cleaned_data["opacity"]
@@ -197,7 +202,7 @@ class StylesOnLayerInlineForm(forms.ModelForm):
                 self._save_tooltip_with_form_field_values(tooltip)
 
 
-class StyleOnLayerInline(sortable_admin.SortableStackedInline, admin.StackedInline):
+class StyleOnLayerInline(SuperuserStrictCleanMixin, sortable_admin.SortableStackedInline, admin.StackedInline):
     form = StylesOnLayerInlineForm
     verbose_name_plural = "Styles applied to this Layer"
     model = models.StylesOnLayer
@@ -269,7 +274,7 @@ class LayerForm(forms.ModelForm):
 
 
 @admin.register(models.Layer)
-class LayerAdmin(sortable_admin.SortableAdminBase, admin.ModelAdmin):  # type: ignore
+class LayerAdmin(SuperuserStrictCleanMixin, sortable_admin.SortableAdminBase, admin.ModelAdmin):  # type: ignore
     form = LayerForm
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]

@@ -15,6 +15,7 @@ class InitiativeForm(ModelForm):
             "link",
             "image",
             "content",
+            "content_strict_clean",
             "tags",
             "published_state",
         ]

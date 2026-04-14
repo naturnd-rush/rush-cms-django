@@ -3,13 +3,13 @@ from django.http import HttpResponseRedirect
 
 from rush.admin.filters import PublishedStateFilter
 from rush.admin.initiative.forms import InitiativeForm
-from rush.admin.utils import image_html, truncate_admin_text_from
+from rush.admin.utils import SuperuserStrictCleanMixin, image_html, truncate_admin_text_from
 from rush.models import Initiative
 from rush.models.duplicators import InitiativeDuplicator
 
 
 @register(Initiative)
-class InitiativeAdmin(ModelAdmin):
+class InitiativeAdmin(SuperuserStrictCleanMixin, ModelAdmin):
     form = InitiativeForm
     list_display = ["title", "link", "content_preview", "image_preview", "get_tags", "site_visibility"]
     list_filter = [PublishedStateFilter]

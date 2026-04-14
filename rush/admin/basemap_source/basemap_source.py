@@ -1,11 +1,12 @@
 from django.contrib.admin import ModelAdmin, register
 
 from rush.admin.basemap_source.forms import BasemapSourceForm
+from rush.admin.utils import SuperuserStrictCleanMixin
 from rush.models import BasemapSource
 
 
 @register(BasemapSource)
-class BasemapSourceAdmin(ModelAdmin):
+class BasemapSourceAdmin(SuperuserStrictCleanMixin, ModelAdmin):
     exclude = ["id"]
     list_display = [
         "name",

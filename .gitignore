@@ -1,5 +1,6 @@
 SAM*.md
 /.django_dev*
+docker-compose.override.yml
 node_modules/
 backups/
 logs/*
