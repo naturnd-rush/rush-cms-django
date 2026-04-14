@@ -6,7 +6,9 @@ services:
       dockerfile: Dockerfile.django
     image: rush_admin/django
     volumes:
-      - djangodata:/rush_admin
+      - .:/rush_admin                                         # bind mount for live reload
+      - venv:/rush_admin/.venv                               # preserve venv from image
+      - frontend_node_modules:/rush_admin/frontend/node_modules  # preserve node_modules from image
     depends_on:
       - postgres
     env_file:
@@ -33,5 +35,6 @@ services:
       - "5432:5432"
 
 volumes:
-  djangodata:
+  venv:
+  frontend_node_modules:
   pgdata:
