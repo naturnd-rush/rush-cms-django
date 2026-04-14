@@ -44,7 +44,7 @@ class LayerGroupOnQuestion(models.Model):
         return max_order
 
     def clean(self) -> None:
-        self.group_description = SummernoteTextCleaner.clean(self.group_description)
+        self.group_description = SummernoteTextCleaner.clean(self.group_description, strict_clean=self.group_description_strict_clean)
 
     def __str__(self):
         return self.group_name

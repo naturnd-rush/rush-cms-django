@@ -156,7 +156,6 @@ class SummernoteTextCleaner:
 
     @classmethod
     def clean(cls, text: str, strict_clean=True) -> str:
-        breakpoint()
         unescaped = text.replace("&quot;", "'")
         if strict_clean:
             cleaned = bleach.clean(
@@ -172,7 +171,10 @@ class SummernoteTextCleaner:
         return cleaned
 
     @classmethod
-    def clean_tooltip(cls, text: str) -> str:
+    def clean_tooltip(cls, text: str, strict_clean=True) -> str:
         unescaped = text.replace("&quot;", "'")
-        cleaned = bleach.clean(text=unescaped, tags=cls.ALLOWED_TOOLTIP_TAGS)
+        if strict_clean:
+            cleaned = bleach.clean(text=unescaped, tags=cls.ALLOWED_TOOLTIP_TAGS)
+        else:
+            cleaned = unescaped
         return cleaned
