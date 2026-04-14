@@ -50,6 +50,7 @@ class SummernoteWidget(SummernoteWidgetBase):
                     # "video",
                 ],
             ],
+            ["view", ["codeview"]],
         ],
         "styleTags": [
             {

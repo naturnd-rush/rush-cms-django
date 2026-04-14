@@ -1,21 +1,19 @@
-from django.contrib import admin
+from django.contrib.admin import ModelAdmin, action, display, register
 from django.http import HttpResponseRedirect
-from django_summernote.admin import SummernoteModelAdmin
 
-from rush import models
-from rush.admin import utils
 from rush.admin.filters import PublishedStateFilter
-from rush.admin.initiative.forms.initiative_form import InitiativeForm
+from rush.admin.initiative.forms import InitiativeForm
+from rush.admin.utils import image_html, truncate_admin_text_from
+from rush.models import Initiative
 from rush.models.duplicators import InitiativeDuplicator
 
 
-@admin.register(models.Initiative)
-class InitiativeAdmin(SummernoteModelAdmin):
-    exclude = ["id"]
+@register(Initiative)
+class InitiativeAdmin(ModelAdmin):
     form = InitiativeForm
     list_display = ["title", "link", "content_preview", "image_preview", "get_tags", "site_visibility"]
     list_filter = [PublishedStateFilter]
-    content_preview = utils.truncate_admin_text_from("content")
+    content_preview = truncate_admin_text_from("content")
     autocomplete_fields = [
         # uses the searchable textbox in the admin form to add/remove Tags
         "tags"
@@ -23,14 +21,14 @@ class InitiativeAdmin(SummernoteModelAdmin):
     search_fields = ["title"]
     actions = ["duplicate_object"]
 
-    @admin.action(description="Duplicate selected items")
+    @action(description="Duplicate selected items")
     def duplicate_object(self, request, queryset):
         for obj in queryset:
             InitiativeDuplicator(obj).duplicate()
         self.message_user(request, f"Successfully duplicated {queryset.count()} item(s).")
         return HttpResponseRedirect("?published_state=all")
 
-    @admin.display(description="Site Visibility")
+    @display(description="Site Visibility")
     def site_visibility(self, obj):
         return obj.published_state
 
@@ -44,10 +42,10 @@ class InitiativeAdmin(SummernoteModelAdmin):
         Image preview inline.
         """
         if obj.image:
-            return utils.image_html(obj.image.url)
+            return image_html(obj.image.url)
         return "No image"
 
-    @admin.display(description="Tags")
+    @display(description="Tags")
     def get_tags(self, obj):
         if obj.tags.count() > 0:
             return ", ".join([tag.name for tag in obj.tags.all()])

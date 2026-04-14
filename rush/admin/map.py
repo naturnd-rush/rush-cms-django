@@ -9,7 +9,6 @@ from django import forms
 from django.contrib import admin
 from django.http import HttpRequest, HttpResponseRedirect
 from django.utils.safestring import mark_safe
-from django_summernote.admin import SummernoteModelAdmin
 from silk.profiling.dynamic import silk_profile
 
 from rush import models
@@ -270,7 +269,7 @@ class LayerForm(forms.ModelForm):
 
 
 @admin.register(models.Layer)
-class LayerAdmin(sortable_admin.SortableAdminBase, SummernoteModelAdmin):  # type: ignore
+class LayerAdmin(sortable_admin.SortableAdminBase, admin.ModelAdmin):  # type: ignore
     form = LayerForm
     inlines = [StyleOnLayerInline]
     autocomplete_fields = ["map_data"]

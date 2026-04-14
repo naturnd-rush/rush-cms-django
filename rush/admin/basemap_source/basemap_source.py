@@ -1,12 +1,11 @@
-from django.contrib.admin import register
-from django_summernote.admin import SummernoteModelAdmin
+from django.contrib.admin import ModelAdmin, register
 
 from rush.admin.basemap_source.forms import BasemapSourceForm
 from rush.models import BasemapSource
 
 
 @register(BasemapSource)
-class BasemapSourceAdmin(SummernoteModelAdmin):
+class BasemapSourceAdmin(ModelAdmin):
     exclude = ["id"]
     list_display = [
         "name",
