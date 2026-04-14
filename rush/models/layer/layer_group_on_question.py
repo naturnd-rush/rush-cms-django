@@ -28,6 +28,7 @@ class LayerGroupOnQuestion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     group_name = models.CharField(max_length=255)
     group_description = models.TextField(blank=True, help_text="An optional description for the group.")
+    group_description_strict_clean = models.BooleanField(default=True)
     question = models.ForeignKey(to="Question", on_delete=models.CASCADE, related_name="layer_groups")
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 

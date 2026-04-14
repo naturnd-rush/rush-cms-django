@@ -24,6 +24,7 @@ class QuestionTab(models.Model):
     icon = models.ForeignKey(to="Icon", on_delete=models.DO_NOTHING)
     title = models.CharField(max_length=255)
     content = models.TextField()
+    content_strict_clean = models.BooleanField(default=True)
     question = models.ForeignKey(
         # Delete all QuestionTabs when a Question is deleted.
         to=Question,

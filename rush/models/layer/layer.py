@@ -25,6 +25,7 @@ class Layer(models.Model):
     description = models.TextField(
         help_text="The layer description that will appear in the map legend to help people understand what the layer data represents."
     )
+    description_strict_clean = models.BooleanField(default=True)
     map_data = models.ForeignKey(
         to="MapData",
         # MapData deletion should fail if a Layer references it.

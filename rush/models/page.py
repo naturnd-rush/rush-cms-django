@@ -13,6 +13,7 @@ class Page(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     title = models.CharField(max_length=255, help_text="The title of the webpage.")
     content = models.TextField(help_text="The content that will appear on the webpage.")
+    content_strict_clean = models.BooleanField(default=True)
     background_image = models.ImageField(
         upload_to="page_background_images/",
         null=True,

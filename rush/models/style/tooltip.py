@@ -2,13 +2,8 @@ import uuid
 from decimal import Decimal
 
 import django.db.models as models
-from colorfield.fields import ColorField
 
 from rush.models.utils import SummernoteTextCleaner
-from rush.models.validators import (
-    FiletypeValidator,
-    validate_only_integers_and_whitespace,
-)
 
 
 class Direction(models.TextChoices):
@@ -38,6 +33,7 @@ class Tooltip(models.Model):
         null=True,
     )
     label = models.TextField()
+    label_strict_clean = models.BooleanField(default=True)
     offset_x = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal(0))
     offset_y = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal(0))
     opacity = models.DecimalField(max_digits=6, decimal_places=3, default=Decimal(0.8))

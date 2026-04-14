@@ -30,6 +30,7 @@ class BasemapSource(models.Model):
     tile_url = models.CharField(max_length=2000, null=False, validators=[URLValidator(schemes=["https"])])
     max_zoom = models.PositiveIntegerField()
     attribution = models.TextField()
+    attribution_strict_clean = models.BooleanField(default=True)
     # default here refers to a global default
     is_default = models.BooleanField(default=False)
 
