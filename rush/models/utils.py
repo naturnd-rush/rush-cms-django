@@ -218,6 +218,9 @@ _JUNK_BLOCK_TAGS = frozenset(
     }
 )
 
+# Inline tags that are always unwrapped (tag removed, content kept in place)
+_UNWRAP_INLINE_TAGS = frozenset({"span"})
+
 # Block tags that are legitimate Summernote output — not treated as junk
 _PRESERVED_BLOCK_TAGS = frozenset(
     {
@@ -280,5 +283,8 @@ def strip_foreign_blocks(html: str) -> str:
                 junk.attrs = {}
             else:
                 junk.decompose()
+
+    for tag in soup.find_all(list(_UNWRAP_INLINE_TAGS)):
+        tag.unwrap()
 
     return str(soup)

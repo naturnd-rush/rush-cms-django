@@ -24,6 +24,10 @@ from rush.tests.models.helpers import FakeFile
         ("<div><p>inner</p></div>", "<p>inner</p>"),
         # <div> with inline content becomes <p>, inline tags and their attrs preserved
         ("<div><strong>bold</strong> text</div>", "<p><strong>bold</strong> text</p>"),
+        # <span> is unwrapped — tag removed, content kept
+        ("<p><span>text</span></p>", "<p>text</p>"),
+        ('<p><span class="foo" style="color:red">styled</span></p>', "<p>styled</p>"),
+        ("<p>before <span>mid</span> after</p>", "<p>before mid after</p>"),
         # Inline formatting inside <p> preserved intact
         ("<p><strong>bold</strong> text</p>", "<p><strong>bold</strong> text</p>"),
         # Headings are Summernote output — kept as-is
