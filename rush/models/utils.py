@@ -3,6 +3,8 @@ from logging import getLogger
 
 import bleach
 import bleach.css_sanitizer
+from bs4 import BeautifulSoup
+from bs4.element import Tag as BSTag
 from django.core.files.base import ContentFile
 from django.db.models.fields.files import FieldFile
 from PIL import Image
@@ -178,3 +180,105 @@ class SummernoteTextCleaner:
         else:
             cleaned = unescaped
         return cleaned
+
+
+_SKIP_TAGS = frozenset({"script", "style", "meta", "link", "noscript", "template"})
+
+
+def _get_text(node: BSTag) -> str:
+    raw = node.get_text(separator=" ")
+    return " ".join(raw.split())
+
+
+_JUNK_BLOCK_TAGS = frozenset(
+    {
+        "div",
+        "section",
+        "article",
+        "header",
+        "footer",
+        "main",
+        "aside",
+        "nav",
+        "details",
+        "summary",
+        "address",
+        "table",
+        "thead",
+        "tbody",
+        "tfoot",
+        "tr",
+        "td",
+        "th",
+        "dl",
+        "dt",
+        "dd",
+        "form",
+        "fieldset",
+    }
+)
+
+# Block tags that are legitimate Summernote output — not treated as junk
+_PRESERVED_BLOCK_TAGS = frozenset(
+    {
+        "p",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "ul",
+        "ol",
+        "li",
+        "blockquote",
+        "pre",
+        "figure",
+        "figcaption",
+    }
+)
+
+
+def _has_block_child_for_dediv(tag: BSTag) -> bool:
+    return any(
+        isinstance(c, BSTag) and c.name and c.name.lower() in (_JUNK_BLOCK_TAGS | _PRESERVED_BLOCK_TAGS)
+        for c in tag.children
+    )
+
+
+def strip_foreign_blocks(html: str) -> str:
+    """
+    Remove copy-paste structural elements (div, section, article, etc.) while
+    preserving Summernote-generated content: <p> tags with their attributes,
+    inline formatting (<strong>, <em>, <font>, <span>, etc.), lists, and headings.
+
+    Junk block elements are handled as follows:
+    - Has block-level children → unwrapped (tag removed, children kept in place)
+    - Has only inline content → converted to <p> (tag attributes stripped)
+    - Empty → removed entirely
+    """
+    if not html or not html.strip():
+        return html
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    for tag in soup.find_all(list(_SKIP_TAGS)):
+        tag.decompose()
+
+    while True:
+        junk = soup.find(list(_JUNK_BLOCK_TAGS))
+        if junk is None:
+            break
+
+        if _has_block_child_for_dediv(junk):
+            junk.unwrap()
+        else:
+            text = _get_text(junk)
+            has_child_elements = any(isinstance(c, BSTag) for c in junk.children)
+            if text or has_child_elements:
+                junk.name = "p"
+                junk.attrs = {}
+            else:
+                junk.decompose()
+
+    return str(soup)
