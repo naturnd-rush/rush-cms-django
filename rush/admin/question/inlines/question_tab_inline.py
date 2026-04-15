@@ -1,12 +1,12 @@
 from adminsortable2.admin import SortableTabularInline
 from django.contrib.admin import TabularInline
-from django_summernote.admin import SummernoteModelAdminMixin
 
 from rush.admin.question.forms import QuestionTabInlineForm
+from rush.admin.utils import SuperuserStrictCleanMixin
 from rush.models import QuestionTab
 
 
-class QuestionTabInline(SortableTabularInline, SummernoteModelAdminMixin, TabularInline):
+class QuestionTabInline(SuperuserStrictCleanMixin, SortableTabularInline, TabularInline):
     """
     Allow editing of QuestionTab objects straight from the Question form.
     """

@@ -1,14 +1,14 @@
-from django.contrib import admin
-from django_summernote.admin import SummernoteModelAdmin
+from django.contrib.admin import ModelAdmin, register
 
+from rush.admin.page import PageForm
+from rush.admin.utils import SuperuserStrictCleanMixin
 from rush.models import Page
 
 
-@admin.register(Page)
-class PageAdmin(SummernoteModelAdmin, admin.ModelAdmin):
+@register(Page)
+class PageAdmin(SuperuserStrictCleanMixin, ModelAdmin):
     """
     Admin page for editing other, non-map-related, Pages on the website.
     """
 
-    summernote_fields = ["content"]
-    exclude = ["id"]
+    form = PageForm

@@ -1,14 +1,14 @@
-from django.contrib import admin
+from django.contrib.admin import ModelAdmin, display, register
 from django.urls import reverse
-from django.utils.html import format_html_join
-from django.utils.html import format_html
-from django.utils.safestring import mark_safe
-from django_summernote.admin import SummernoteModelAdmin
+from django.utils.html import format_html, format_html_join
+
 from rush import models
+from rush.admin.initiative.forms import InitiativeTagForm
 
 
-@admin.register(models.InitiativeTag)
-class InitiativeTagAdmin(SummernoteModelAdmin):
+@register(models.InitiativeTag)
+class InitiativeTagAdmin(ModelAdmin):
+    form = InitiativeTagForm
     exclude = ["id"]
     list_display = ["name", "preview", "tagged_initiatives"]
     search_fields = ["name"]
@@ -42,7 +42,7 @@ class InitiativeTagAdmin(SummernoteModelAdmin):
             """
         )
 
-    @admin.display(description="Initiatives with this tag")
+    @display(description="Initiatives with this tag")
     def tagged_initiatives(self, obj):
         initiatives = obj.initiatives.all()
         if not initiatives.exists():

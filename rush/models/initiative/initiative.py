@@ -17,6 +17,7 @@ class Initiative(models.Model):
     image = models.ImageField(upload_to="initiative_images/", null=True, blank=True)
     title = models.CharField(max_length=255)
     content = models.TextField()
+    content_strict_clean = models.BooleanField(default=True)
     tags = models.ManyToManyField(to="InitiativeTag", related_name="initiatives")
     published_state = models.CharField(
         max_length=255,
@@ -25,7 +26,7 @@ class Initiative(models.Model):
     )
 
     def clean(self) -> None:
-        self.content = SummernoteTextCleaner.clean(self.content)
+        self.content = SummernoteTextCleaner.clean(self.content, strict_clean=self.content_strict_clean)
 
     def __str__(self):
         return self.title

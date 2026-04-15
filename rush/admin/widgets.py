@@ -26,14 +26,21 @@ class SummernoteWidget(SummernoteWidgetBase):
     1. Add this widget to an admin field. See `rush/admin/question/forms/question_tab_inline_form.py` for an example.
     2. Use the SummernoteTextCleaner to clean the text before it gets saved to the database. See `rush/models/layer/layer_group_on_question.py` for an example.
     3. Use `convert_relative_images_to_absolute` in `graphql.py` on the API field to convert any media links to use RUSH's base media url
-       before sending the text data to the client. There are many examples of how to do this in `graphql.py`.
-    4. Test that the field data in the graphql playground is recieved without causing any errors!
+        before sending the text data to the client. There are many examples of how to do this in `graphql.py`.
+    4. Add another field to the model to toggle strict_clean behaviour, and add the SuperuserStrictCleanMixin to the model admin
+        class.
+    5. Test that the field data in the graphql playground is recieved without causing any errors!
 
     """
 
     DEFAULT_SUMMERNOTE_SETTINGS = {
         "height": "500px",
         "width": "500px",
+        # Disable client-side code view filtering so tags like <script> are not
+        # stripped when toggling between code view and WYSIWYG. The backend
+        # SummernoteTextCleaner is the real line of defence on save.
+        "codeviewFilter": False,
+        "codeviewIframeFilter": False,
         "toolbar": [
             ["style", ["style"]],
             ["font", ["bold", "underline", "clear"]],
@@ -50,6 +57,7 @@ class SummernoteWidget(SummernoteWidgetBase):
                     # "video",
                 ],
             ],
+            ["view", ["codeview"]],
         ],
         "styleTags": [
             {

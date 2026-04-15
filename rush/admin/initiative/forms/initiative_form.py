@@ -1,25 +1,35 @@
-from django import forms
+from django.forms import ModelForm
 
-from rush import models
-from rush.admin import utils
+from rush.admin.utils import image_html
+from rush.admin.widgets import SummernoteWidget
+from rush.models import Initiative
 
 
-class InitiativeForm(forms.ModelForm):
-    """
-    Override the default add/change page for the Initiative model admin.
-    """
+class InitiativeForm(ModelForm):
 
     class Meta:
-        model = models.Initiative
-        fields = ["title", "link", "image", "content", "tags", "published_state"]
+        model = Initiative
+        exclude = ["id"]
+        fields = [
+            "title",
+            "link",
+            "image",
+            "content",
+            "content_strict_clean",
+            "tags",
+            "published_state",
+        ]
 
     def __init__(self, *args, **kwargs):
         """
         Inject image HTML in "image" field help text.
         """
         super().__init__(*args, **kwargs)
+
         if self.instance and self.instance.image:
-            self.fields["image"].help_text = utils.image_html(self.instance.image.url)
+            self.fields["image"].help_text = image_html(self.instance.image.url)
+
+        self.fields["content"].widget = SummernoteWidget()
 
     def clean_image(self):
         """

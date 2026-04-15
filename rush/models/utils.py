@@ -155,20 +155,26 @@ class SummernoteTextCleaner:
     ]
 
     @classmethod
-    def clean(cls, text: str) -> str:
+    def clean(cls, text: str, strict_clean=True) -> str:
         unescaped = text.replace("&quot;", "'")
-        cleaned = bleach.clean(
-            text=unescaped,
-            attributes=cls.ALLOWED_ATTRIBUTES,
-            tags=cls.ALLOWED_TAGS,
-            css_sanitizer=bleach.css_sanitizer.CSSSanitizer(
-                allowed_css_properties=cls.BLEACH_ALLOWED_STYLES,
-            ),
-        )
+        if strict_clean:
+            cleaned = bleach.clean(
+                text=unescaped,
+                attributes=cls.ALLOWED_ATTRIBUTES,
+                tags=cls.ALLOWED_TAGS,
+                css_sanitizer=bleach.css_sanitizer.CSSSanitizer(
+                    allowed_css_properties=cls.BLEACH_ALLOWED_STYLES,
+                ),
+            )
+        else:
+            cleaned = unescaped
         return cleaned
 
     @classmethod
-    def clean_tooltip(cls, text: str) -> str:
+    def clean_tooltip(cls, text: str, strict_clean=True) -> str:
         unescaped = text.replace("&quot;", "'")
-        cleaned = bleach.clean(text=unescaped, tags=cls.ALLOWED_TOOLTIP_TAGS)
+        if strict_clean:
+            cleaned = bleach.clean(text=unescaped, tags=cls.ALLOWED_TOOLTIP_TAGS)
+        else:
+            cleaned = unescaped
         return cleaned

@@ -3,6 +3,7 @@ from nested_admin.forms import SortableHiddenMixin
 from nested_admin.nested import NestedTabularInline
 
 from rush.admin.question.inlines import LayerOnLayerGroupInline
+from rush.admin.utils import SuperuserStrictCleanMixin
 from rush.admin.widgets import SummernoteWidget
 from rush.models import LayerGroupOnQuestion
 
@@ -13,6 +14,7 @@ class LayerGroupOnQuestionInlineForm(ModelForm):
         fields = [
             "group_name",
             "group_description",
+            "group_description_strict_clean",
             "behaviour",
             "display_order",
         ]
@@ -38,7 +40,7 @@ class LayerGroupOnQuestionInlineForm(ModelForm):
         }
 
 
-class LayerGroupOnQuestionInline(SortableHiddenMixin, NestedTabularInline):
+class LayerGroupOnQuestionInline(SuperuserStrictCleanMixin, SortableHiddenMixin, NestedTabularInline):
     """
     An inline group of layers that are assigned to a question.
     """

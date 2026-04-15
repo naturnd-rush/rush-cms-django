@@ -24,6 +24,7 @@ class QuestionTab(models.Model):
     icon = models.ForeignKey(to="Icon", on_delete=models.DO_NOTHING)
     title = models.CharField(max_length=255)
     content = models.TextField()
+    content_strict_clean = models.BooleanField(default=True)
     question = models.ForeignKey(
         # Delete all QuestionTabs when a Question is deleted.
         to=Question,
@@ -34,7 +35,7 @@ class QuestionTab(models.Model):
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 
     def clean(self) -> None:
-        self.content = SummernoteTextCleaner.clean(self.content)
+        self.content = SummernoteTextCleaner.clean(self.content, strict_clean=self.content_strict_clean)
 
     def __str__(self):
         return f"{self.title} for question: '{self.question.title}'"

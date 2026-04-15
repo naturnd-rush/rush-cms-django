@@ -24,6 +24,8 @@ class StylesOnLayer(models.Model):
         default="E.g., 'Grassland', '0-25%', or '>3 Tree Protection Score'.",
         help_text="A short description of what this style represents on the map.",
     )
+    legend_description_strict_clean = models.BooleanField(default=True)
+    popup_strict_clean = models.BooleanField(default=True)
     display_order = models.PositiveIntegerField(default=0, blank=False, null=False, db_index=True, editable=True)
 
     # Some expression that will be matched against a GeoJSON feature's properties
@@ -36,4 +38,4 @@ class StylesOnLayer(models.Model):
 
     def clean(self) -> None:
         if self.popup:
-            self.popup = SummernoteTextCleaner.clean(self.popup)
+            self.popup = SummernoteTextCleaner.clean(self.popup, strict_clean=self.popup_strict_clean)
