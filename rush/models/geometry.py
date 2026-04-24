@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from django.contrib.gis.db.models import GeometryField
 from django.contrib.gis.geos import GEOSGeometry
-from django.db.models import CASCADE, ForeignKey, Model, UUIDField
+from django.db.models import CASCADE, ForeignKey, JSONField, Model, UUIDField
 from django.db.transaction import atomic
 
 from rush.models.map_data import MapData
@@ -20,6 +20,7 @@ class Geometry(Model):
     id = UUIDField(primary_key=True, default=uuid4, null=False)
     map_data = ForeignKey(to="MapData", on_delete=CASCADE)
     data = GeometryField(srid=4326)
+    properties = JSONField(default=dict)
 
 
 class MapDataGeometryGenerator:
@@ -72,7 +73,7 @@ class MapDataGeometryGenerator:
         self._map_data = map_data
 
     @classmethod
-    def _extract_raw_geometries(cls, geojson: dict | None, map_data_id: str) -> list[dict]:
+    def _extract_raw_geometries(cls, geojson: dict | None, map_data_id: str, _properties: dict | None = None) -> list[dict]:
 
         # Get the geometry type of this geojson. Returning empty lists here
         # is safe because recursive calls will just extend nothing.
@@ -98,7 +99,7 @@ class MapDataGeometryGenerator:
                 result.extend(cls._extract_raw_geometries(feature, map_data_id))
             return result
 
-        # recurse inside geometry collections
+        # recurse inside geometry collections, forwarding any inherited properties
         if geojson.get("type") == "GeometryCollection":
             if "geometries" not in geojson:
                 raise cls.MalformedGeojsonData(
@@ -111,7 +112,7 @@ class MapDataGeometryGenerator:
                 )
             result = []
             for geometry in geojson["geometries"]:
-                result.extend(cls._extract_raw_geometries(geometry, map_data_id))
+                result.extend(cls._extract_raw_geometries(geometry, map_data_id, _properties))
             return result
 
         if geojson.get("type") == "Feature":
@@ -125,12 +126,33 @@ class MapDataGeometryGenerator:
                         "data": dumps(geojson),
                     },
                 )
-            return cls._extract_raw_geometries(geojson["geometry"], map_data_id)
+            if geojson["geometry"] is None:
+                raise cls.MalformedGeojsonData(
+                    map_data_id,
+                    {
+                        "geometry": "Feature",
+                        "reason": "The 'geometry' key cannot be null.",
+                        "data": dumps(geojson),
+                    },
+                )
+            props = geojson.get("properties") or {}
+            return cls._extract_raw_geometries(geojson["geometry"], map_data_id, _properties=props)
 
-        # base case: return a geometry
+        # base case: return a geometry, embedding properties if inherited from a parent Feature
+        if _properties is not None:
+            return [geojson | {"properties": _properties}]
         return [geojson]
 
     def run(self) -> None:
+
+        SUPPORTED_TYPES = {
+            "Point",
+            "MultiPoint",
+            "LineString",
+            "MultiLineString",
+            "Polygon",
+            "MultiPolygon",
+        }
 
         if self._map_data.geojson is None:
             # make sure the geojson data exists
@@ -150,6 +172,9 @@ class MapDataGeometryGenerator:
         # iterate through the raw geometries and save them to the database
         with atomic():
             for raw_geometry in raw_geometries:
+                if raw_geometry["type"] not in SUPPORTED_TYPES:
+                    raise self.UnsupportedGeometryType(raw_geometry["type"])
+                properties = raw_geometry.pop("properties", {}) or {}
                 raw_geometry_string = dumps(raw_geometry)
                 try:
                     geometry_data = GEOSGeometry(raw_geometry_string, srid=4326)
@@ -162,14 +187,4 @@ class MapDataGeometryGenerator:
                             "data": dumps(raw_geometry_string),
                         },
                     )
-                print(geometry_data)
-                Geometry.objects.create(map_data=self._map_data, data=geometry_data)
-
-        SUPPORTED_TYPES = {
-            "Point",
-            "MultiPoint",
-            "LineString",
-            "MultiLineString",
-            "Polygon",
-            "MultiPolygon",
-        }
+                Geometry.objects.create(map_data=self._map_data, data=geometry_data, properties=properties)

@@ -20,12 +20,7 @@ from rush.tests.models.helpers import create_test_map_data
         # Feature unrwaps to geometry
         (
             {"type": "Feature", "geometry": {"type": "Point", "coordinates": [1.0, 2.0]}, "properties": {}},
-            [{"type": "Point", "coordinates": [1.0, 2.0]}],
-        ),
-        # Feature geometry that is none returns an empty list
-        (
-            {"type": "Feature", "geometry": None, "properties": {}},
-            [],
+            [{"type": "Point", "coordinates": [1.0, 2.0], "properties": {}}],
         ),
         # Feature-collection returns a flat list of geometries
         (
@@ -41,8 +36,8 @@ from rush.tests.models.helpers import create_test_map_data
                 ],
             },
             [
-                {"type": "Point", "coordinates": [1.0, 2.0]},
-                {"type": "LineString", "coordinates": [[0.0, 0.0], [1.0, 1.0]]},
+                {"type": "Point", "coordinates": [1.0, 2.0], "properties": {}},
+                {"type": "LineString", "coordinates": [[0.0, 0.0], [1.0, 1.0]], "properties": {}},
             ],
         ),
         # Nested feature-collections also return a flat geometry list
@@ -64,8 +59,8 @@ from rush.tests.models.helpers import create_test_map_data
                 ],
             },
             [
-                {"type": "Point", "coordinates": [1.0, 2.0]},
-                {"type": "Point", "coordinates": [3.0, 4.0]},
+                {"type": "Point", "coordinates": [1.0, 2.0], "properties": {}},
+                {"type": "Point", "coordinates": [3.0, 4.0], "properties": {}},
             ],
         ),
         # Geometry-collection returns a flat list of geometries
@@ -123,8 +118,8 @@ from rush.tests.models.helpers import create_test_map_data
             },
             [
                 {"type": "LineString", "coordinates": [[0.0, 0.0], [1.0, 1.0]]},
-                {"type": "Point", "coordinates": [1.0, 2.0]},
-                {"type": "Point", "coordinates": [3.0, 4.0]},
+                {"type": "Point", "coordinates": [1.0, 2.0], "properties": {}},
+                {"type": "Point", "coordinates": [3.0, 4.0], "properties": {}},
             ],
         ),
     ],
@@ -169,8 +164,8 @@ def test_map_data_geometry_generator_extract_raw_geometries(geojson, expected_ge
         ),
         (
             {"type": "Feature", "geometry": None, "properties": {}},
-            MapDataGeometryGenerator.NoGeometry,
-            "contains no supported geometries",
+            MapDataGeometryGenerator.MalformedGeojsonData,
+            "The 'geometry' key cannot be null",
         ),
         (
             {"type": "Feature", "geometry": {}, "properties": {}},
@@ -212,7 +207,7 @@ def test_map_data_geometry_generator_run():
                         {"type": "Point", "coordinates": [3.0, 4.0]},
                     ],
                 },
-                "properties": {},
+                "properties": {"AwesomeFactorv2.0": 1900},
             },
         ],
     }
@@ -228,6 +223,7 @@ def test_map_data_geometry_generator_run():
     assert len(points) == 1
     assert points[0].data.x == 3
     assert points[0].data.y == 4
+    assert points[0].properties == {"AwesomeFactorv2.0": 1900}
 
     # line-string data is correct
     line_strings = [x for x in geoms if x.data.geom_type == "LineString"]
@@ -236,3 +232,4 @@ def test_map_data_geometry_generator_run():
     assert line_strings[0].data[0][1] == 0
     assert line_strings[0].data[1][0] == 1
     assert line_strings[0].data[1][1] == 1
+    assert line_strings[0].properties == {}
