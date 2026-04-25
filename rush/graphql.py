@@ -336,6 +336,53 @@ class LayerType(DjangoObjectType):
                         )
             return json.dumps(data_obj)
 
+    serialized_leaflet_json_v2 = graphene.String()
+
+    def resolve_serialized_leaflet_json_v2(self, info) -> str:
+        from rush.models.geometry import Geometry
+        from rush.models.layer.serializer import serialize_layer
+
+        with log_execution_time_with_result(
+            "resolve_serialized_leaflet_json_v2", log_level=logging.DEBUG
+        ) as result:
+            if not isinstance(self, models.Layer):
+                raise ValueError("Expected object to be of type Layer when resolving query.")
+
+            result["layer_id"] = self.id
+            result["layer_name"] = self.name
+
+            base_media_url = base_url_from_request(info.context)
+            geometries = Geometry.objects.filter(map_data=self.map_data)
+            styles_on_layer = (
+                models.StylesOnLayer.objects.filter(layer=self).select_related("style").prefetch_related("tooltip")
+            )
+
+            data_obj = serialize_layer(
+                geometries=geometries,
+                styles_on_layer=styles_on_layer,
+                base_media_url=base_media_url,
+            )
+
+            for feature in data_obj["featureCollection"]["features"]:
+                if "properties" in feature:
+                    properties = feature["properties"]
+                    if "__popupHTML" in properties and properties["__popupHTML"] is not None:
+                        properties["__popupHTML"] = convert_relative_links_to_absolute(
+                            html=properties["__popupHTML"],
+                            base_media_url=base_media_url,
+                        )
+                    if (
+                        "__pointDivIconStyleProps" in properties
+                        and "html" in properties["__pointDivIconStyleProps"]
+                        and properties["__pointDivIconStyleProps"]["html"] is not None
+                    ):
+                        properties["__pointDivIconStyleProps"]["html"] = convert_relative_links_to_absolute(
+                            html=properties["__pointDivIconStyleProps"]["html"],
+                            base_media_url=base_media_url,
+                        )
+
+            return json.dumps(data_obj)
+
 
 class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
     """
@@ -638,6 +685,7 @@ def optimized_layer_resolve_qs(info: ResolveInfo) -> QuerySet[models.Layer]:
     requested_fields = get_requested_fields(info)
     if "serializedLeafletJson" not in requested_fields:
         # We know we won't be accessing serialized_leaflet_json
+        # Note: serializedLeafletJsonV2 computes at runtime and never reads this column.
         queryset = queryset.defer("serialized_leaflet_json")
     # This will always send another request when accessing _geojson, but
     # it will speed up queries that don't access _geojson significantly.

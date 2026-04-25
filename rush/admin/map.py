@@ -495,7 +495,14 @@ class MapDataAdmin(admin.ModelAdmin):
 
     @silk_profile(name="MapDataAdmin save")
     def save_model(self, request: HttpRequest, obj: Any, form: forms.ModelForm, change: bool) -> None:
-        return super().save_model(request, obj, form, change)
+        super().save_model(request, obj, form, change)
+        if obj.provider_state == models.MapData.ProviderState.GEOJSON:
+            try:
+                models.Geometry.objects.filter(map_data=obj).delete()
+                models.MapDataGeometryGenerator(obj).run()
+            except models.MapDataGeometryGenerator.GenerationFailed as e:
+                logger.error("Failed to generate map data geometries on save!", exc_info=e)
+                raise e
 
     @silk_profile(name="MapDataAdmin get_form")
     def get_form(self, request, obj=None, change=False, **kwargs):
