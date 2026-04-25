@@ -1,6 +1,8 @@
 import json
 import sys
 import uuid
+from logging import getLogger
+from typing import Iterable
 
 import django.db.models as models
 from django.conf import settings
@@ -15,6 +17,8 @@ from rush.models.validators import (
     validate_ogm_map_link,
 )
 from rush.storage import BackblazeStorageFactory
+
+logger = getLogger(__name__)
 
 
 def get_raster_storage() -> S3Storage | FileSystemStorage:
@@ -95,6 +99,25 @@ class MapData(models.Model):
         null=True,
         blank=True,
     )
+
+    def save(
+        self,
+        force_insert: bool = False,
+        force_update: bool = False,
+        using: str | None = None,
+        update_fields: Iterable[str] | None = None,
+    ) -> None:
+        from rush.models import Geometry, MapDataGeometryGenerator
+
+        if self.provider_state == self.ProviderState.GEOJSON:
+            try:
+                # re-generate map data geometries when saving geojson data
+                Geometry.objects.filter(map_data=self).delete()
+                MapDataGeometryGenerator(self).run()
+            except MapDataGeometryGenerator.GenerationFailed as e:
+                logger.error("Failed to generate map data geometries on save!", exc_info=e)
+                raise e
+        return super().save(force_insert, force_update, using, update_fields)
 
     @property
     def geojson(self) -> str | None:
