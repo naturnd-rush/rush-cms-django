@@ -73,7 +73,12 @@ class MapDataGeometryGenerator:
         self._map_data = map_data
 
     @classmethod
-    def _extract_raw_geometries(cls, geojson: dict | None, map_data_id: str, _properties: dict | None = None) -> list[dict]:
+    def _extract_raw_geometries(
+        cls,
+        geojson: dict | None,
+        map_data_id: str,
+        _properties: dict | None = None,
+    ) -> list[dict]:
 
         # Get the geometry type of this geojson. Returning empty lists here
         # is safe because recursive calls will just extend nothing.
