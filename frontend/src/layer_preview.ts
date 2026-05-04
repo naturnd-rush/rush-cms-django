@@ -964,8 +964,12 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     const map = L.map('map-preview').setView([0, 0], 2);
     L.tileLayer(API_URL + API_TILE_PATH + API_PARAMS, TILE_LAYER_OPTS).addTo(map);
 
+    const subscriberManager = new DynamicSubscriberManager(document.body);
+    initStylesOnLayerResponsiveUI(subscriberManager);
+
     let currentGeoJsonLayer: L.GeoJSON | null = null;
     let currentTooltipLayer: L.LayerGroup | null = null;
+    let fittedMapDataId: string | null = null;
 
     function getMapDataId(): string | null {
         const span = document.getElementById("id_map_data");
@@ -1054,8 +1058,9 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
             },
         }).addTo(map);
 
-        if (currentGeoJsonLayer.getLayers().length > 0) {
+        if (currentGeoJsonLayer.getLayers().length > 0 && mapDataId !== fittedMapDataId) {
             map.fitBounds(currentGeoJsonLayer.getBounds());
+            fittedMapDataId = mapDataId;
         }
     }
 
@@ -1072,6 +1077,29 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
         }
     });
     document.getElementById("id_map_data")?.addEventListener("change", updatePreview);
+
+    let previousEditorText = "";
+    const summernoteSelectors = ["textarea[id*='popup']", "textarea[id*='label']"];
+    const pollSummernote = () => {
+        let currentText = "";
+        for (const sel of summernoteSelectors) {
+            for (const el of document.querySelectorAll(sel)) {
+                if (el instanceof HTMLTextAreaElement) currentText += el.value;
+            }
+        }
+        if (currentText !== previousEditorText) {
+            previousEditorText = currentText;
+            throttled.trigger();
+        }
+        setTimeout(pollSummernote, 1000);
+    };
+    pollSummernote();
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+            updatePreview();
+        }
+    });
 
     updatePreview();
 
