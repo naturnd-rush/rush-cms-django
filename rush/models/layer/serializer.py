@@ -169,7 +169,7 @@ def _get_marker_div_icon_props(base_media_url: str, style) -> dict:
         f"display: flex;"
         f"position: absolute;"
         f'"></div>'
-        f'<img src="{base_media_url}{style.marker_icon}"'
+        f'<img src="{base_media_url}{style.marker_icon.url}"'
         f' style="'
         f"width: {marker_image_width}px;"
         f"height: {marker_image_width}px;"
