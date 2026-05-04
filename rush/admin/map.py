@@ -1,5 +1,6 @@
 import json
 import logging
+import types
 from dataclasses import asdict, dataclass
 from decimal import Decimal
 from typing import Any, List
@@ -7,7 +8,8 @@ from typing import Any, List
 import adminsortable2.admin as sortable_admin
 from django import forms
 from django.contrib import admin
-from django.http import HttpRequest, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponseRedirect, JsonResponse
+from django.urls import path
 from django.utils.safestring import mark_safe
 from silk.profiling.dynamic import silk_profile
 
@@ -257,21 +259,47 @@ class LayerForm(forms.ModelForm):
         ).order_by("name")
     )
 
-    @silk_profile(name="LayerForm clean_serialized_leaflet_json")
-    def clean_serialized_leaflet_json(self):
-        """
-        Prevent double-serialization of submitted GeoJSON data.
-        """
+    # @silk_profile(name="LayerForm clean_serialized_leaflet_json")
+    # def clean_serialized_leaflet_json(self):
+    #     """
+    #     Prevent double-serialization of submitted GeoJSON data.
+    #     """
+    #     try:
+    #         map_data: models.MapData = self.cleaned_data["map_data"]
+    #         if map_data.provider_state == models.MapData.ProviderState.GEOJSON:
+    #             data = self.cleaned_data["serialized_leaflet_json"]
+    #             # The json.loads here avoids double-serialization. We need it because
+    #             # the data is serialized pre-transit to the server, and then again (mistakenly)
+    #             # by Django's JSONField.
+    #             return json.loads(data)
+    #     except Exception as e:
+    #         raise self.LeafletSerializationFail from e
+
+
+def _build_style_proxies(styles_data: list) -> list:
+    proxies = []
+    for s in styles_data:
         try:
-            map_data: models.MapData = self.cleaned_data["map_data"]
-            if map_data.provider_state == models.MapData.ProviderState.GEOJSON:
-                data = self.cleaned_data["serialized_leaflet_json"]
-                # The json.loads here avoids double-serialization. We need it because
-                # the data is serialized pre-transit to the server, and then again (mistakenly)
-                # by Django's JSONField.
-                return json.loads(data)
-        except Exception as e:
-            raise self.LeafletSerializationFail from e
+            style = models.Style.objects.get(id=s["style_id"])
+        except (models.Style.DoesNotExist, KeyError):
+            continue
+        proxy = types.SimpleNamespace(
+            style=style,
+            feature_mapping=s.get("feature_mapping", "true"),
+            popup=s.get("popup") if s.get("draw_popup") else None,
+        )
+        if s.get("draw_tooltip") and (t := s.get("tooltip")):
+            proxy.tooltip = types.SimpleNamespace(
+                label=t.get("label", ""),
+                offset_x=float(t.get("offset_x", 0)),
+                offset_y=float(t.get("offset_y", 0)),
+                opacity=float(t.get("opacity", 0.8)),
+                direction=t.get("direction", "center"),
+                permanent=bool(t.get("permanent", True)),
+                sticky=bool(t.get("sticky", False)),
+            )
+        proxies.append(proxy)
+    return proxies
 
 
 @admin.register(models.Layer)
@@ -295,6 +323,33 @@ class LayerAdmin(SuperuserStrictCleanMixin, sortable_admin.SortableAdminBase, ad
     @admin.display(description="Site Visibility")
     def site_visibility(self, obj):
         return obj.published_state
+
+    def get_urls(self):
+        return [
+            path("preview/", self.admin_site.admin_view(self.layer_preview_view), name="layer_preview"),
+        ] + super().get_urls()
+
+    def layer_preview_view(self, request: HttpRequest) -> JsonResponse:
+        if request.method != "POST":
+            return JsonResponse({"error": "Method not allowed"}, status=405)
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        map_data_id = body.get("map_data_id")
+        if not map_data_id:
+            return JsonResponse({"error": "map_data_id required"}, status=400)
+
+        from rush.context_processors import base_url_from_request
+        from rush.models.geometry import Geometry
+        from rush.models.layer.serializer import serialize_layer
+
+        geometries = Geometry.objects.filter(map_data_id=map_data_id)
+        style_proxies = _build_style_proxies(body.get("styles_on_layer", []))
+        base_media_url = base_url_from_request(request)
+        data = serialize_layer(geometries, style_proxies, base_media_url)
+        return JsonResponse(data)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

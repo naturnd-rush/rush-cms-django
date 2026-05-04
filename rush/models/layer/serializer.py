@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json as _json
 import math
 import re
 from json import loads
@@ -10,6 +12,12 @@ if TYPE_CHECKING:
 
     from rush.models.geometry import Geometry
     from rush.models.style.styles_on_layer import StylesOnLayer
+
+
+def _make_style_ref(style_data: dict, style_index: dict) -> str:
+    key = hashlib.md5(_json.dumps(style_data, sort_keys=True).encode()).hexdigest()[:12]
+    style_index.setdefault(key, style_data)
+    return key
 
 
 def _coerce_numbers_deep(obj):
@@ -255,6 +263,7 @@ def serialize_layer(
     sol_list = list(styles_on_layer)
     any_marker_styles = any(sol.style.draw_marker for sol in sol_list)
 
+    style_index: dict = {}
     features = []
     centroid_features = []
 
@@ -268,14 +277,14 @@ def serialize_layer(
 
         if not is_point:
             style_props = _get_polygon_style(applied) if applied else _get_default_polygon_style()
-            properties["__style"] = style_props
+            properties["__styleRef"] = _make_style_ref(style_props, style_index)
         else:
             marker_style = next((sol.style for sol in applied if sol.style.draw_marker), None)
             circle_style = next((sol.style for sol in applied if sol.style.draw_circle), None)
             if circle_style is not None:
-                properties["__circleOptions"] = _get_circle_options(circle_style)
+                properties["__circleRef"] = _make_style_ref(_get_circle_options(circle_style), style_index)
             elif marker_style is not None:
-                properties["__pointDivIconStyleProps"] = _get_marker_div_icon_props(base_media_url, marker_style)
+                properties["__markerRef"] = _make_style_ref(_get_marker_div_icon_props(base_media_url, marker_style), style_index)
 
         popup_metadata = _get_popup_metadata(applied, properties)
         if popup_metadata["__hasPopup"]:
@@ -314,7 +323,7 @@ def serialize_layer(
             marker_applied = [sol for sol in applied if sol.style.draw_marker]
             if marker_applied:
                 centroid_props = {
-                    **_get_marker_div_icon_props(base_media_url, marker_applied[0].style),
+                    "__markerRef": _make_style_ref(_get_marker_div_icon_props(base_media_url, marker_applied[0].style), style_index),
                     **popup_metadata,
                 }
                 centroid_features.append(
@@ -337,5 +346,6 @@ def serialize_layer(
         "featureCollection": {
             "type": "FeatureCollection",
             "features": centroid_features + features,
-        }
+        },
+        "styleIndex": style_index,
     }

@@ -1,4 +1,4 @@
-class a extends Error{constructor(e){super(e)}}async function o(r){const e=await fetch("/graphql/",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:r}),t=await e.json();if(e.status!==200)throw t.errors===null||t.errors===void 0?new a("GraphQL response code ("+e.status+") is not 200 but no errors were sent back in the response!"):new a(JSON.stringify(t.errors));return t}async function i(r){return(await o(JSON.stringify({query:`
+class o extends Error{constructor(r){super(r)}}async function s(t){const r=await fetch("/graphql/",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:t}),e=await r.json();if(r.status!==200)throw e.errors===null||e.errors===void 0?new o("GraphQL response code ("+r.status+") is not 200 but no errors were sent back in the response!"):new o(JSON.stringify(e.errors));return e}async function a(t){return(await s(JSON.stringify({query:`
         query ($id: UUID!) {
             style(id: $id) {
                 drawStroke
@@ -31,11 +31,4 @@ class a extends Error{constructor(e){super(e)}}async function o(r){const e=await
                 circleStrokeWeight
             }
         }
-    `,variables:{id:r}}))).data.style}async function n(r){return(await o(JSON.stringify({query:`
-        query ($id: UUID!) {
-            mapData(id: $id) {
-                geojson
-                providerState
-            }
-        }
-    `,variables:{id:r}}))).data.mapData}export{n as a,i as g};
+    `,variables:{id:t}}))).data.style}export{a as g};

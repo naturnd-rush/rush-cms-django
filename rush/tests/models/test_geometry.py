@@ -1,7 +1,5 @@
 from json import loads
 
-from django.db.models import CharField
-from django.db.models.functions import Cast
 from pytest import mark, raises
 
 from rush.models.geometry import Geometry, MapDataGeometryGenerator
