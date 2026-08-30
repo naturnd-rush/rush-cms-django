@@ -134,6 +134,18 @@ export interface MapData{
     providerState: "GEOJSON" | "OPEN_GREEN_MAP" | "GEOTIFF" | "UNSET",
 }
 
+export async function getLayerSerializedLeafletJsonV2(layerId: string): Promise<string | null> {
+    const query = `
+        query ($id: UUID!) {
+            layer(id: $id) {
+                serializedLeafletJsonV2
+            }
+        }
+    `;
+    const response = await executeQuery(JSON.stringify({ query, variables: { id: layerId } }));
+    return response.data.layer?.serializedLeafletJsonV2 ?? null;
+}
+
 export async function getMapDataById(mapDataId: string): Promise<MapData | null>{
     const query = `
         query ($id: UUID!) {

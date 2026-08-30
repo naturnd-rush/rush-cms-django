@@ -683,9 +683,8 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
     const baseMediaUrl = expectEl('injected-media-url').innerHTML;
     const anyMarkerStyles = state.stylesOnLayer.filter(styleOnLayer => styleOnLayer.style.drawMarker == true).length > 0;
     const styledGeoJsonData = L.geoJSON(state.currentLayer.toGeoJSON(), {
-        renderer: L.canvas(),
         style: getPolygonStyleFunc(state),
-        pointToLayer: getPointStyleFunc(baseMediaUrl, state),
+        pointToLayer: getPointStyleFunc(baseMediaUrl, state) as (feature: Feature<Point, any>, latlng: L.LatLng) => L.Layer,
         onEachFeature: (feature, layer) => {
 
             const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
@@ -947,7 +946,7 @@ const initStyleUpdateTriggers = (subscriberManager: DynamicSubscriberManager, ma
 };
 
 document.addEventListener("DOMContentLoaded", () => {(async () => {
-    
+
     const TILE_LAYER_OPTS = {
         minZoom: 0,
         maxZoom: 22,
@@ -962,68 +961,146 @@ document.addEventListener("DOMContentLoaded", () => {(async () => {
     const API_TILE_PATH = `${MAPBOX_USER}/${MAPBOX_STYLEID}/tiles/256/{z}/{x}/{y}@2x`
     const API_PARAMS = `?access_token=${MAPBOX_TOKEN}`
 
-    // Initialize leaflet map
-    let map = L.map('map-preview').setView([0, 0], 2);
+    const map = L.map('map-preview').setView([0, 0], 2);
     L.tileLayer(API_URL + API_TILE_PATH + API_PARAMS, TILE_LAYER_OPTS).addTo(map);
 
-    // Initialize object to track map preview state
-    let mapPreviewState: MapPreviewState = {
-        isUpdating: true,
-        stylesOnLayer: [],
-        currentLayer: null,
-        centroidMarkers: new L.LayerGroup(),
-        centroidTooltips: new L.LayerGroup(),
-    };
-    mapPreviewState.centroidMarkers.addTo(map);
-    mapPreviewState.centroidTooltips.addTo(map);
-
-    // Move spinner from top of page to inside the map preview box and show the spinner initially as the map preview is drawn
-    const mapDataSelectSpan = await waitForElementById("id_map_data");
-    (await waitForElementById('id_map_data_helptext')).appendChild(await waitForElementById("map-spinner"));
-    const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
-    hideSpinner(); // Spinner should be turned off by default... (this is needed so non-gejson map data layers don't initialize with a spinner that never goes away.)
-    if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON"){
-        // Render the spinner initially if the being edited is for GEOJSON map-data.
-        showSpinner();
-    }
-    
     const subscriberManager = new DynamicSubscriberManager(document.body);
-    initStyleUpdateTriggers(subscriberManager, map, mapDataSelectSpan, mapPreviewState);
     initStylesOnLayerResponsiveUI(subscriberManager);
 
-    // Listen to redraw the map when the map-data is changed.
-    const mapPreviewEl = await waitForElementById("map-preview");
-    //const stylesOnLayersGroupEl = await waitForElementById("stylesonlayer_set-group");
-    async function onMapDataDropdownChange(){
-        const mapData = await mapDataFromSpan(mapDataSelectSpan);
-        const hideMapPreview = () => {
-            mapPreviewEl.style.display = 'none';
-        };
-        const showMapPreview = () => {
-            mapPreviewEl.style.display = 'block';
-        };
-        if (mapData?.providerState === "GEOJSON"){
-            showMapPreview();
-            mapPreviewState.isUpdating = true;
-            showSpinnerAfter(1, mapPreviewState);
-            getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
-        } else {
-            // Hide map preview and styles on layers when we are not dealing with GEOJSON map data for this layer...
-            hideMapPreview();
-        }
-    };
-    onMapDataDropdownChange(); // for initial load
-    mapDataSelectSpan.addEventListener("change", onMapDataDropdownChange); // When new map data is selected
+    let currentGeoJsonLayer: L.GeoJSON | null = null;
+    let currentTooltipLayer: L.LayerGroup | null = null;
+    let fittedMapDataId: string | null = null;
 
-    // Draw the initial map using the current map-data and style info.
-    Promise.all([
-        getStyleUpdate(), 
-        getMapDataUpdate(mapDataSelectSpan),
-    ]).then(([styleUpdate, mapDataUpdate]: [StyleUpdate, MapDataUpdate]) => {
-        // Inefficient, but meh.
-        drawMapPreview(map, mapPreviewState, mapDataUpdate);
-        mapPreviewState.isUpdating = true; // Still doing the initial update...
-        drawMapPreview(map, mapPreviewState, styleUpdate);
+    function getMapDataId(): string | null {
+        const span = document.getElementById("id_map_data");
+        if (!span) return null;
+        for (const child of span.childNodes) {
+            if (child instanceof HTMLOptionElement && child.selected) {
+                return child.value || null;
+            }
+        }
+        return null;
+    }
+
+    function readStylesFromForm(): object[] {
+        const styles = [];
+        for (const row of document.querySelectorAll("[id^='stylesonlayer_set-']:not([id$='-group'])")) {
+            const styleId = (row.querySelector("select[id*='-style']") as HTMLSelectElement)?.value;
+            const featureMapping = (row.querySelector("textarea[id*='feature_mapping']") as HTMLTextAreaElement)?.value;
+            if (!styleId || !featureMapping) continue;
+            const drawPopup = (row.querySelector("input[id*='-draw_popup']") as HTMLInputElement)?.checked ?? false;
+            const popup = (row.querySelector("textarea[id*='popup']") as HTMLTextAreaElement)?.value ?? null;
+            const drawTooltip = (row.querySelector("input[id*='-draw_tooltip']") as HTMLInputElement)?.checked ?? false;
+            styles.push({
+                style_id: styleId,
+                feature_mapping: featureMapping,
+                draw_popup: drawPopup,
+                popup: drawPopup ? popup : null,
+                draw_tooltip: drawTooltip,
+                tooltip: drawTooltip ? {
+                    label: (row.querySelector("textarea[id*='label']") as HTMLTextAreaElement)?.value ?? "",
+                    offset_x: parseFloat((row.querySelector("input[id*='offset_x']") as HTMLInputElement)?.value ?? "0"),
+                    offset_y: parseFloat((row.querySelector("input[id*='offset_y']") as HTMLInputElement)?.value ?? "0"),
+                    opacity: parseFloat((row.querySelector("input[id*='opacity']") as HTMLInputElement)?.value ?? "0.8"),
+                    direction: (row.querySelector("select[id*='direction']") as HTMLSelectElement)?.value ?? "center",
+                    permanent: (row.querySelector("input[id*='permanent']") as HTMLInputElement)?.checked ?? true,
+                    sticky: (row.querySelector("input[id*='sticky']") as HTMLInputElement)?.checked ?? false,
+                } : null,
+            });
+        }
+        return styles;
+    }
+
+    async function updatePreview(): Promise<void> {
+        const mapDataId = getMapDataId();
+        if (!mapDataId) return;
+
+        const csrfToken = (document.querySelector('[name=csrfmiddlewaretoken]') as HTMLInputElement)?.value;
+        let response: Response;
+        try {
+            response = await fetch("/rush/layer/preview/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+                body: JSON.stringify({ map_data_id: mapDataId, styles_on_layer: readStylesFromForm() }),
+            });
+        } catch {
+            return;
+        }
+        if (!response.ok) return;
+        const data = await response.json();
+        const styleIndex: Record<string, any> = data.styleIndex ?? {};
+        console.log("Style index: ", styleIndex);
+
+        currentGeoJsonLayer?.remove();
+        currentTooltipLayer?.remove();
+        currentTooltipLayer = new L.LayerGroup().addTo(map);
+
+        currentGeoJsonLayer = L.geoJSON(data.featureCollection, {
+            style: (f) => {
+                const ref = f?.properties?.__styleRef;
+                return ref ? (styleIndex[ref] ?? {}) : {};
+            },
+            pointToLayer: (f, latlng) => {
+                const p = f.properties;
+                if (p.__circleRef) return L.circle(latlng, { ...(styleIndex[p.__circleRef] ?? {}), renderer: L.canvas() });
+                if (p.__markerRef) return L.marker(latlng, { icon: new L.DivIcon(styleIndex[p.__markerRef] ?? {}) });
+                return L.marker(latlng);
+            },
+            onEachFeature: (f, layer) => {
+                const p = f.properties;
+                if (p.__hasPopup && p.__popupHTML) layer.bindPopup(p.__popupHTML, p.__popupOptions ?? {});
+                if (p.__hasTooltip && p.__tooltipHTML) {
+                    L.tooltip(p.__tooltipOptions ?? {})
+                        .setLatLng([p.__tooltipLat, p.__tooltipLng])
+                        .setContent(p.__tooltipHTML)
+                        .addTo(currentTooltipLayer!);
+                }
+            },
+        }).addTo(map);
+
+        if (currentGeoJsonLayer.getLayers().length > 0 && mapDataId !== fittedMapDataId) {
+            map.fitBounds(currentGeoJsonLayer.getBounds());
+            fittedMapDataId = mapDataId;
+        }
+    }
+
+    const throttled = new ThrottledSignalReceiver(1000, updatePreview);
+
+    document.addEventListener("input", (e) => {
+        if (e.target instanceof HTMLElement && e.target.closest("[id^='stylesonlayer_set-']")) {
+            throttled.trigger();
+        }
     });
+    document.addEventListener("change", (e) => {
+        if (e.target instanceof HTMLElement && e.target.closest("[id^='stylesonlayer_set-']")) {
+            throttled.trigger();
+        }
+    });
+    document.getElementById("id_map_data")?.addEventListener("change", updatePreview);
+
+    let previousEditorText = "";
+    const summernoteSelectors = ["textarea[id*='popup']", "textarea[id*='label']"];
+    const pollSummernote = () => {
+        let currentText = "";
+        for (const sel of summernoteSelectors) {
+            for (const el of document.querySelectorAll(sel)) {
+                if (el instanceof HTMLTextAreaElement) currentText += el.value;
+            }
+        }
+        if (currentText !== previousEditorText) {
+            previousEditorText = currentText;
+            throttled.trigger();
+        }
+        setTimeout(pollSummernote, 1000);
+    };
+    pollSummernote();
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+            updatePreview();
+        }
+    });
+
+    updatePreview();
 
 })();});

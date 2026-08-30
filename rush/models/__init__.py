@@ -17,6 +17,7 @@ if True:
     from rush.models.mimetype import MimeType, GuessedMimeType
 
 from rush.models.basemap_source import BasemapSource
+from rush.models.geometry import *
 from rush.models.icon import *
 from rush.models.initiative import *
 from rush.models.layer import *

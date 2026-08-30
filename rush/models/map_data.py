@@ -1,21 +1,23 @@
 import json
 import sys
 import uuid
+from logging import getLogger
 
 import django.db.models as models
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
-from django.core.validators import URLValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, URLValidator
 from storages.backends.s3 import S3Storage
 
 from rush.models.validators import (
     FiletypeValidator,
+    validate_arcgis_feature_server_link,
     validate_ogm_campaign_link,
     validate_ogm_map_link,
-    validate_arcgis_feature_server_link,
 )
 from rush.storage import BackblazeStorageFactory
-from django.core.validators import MinValueValidator, MaxValueValidator
+
+logger = getLogger(__name__)
 
 
 def get_raster_storage() -> S3Storage | FileSystemStorage:
@@ -77,7 +79,7 @@ class MapData(models.Model):
         max_length=2000,
         null=True,
         blank=True,
-        validators = [URLValidator(schemes=["https"]), validate_arcgis_feature_server_link],
+        validators=[URLValidator(schemes=["https"]), validate_arcgis_feature_server_link],
     )
 
     arcgis_cache_seconds = models.IntegerField(
@@ -88,7 +90,7 @@ class MapData(models.Model):
         validators=[
             # allowed between 30 mins and ~1 month
             MinValueValidator(1800),
-            MaxValueValidator(2592000)
+            MaxValueValidator(2592000),
         ],
     )
 
