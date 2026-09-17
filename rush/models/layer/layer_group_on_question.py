@@ -28,7 +28,8 @@ class LayerGroupOnQuestion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, null=False)
     group_name = models.CharField(max_length=255)
     group_description = models.TextField(
-        blank=True, help_text="An optional description for the group."
+        blank=True,
+        help_text="An optional description for the group.",
     )
     group_description_strict_clean = models.BooleanField(default=True)
     question = models.ForeignKey(
@@ -51,10 +52,25 @@ class LayerGroupOnQuestion(models.Model):
             return 0
         return max_order
 
+    @classmethod
+    def _is_group_description_empty(cls, desc: str) -> bool:
+        tags_to_strip_during_empty_check = ["<br>", "</br>", "<p>", "</p>"]
+        for tag in tags_to_strip_during_empty_check:
+            # summernote can leave <br> and <p> tags in the code view, even when a user
+            # removes all content from the editor. this checks for that case and strips
+            # everything.
+            desc = desc.replace(tag, "")
+        return desc.strip() == ""
+
     def clean(self) -> None:
-        self.group_description = SummernoteTextCleaner.clean(
-            self.group_description, strict_clean=self.group_description_strict_clean
-        )
+        if self._is_group_description_empty(self.group_description):
+            self.group_description = ""
+        else:
+            # regular summernote clean
+            self.group_description = SummernoteTextCleaner.clean(
+                self.group_description,
+                strict_clean=self.group_description_strict_clean,
+            )
 
     def __str__(self):
         return self.group_name
