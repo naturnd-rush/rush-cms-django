@@ -24,6 +24,7 @@ def test_empty_descriptions(desc):
     assert is_empty(desc) is True
 
 
+@pytest.mark.parametrize(
     "desc",
     [
         "hello",
