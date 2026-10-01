@@ -60,6 +60,14 @@ class QuestionTab(models.Model):
         null=True,
         blank=True,
     )
+    # layers to toggle on when a question tab is selected.
+    layers = models.ManyToManyField(
+        to="Layer",
+        through="LayerOnQuestionTab",
+        related_name="question_tabs",
+        blank=True,
+        help_text="layers to toggle on when a question tab is clicked. they don't need to be on the question.",
+    )
 
     def clean(self) -> None:
         self.content = SummernoteTextCleaner.clean(
