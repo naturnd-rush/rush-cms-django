@@ -1,7 +1,7 @@
 import uuid
 
 from django.db import models
-
+from django.core.validators import MinValueValidator, MaxValueValidator
 from rush.models.question import Question
 from rush.models.utils import SummernoteTextCleaner
 
@@ -34,6 +34,31 @@ class QuestionTab(models.Model):
     slug = models.SlugField(max_length=255)
     display_order = models.PositiveIntegerField(
         default=0, blank=False, null=False, db_index=True, editable=True
+    )
+
+    # the zoom level to adjust to when a question tab is selected
+    zoom = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(0),
+            MaxValueValidator(23),
+        ],
+        help_text="automatically zooms the map when a question tab is clicked. defaults to None,"
+        + " which means that the map will stay at its current zoom level.",
+    )
+    # the lat and long to center the map on when a question tab is selected.
+    center_lat = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    center_long = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
     )
 
     def clean(self) -> None:

@@ -38,5 +38,3 @@ def test_empty_descriptions(desc):
 )
 def test_non_empty_descriptions(desc):
     assert is_empty(desc) is False
-
-
