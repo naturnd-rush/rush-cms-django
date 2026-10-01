@@ -49,14 +49,14 @@ class QuestionTab(models.Model):
     )
     # the lat and long to center the map on when a question tab is selected.
     center_lat = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=9,
+        decimal_places=6,
         null=True,
         blank=True,
     )
     center_long = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
+        max_digits=9,
+        decimal_places=6,
         null=True,
         blank=True,
     )
