@@ -98,14 +98,19 @@ class QuestionDuplicator(DuplicatorBase):
 
         # Copy tabs by value
         for tab in self.instance.tabs.all():  # type: ignore
-            QuestionTab.objects.create(
+            duplicate_tab = QuestionTab.objects.create(
                 question=duplicate,
                 icon=tab.icon,
                 title=tab.title,
                 content=tab.content,
                 slug=tab.slug,
                 display_order=tab.display_order,
+                zoom=tab.zoom,
+                center_lat=tab.center_lat,
+                center_long=tab.center_long,
             )
+            # Copy tab layers by reference
+            duplicate_tab.layers.set(tab.layers.all())
 
         # Copy basemap-sources by reference (through the basemap-source-on-question model
         # which is copied by value).

@@ -547,9 +547,41 @@ class QuestionTabType(DjangoObjectType):
             "display_order",
             "slug",
             "icon_url",
+            "zoom",
+            "center_lat",
+            "center_long",
+            "layer_ids",
         ]
 
     icon_url = graphene.String()
+    center_lat = graphene.Float()
+    center_long = graphene.Float()
+    layer_ids = graphene.List(graphene.String)
+
+    def resolve_center_lat(self, info):
+        if isinstance(self, models.QuestionTab):
+            return float(self.center_lat) if self.center_lat is not None else None
+        raise ValueError("Expected QuestionTab object while resolving query!")
+
+    def resolve_center_long(self, info):
+        if isinstance(self, models.QuestionTab):
+            return float(self.center_long) if self.center_long is not None else None
+        raise ValueError("Expected QuestionTab object while resolving query!")
+
+    def resolve_layer_ids(self, info):
+        """
+        Ids of the layers to toggle on when this tab is selected, limited to the request's channels.
+        """
+        if isinstance(self, models.QuestionTab):
+            return [
+                str(layer_id)
+                for layer_id in self.layers.filter(  # type: ignore
+                    channels__in=request_channels(info)
+                )
+                .distinct()
+                .values_list("id", flat=True)
+            ]
+        raise ValueError("Expected QuestionTab object while resolving query!")
 
     def resolve_icon_url(self, info):
         if isinstance(self, models.QuestionTab):
