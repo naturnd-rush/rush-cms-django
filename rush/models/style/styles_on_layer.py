@@ -38,8 +38,8 @@ class StylesOnLayer(models.Model):
     # Optional HTML text field for describing what the popup template will be used
     popup = models.TextField(null=True, blank=True)
     popup_permanent = models.BooleanField(
-        default=False,
-        help_text="Turn this on if you want the popup to be open by default, instead of only when a user clicks on the map feature.",
+        default=True,
+        help_text="Keep this on if you want the popup to stay open while people click around outside of the popup.",
     )
 
     def clean(self) -> None:
