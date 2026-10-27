@@ -592,7 +592,12 @@ def test_layer_duplicator_copies_styles_on_layer_data_by_value():
         x
         for x in StylesOnLayer.objects.filter(layer=layer)
         .values_list(
-            "style", "legend_description", "display_order", "feature_mapping", "popup"
+            "style",
+            "legend_description",
+            "display_order",
+            "feature_mapping",
+            "popup",
+            "popup_permanent",
         )
         .order_by("display_order")
     ]
@@ -657,6 +662,7 @@ def test_layer_duplicator_copies_tooltip_data_by_value():
             "style_on_layer__display_order",
             "style_on_layer__feature_mapping",
             "style_on_layer__popup",
+            "style_on_layer__popup_permanent",
         )
         .order_by("style_on_layer__display_order")
     ]

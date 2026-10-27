@@ -60,6 +60,7 @@ class StylesOnLayerInlineForm(forms.ModelForm):
             "draw_popup",  # only on form, not the model
             "popup",
             "popup_strict_clean",
+            "popup_permanent",
         ]
         widgets = {
             "popup": SummernoteWidget(),
