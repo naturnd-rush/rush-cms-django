@@ -33,6 +33,7 @@ export interface StyleOnLayer{
 
     drawPopup: boolean,
     popupTemplate: string | null,
+    popupPermanent: boolean,
 
     drawTooltip: boolean,
     tooltip: Tooltip,
@@ -69,6 +70,7 @@ interface PopupMetadata {
     __hasPopup: boolean;
     __popupHTML: string | null;
     __popupOptions: object | null;
+    __popupPermanent: boolean;
 }
 
 /**
@@ -83,13 +85,14 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
         const featureMapping = (inlineRow.querySelector("textarea[id*='feature_mapping']") as HTMLInputElement | null)?.value;
         const popupTemplate = (inlineRow.querySelector("textarea[id*='popup']") as HTMLInputElement | null)?.value;
         const drawPopupChecked = (inlineRow.querySelector("input[id*='-draw_popup']") as HTMLInputElement | null)?.checked;
+        const popupPermanent = (inlineRow.querySelector("input[id$='-popup_permanent']") as HTMLInputElement | null)?.checked;
         const drawTooltipChecked = (inlineRow.querySelector("input[id*='-draw_tooltip']") as HTMLInputElement | null)?.checked;
         const tooltipLabel = (inlineRow.querySelector("textarea[id*='label']") as HTMLInputElement | null)?.value;
         const tooltipOffsetX = (inlineRow.querySelector("input[id*='offset_x']") as HTMLInputElement | null)?.value;
         const tooltipOffsetY = (inlineRow.querySelector("input[id*='offset_y']") as HTMLInputElement | null)?.value;
         const tooltipOpacity = (inlineRow.querySelector("input[id*='opacity']") as HTMLInputElement | null)?.value;
         const tooltipDirection = (inlineRow.querySelector("select[id*='direction']") as HTMLInputElement | null)?.value;
-        const tooltipPermanent = (inlineRow.querySelector("input[id*='permanent']") as HTMLInputElement | null)?.checked;
+        const tooltipPermanent = (inlineRow.querySelector("input[id$='-permanent']") as HTMLInputElement | null)?.checked;
         const tooltipSticky = (inlineRow.querySelector("input[id*='sticky']") as HTMLInputElement | null)?.checked;
         if (!(styleId && featureMapping)){
             // most likely an empty inline
@@ -101,6 +104,7 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
             featureMapping !== undefined && 
             popupTemplate !== undefined && 
             drawPopupChecked !== undefined && 
+            popupPermanent !== undefined &&
             drawTooltipChecked !== undefined &&
             tooltipLabel !== undefined &&
             tooltipOffsetX !== undefined &&
@@ -125,6 +129,7 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
                 inlineRow: inlineRow,
                 drawPopup: drawPopupChecked,
                 popupTemplate: popupTemplate,
+                popupPermanent: popupPermanent,
                 drawTooltip: drawTooltipChecked,
                 tooltip: tooltipData,
             };
@@ -145,6 +150,7 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
                 inlineRow: inlineRow,
                 drawPopup: drawPopupChecked,
                 popupTemplate: popupTemplate,
+                popupPermanent: popupPermanent,
                 drawTooltip: drawTooltipChecked,
                 tooltip: tooltipData,
             };
@@ -599,12 +605,13 @@ function extractLatLngGroups(coordinates: any): Position[][] {
  * @returns some popup metadata that can be used to tell leaflet how, and whether,
  * to render a popup.
  */
-function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string | null): PopupMetadata {
+function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string | null, popupPermanent: boolean): PopupMetadata {
     if (popupTemplate === null){
         return {
             __hasPopup: false,
             __popupHTML: null,
             __popupOptions: null,
+            __popupPermanent: false,
         };
     }
 
@@ -621,28 +628,47 @@ function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string
         // Otherwise, resize the image width to be 250 pixels and set the minimum popup container 
         // to be the same size as well.
         minWidth: hasImage ? 250 : 0,
+        // Permanent popups stay open when other popups are opened, or when the map is clicked.
+        autoClose: !popupPermanent,
+        closeOnClick: !popupPermanent,
     };
 
     return {
         __hasPopup: true,
         __popupHTML: renderedPopup,
         __popupOptions: popupOptions,
+        __popupPermanent: popupPermanent,
     };
 }
 
 /**
  * Flatten a list of "applied styles" to a popup template, or null.
  * @param appliedStyles a list of styles applied to some feature.
- * @returns a string template, or null if no popup template is defined (and enabled) in any of the applied styles.
+ * @returns a string template, or null if no popup template is defined (and enabled) in any of the applied styles,
+ * along with whether that popup should be permanently open.
  */
-function getPopupTemplate(appliedStyles: Array<AppliedStyle>): string | null {
+function getPopupTemplate(appliedStyles: Array<AppliedStyle>): [string | null, boolean] {
     let popupTemplate = null;
+    let popupPermanent = false;
     for (let appliedStyle of appliedStyles){
         if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== "" && appliedStyle.styleOnLayer.drawPopup === true){
             popupTemplate = appliedStyle.popupTemplate;
+            popupPermanent = appliedStyle.styleOnLayer.popupPermanent;
         }
     }
-    return popupTemplate;
+    return [popupTemplate, popupPermanent];
+}
+
+/**
+ * Bind a popup to the given leaflet layer, opening it as soon as the layer is added to the map if the popup is permanent.
+ */
+function bindPopupFromMetadata(layer: L.Layer, popupMetadata: PopupMetadata): void {
+    if (popupMetadata.__hasPopup === true && popupMetadata.__popupHTML !== null && popupMetadata.__popupOptions !== null){
+        layer.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
+        if (popupMetadata.__popupPermanent === true){
+            layer.on("add", () => layer.openPopup());
+        }
+    }
 }
 
 function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUpdate): void {
@@ -689,10 +715,10 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         onEachFeature: (feature, layer) => {
 
             const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
-            const popupTemplate = getPopupTemplate(appliedStyles);
-            const popupMetadata = getPopupMetadata(feature, popupTemplate);
-            if (popupMetadata.__hasPopup === true && popupMetadata.__popupHTML !== null && popupMetadata.__popupOptions !== null){
-                layer.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
+            const [popupTemplate, popupPermanent] = getPopupTemplate(appliedStyles);
+            const popupMetadata = getPopupMetadata(feature, popupTemplate, popupPermanent);
+            bindPopupFromMetadata(layer, popupMetadata);
+            if (popupMetadata.__hasPopup === true){
                 feature.properties = {...feature.properties, ...popupMetadata};
             }
 
@@ -754,9 +780,7 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                         }).getLayers()[0];
 
                         // Bind a leaflet popup to the marker if necessary
-                        if (popupMetadata.__hasPopup === true && popupMetadata.__popupHTML !== null && popupMetadata.__popupOptions !== null){
-                            marker.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
-                        }
+                        bindPopupFromMetadata(marker, popupMetadata);
                         marker.addTo(state.centroidMarkers);
                     };
                     bindCentroidMarkerIcon(featureCenterLat, featureCenterLng);
@@ -931,6 +955,7 @@ const initStyleUpdateTriggers = (subscriberManager: DynamicSubscriberManager, ma
     // 3. Checkboxes and dropdowns
     subscriberManager.subscribeMutationObserver({childList: true, subtree: true}, "span[id*='select2-id_stylesonlayer_set']", doStyleUpdate); // Select-2 (autocomplete) dropdown needs DOM observer
     subscriberManager.subscribeEventListener("input", "input[id*='-draw_popup']", doStyleUpdate);
+    subscriberManager.subscribeEventListener("input", "input[id$='-popup_permanent']", doStyleUpdate);
     subscriberManager.subscribeEventListener("input", "input[id*='-draw_tooltip']", doStyleUpdate);
     subscriberManager.subscribeEventListener("change", "select[id*='-direction']", doStyleUpdate);
     subscriberManager.subscribeEventListener("input", "input[id*='-permanent']", doStyleUpdate);

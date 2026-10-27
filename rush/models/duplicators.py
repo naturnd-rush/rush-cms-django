@@ -205,6 +205,7 @@ class LayerDuplicator(DuplicatorBase):
                 display_order=styles_on_layer.display_order,
                 feature_mapping=styles_on_layer.feature_mapping,
                 popup=styles_on_layer.popup,
+                popup_permanent=styles_on_layer.popup_permanent,
             )
 
             # create double-related tooltip (if it exists)

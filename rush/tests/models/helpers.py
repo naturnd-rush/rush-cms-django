@@ -442,6 +442,7 @@ def create_test_styles_on_layer(
     ) = DEFAULT_STYLES_ON_LAYER_DISPLAY_ORDER_PROVIDER,
     feature_mapping="true",
     popup="<h1>Popup text!</h1>",
+    popup_permanent=True,
     tooltip: None | Callable[[StylesOnLayer], Tooltip] = DEFAULT_TOOLTIP_PROVIDER,
 ) -> StylesOnLayer:
     style = style if not isinstance(style, Callable) else style()
@@ -457,6 +458,7 @@ def create_test_styles_on_layer(
         display_order=display_order,
         feature_mapping=feature_mapping,
         popup=popup,
+        popup_permanent=popup_permanent,
     )
     # by default we add a tooltip, but it can also be set to None
     if tooltip is not None:
