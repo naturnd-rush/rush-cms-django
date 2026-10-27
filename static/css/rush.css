@@ -8,12 +8,12 @@
     color: white;
     font-weight: 700;
     font-family: 'Inter', sans-serif;
-    text-shadow: -2px -2px 0 black, 2px -2px 0 black, -2px 2px 0 black, 2px 2px 0 black;
-    ;
+    -webkit-text-stroke: 4px black;
+    paint-order: stroke fill;
 }
 
 .leaflet-tooltip.leaflet-label::before {
-    display: 'none'
+    display: none;
 }
 
 /* Global Variables */
