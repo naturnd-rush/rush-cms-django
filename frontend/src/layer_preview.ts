@@ -1,6 +1,6 @@
-import {type Style, type MapData, getStyleById, getMapDataById} from "./graphql"
+import { type Style, type MapData, getStyleById, getMapDataById } from "./graphql"
 import type { FeatureCollection, Geometry, Feature, Point, Position } from 'geojson';
-import type {PathOptions, StyleFunction, CircleMarkerOptions} from "leaflet"
+import type { PathOptions, StyleFunction, CircleMarkerOptions } from "leaflet"
 import * as L from 'leaflet';
 import { coerceNumbersDeep, blendHexColors, interpolateNumbers, getCentroid } from "./utils/math";
 import { waitForElementById, expectEl, ThrottledSignalReceiver, expectQuerySelector } from "./utils/timing";
@@ -8,7 +8,6 @@ import { Parser } from 'expr-eval';
 import Mustache from "mustache";
 import { DynamicSubscriberManager } from './utils/events'
 import centerOfMass from "@turf/center-of-mass";
-import { circle } from "turf";
 
 /************
  * This script draws a map layer preview based on the currently selected map-data object and
@@ -25,8 +24,8 @@ interface Tooltip {
     sticky: boolean,
 }
 
-export interface StyleOnLayer{
-    
+export interface StyleOnLayer {
+
     style: Style,
     feature_mapping: string,
     inlineRow: Element,
@@ -61,16 +60,21 @@ export interface MapDataUpdate extends MapPreviewUpdate {
     newGeoJsonData: FeatureCollection<Geometry, any> | null,
 }
 
-interface AppliedStyle{
+interface AppliedStyle {
     styleOnLayer: StyleOnLayer,
     popupTemplate: string | null,
+}
+
+interface PopupOptions {
+    maxWidth: number,
+    minWidth: number,
+    closeOnClick: boolean,
 }
 
 interface PopupMetadata {
     __hasPopup: boolean;
     __popupHTML: string | null;
-    __popupOptions: object | null;
-    __popupPermanent: boolean;
+    __popupOptions: PopupOptions | null;
 }
 
 /**
@@ -79,7 +83,7 @@ interface PopupMetadata {
  */
 export async function getStyleUpdate(): Promise<StyleUpdate> {
     const stylesOnLayers: Array<StyleOnLayer> = [];
-    for (let inlineRow of document.querySelectorAll("[id^='stylesonlayer_set-']:not([id$='-group'])")){
+    for (let inlineRow of document.querySelectorAll("[id^='stylesonlayer_set-']:not([id$='-group'])")) {
         // for each styleOnLayer inline group
         const styleId = (inlineRow.querySelector("select[id*='-style']") as HTMLSelectElement)?.value;
         const featureMapping = (inlineRow.querySelector("textarea[id*='feature_mapping']") as HTMLInputElement | null)?.value;
@@ -94,16 +98,16 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
         const tooltipDirection = (inlineRow.querySelector("select[id*='direction']") as HTMLInputElement | null)?.value;
         const tooltipPermanent = (inlineRow.querySelector("input[id$='-permanent']") as HTMLInputElement | null)?.checked;
         const tooltipSticky = (inlineRow.querySelector("input[id*='sticky']") as HTMLInputElement | null)?.checked;
-        if (!(styleId && featureMapping)){
+        if (!(styleId && featureMapping)) {
             // most likely an empty inline
             continue;
         }
         const style = await getStyleById(styleId);
         if (
-            style !== null && 
-            featureMapping !== undefined && 
-            popupTemplate !== undefined && 
-            drawPopupChecked !== undefined && 
+            style !== null &&
+            featureMapping !== undefined &&
+            popupTemplate !== undefined &&
+            drawPopupChecked !== undefined &&
             popupPermanent !== undefined &&
             drawTooltipChecked !== undefined &&
             tooltipLabel !== undefined &&
@@ -113,7 +117,7 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
             tooltipDirection !== undefined &&
             tooltipPermanent !== undefined &&
             tooltipSticky !== undefined
-        ){
+        ) {
             const tooltipData = {
                 label: tooltipLabel,
                 offsetX: Number.parseFloat(tooltipOffsetX),
@@ -165,12 +169,12 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
 
 async function mapDataFromSpan(mapDataSelectSpan: HTMLSpanElement): Promise<MapData | null> {
     let mapDataId = null;
-    for (let child of mapDataSelectSpan.childNodes){
-        if (child instanceof HTMLOptionElement && child.selected){
+    for (let child of mapDataSelectSpan.childNodes) {
+        if (child instanceof HTMLOptionElement && child.selected) {
             mapDataId = child.value;
         }
     }
-    if (mapDataId === null || mapDataId === ""){
+    if (mapDataId === null || mapDataId === "") {
         return null;
     }
     return await getMapDataById(mapDataId);
@@ -179,16 +183,16 @@ async function mapDataFromSpan(mapDataSelectSpan: HTMLSpanElement): Promise<MapD
 /**
  * Fetch GeoJSON using the UUID present in the map-data input field.
  */
-export async function getMapDataUpdate(mapDataSelectSpan: HTMLSpanElement): Promise<MapDataUpdate>{
-    const clearMapData = {type: "MapData", newGeoJsonData: null} as MapDataUpdate;
+export async function getMapDataUpdate(mapDataSelectSpan: HTMLSpanElement): Promise<MapDataUpdate> {
+    const clearMapData = { type: "MapData", newGeoJsonData: null } as MapDataUpdate;
     const mapData = await mapDataFromSpan(mapDataSelectSpan);
-    if (mapData === null){
+    if (mapData === null) {
         return clearMapData;
-    } else if (mapData.geojson === null){
+    } else if (mapData.geojson === null) {
         return clearMapData;
     }
     const geojson = JSON.parse(mapData.geojson);
-    if (geojson.features === null || geojson.features === undefined){
+    if (geojson.features === null || geojson.features === undefined) {
         return clearMapData;
     }
     return {
@@ -209,12 +213,12 @@ export const inlineElements = {
             if (inlineGroup !== null) {
                 const observer = new MutationObserver((mutations) => {
                     mutations.forEach((mutation) => {
-                        if (mutation.target instanceof HTMLSelectElement && mutation.type === "childList"){
+                        if (mutation.target instanceof HTMLSelectElement && mutation.type === "childList") {
                             callback(mutation);
                         }
                     });
                 });
-                observer.observe(inlineGroup, {childList: true, subtree: true});
+                observer.observe(inlineGroup, { childList: true, subtree: true });
             }
         },
     },
@@ -230,17 +234,17 @@ export const inlineElements = {
         },
     },
     popups: {
-         addEventListener: (callback: (mutation: MutationRecord) => void): void => {
+        addEventListener: (callback: (mutation: MutationRecord) => void): void => {
             const inlineGroup = document.getElementById('stylesonlayer_set-group');
             if (inlineGroup !== null) {
                 const observer = new MutationObserver((mutations) => {
                     mutations.forEach((mutation) => {
-                        if (mutation.target instanceof HTMLSelectElement && mutation.type === "childList"){
+                        if (mutation.target instanceof HTMLSelectElement && mutation.type === "childList") {
                             callback(mutation);
                         }
                     });
                 });
-                observer.observe(inlineGroup, {childList: true, subtree: true});
+                observer.observe(inlineGroup, { childList: true, subtree: true });
             }
         },
     },
@@ -252,21 +256,21 @@ export const inlineElements = {
  * @param stylesOnLayer the styles present on the current map layer.
  * @returns an array of styles that should be applied to the given feature. 
  */
-function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<StyleOnLayer>): Array<AppliedStyle>{
+function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<StyleOnLayer>): Array<AppliedStyle> {
     const parser = new Parser();
     let applied: Array<AppliedStyle> = [];
-    for (let styleOnLayer of stylesOnLayer){
+    for (let styleOnLayer of stylesOnLayer) {
         const fieldMappingContainer = styleOnLayer.inlineRow.querySelector("td[class*='feature_mapping']");
         const fieldMappingErrors = fieldMappingContainer?.querySelector("div[id*='errors']");
-        try{
+        try {
             const expr = parser.parse(styleOnLayer.feature_mapping);
-            if (expr.evaluate(coerceNumbersDeep(feature.properties)) === true){
-                applied.push({styleOnLayer: styleOnLayer, popupTemplate: styleOnLayer.popupTemplate});
-                if (fieldMappingErrors && fieldMappingContainer){
+            if (expr.evaluate(coerceNumbersDeep(feature.properties)) === true) {
+                applied.push({ styleOnLayer: styleOnLayer, popupTemplate: styleOnLayer.popupTemplate });
+                if (fieldMappingErrors && fieldMappingContainer) {
                     fieldMappingContainer.removeChild(fieldMappingErrors);
                 }
             }
-        } catch (error){
+        } catch (error) {
             // TODO: If a variable isn't in ANY of the features then we can display it here, otherwise if it's 
             // being used at least once I don't think I should display an error since the style is technically 
             // being applied.
@@ -274,22 +278,22 @@ function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<
             // TODO: Error propagating code is NOT efficient! I should probably make this faster...
 
             // Add an error message above the feature mapping textarea for the user if parsing fails.
-            if (fieldMappingErrors && fieldMappingContainer){
+            if (fieldMappingErrors && fieldMappingContainer) {
                 fieldMappingContainer.removeChild(fieldMappingErrors);
             }
-            if (fieldMappingContainer && !fieldMappingContainer?.querySelector("div[id*='errors']")){
+            if (fieldMappingContainer && !fieldMappingContainer?.querySelector("div[id*='errors']")) {
                 const errorEl = document.createElement("div");
                 errorEl.textContent = String(error);
                 errorEl.id = "errors";
                 errorEl.style = "color:rgb(255, 0, 0);";
                 fieldMappingContainer.insertBefore(errorEl, fieldMappingContainer.children[0]);
-            }   
+            }
         }
     }
     return applied;
 }
 
-function getDefaultPolygonStyle(): PathOptions{
+function getDefaultPolygonStyle(): PathOptions {
     return {
         // Path fill options.
         fill: true,
@@ -321,7 +325,7 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
         }
 
         // If no stylesOnLayers are in the map preview state, just return a default polygon styling.
-        if (state.stylesOnLayer.length == 0 && !state.isUpdating){
+        if (state.stylesOnLayer.length == 0 && !state.isUpdating) {
             return getDefaultPolygonStyle();
         }
 
@@ -330,11 +334,11 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
         // best guess at how the user wants their map to look by interpolating them
         // or overriding if they can't be interpolated.
         let appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
-        
+
         let drawFill = false;
         let fillOpacity = undefined;
         let fillColor = undefined;
-        
+
         let drawStroke = false;
         let strokeOpacity = undefined;
         let strokeColor = undefined;
@@ -346,14 +350,14 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
         let strokeLineCap = "round";
         let strokeLineJoin = "round";
 
-        for (let appliedStyle of appliedStyles){
+        for (let appliedStyle of appliedStyles) {
             const style = appliedStyle.styleOnLayer.style;
 
             // If one style draws something then the combined style will also draw that thing
-            if (style.drawFill === true){
+            if (style.drawFill === true) {
                 drawFill = true;
             }
-            if (style.drawStroke === true){
+            if (style.drawStroke === true) {
                 drawStroke = true;
             }
 
@@ -361,13 +365,13 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
             strokeOpacity = interpolateNumbers(strokeOpacity, style.strokeOpacity);
             strokeWeight = interpolateNumbers(strokeWeight, style.strokeWeight);
 
-            if (fillColor === undefined){
+            if (fillColor === undefined) {
                 fillColor = style.fillColor;
             } else {
                 // interpolate fill color
                 fillColor = blendHexColors(fillColor, style.fillColor, 0.5);
             }
-            if (strokeColor === undefined){
+            if (strokeColor === undefined) {
                 strokeColor = style.strokeColor;
             } else {
                 // interpolate stroke color
@@ -375,10 +379,10 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
             }
 
             // Just override the rest without interpolation...
-            if (style.strokeDashArray !== null){
+            if (style.strokeDashArray !== null) {
                 strokeDashArray = style.strokeDashArray;
             }
-            if (style.strokeDashOffset !== null){
+            if (style.strokeDashOffset !== null) {
                 strokeDashOffset = style.strokeDashOffset;
             }
             strokeLineJoin = style.strokeLineJoin;
@@ -413,7 +417,7 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
  * @param baseMediaUrl the base media url for the RUSH admin server.
  * @param markerStyle the marker style.
  */
-function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
+function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any {
     const markerImageWidth = markerStyle.markerSize;
     const markerRadius = Math.sqrt(Math.pow(markerImageWidth / 2, 2) + Math.pow(markerImageWidth / 2, 2));
     return {
@@ -453,7 +457,7 @@ function getMarkerDivIconProps(baseMediaUrl: string, markerStyle: Style): any{
  * @param state the current map preview state.
  * @returns a function that returns a leaflet marker object.
  */
-function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (feature: Feature<Point, any>, latlng: L.LatLng) => L.Marker | L.Circle | undefined{
+function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (feature: Feature<Point, any>, latlng: L.LatLng) => L.Marker | L.Circle | undefined {
     // canvas is initialized once per render-cycle, since this executes at function-build time.
     const circleCanvas = L.canvas()
     const func = (feature: Feature<Point, any>, latlng: L.LatLng) => {
@@ -465,21 +469,21 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
         let markerStyle: Style | null = null;
         let circleStyle: Style | null = null;  // grab the first applied circle style as well
         const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
-        for (let appliedStyle of appliedStyles){
+        for (let appliedStyle of appliedStyles) {
             const style = appliedStyle.styleOnLayer.style;
-            if (style.drawMarker === true){
+            if (style.drawMarker === true) {
                 markerStyle = style;
             }
-            else if (style.drawCircle === true){
+            else if (style.drawCircle === true) {
                 circleStyle = style;
             }
         }
 
-        if (markerStyle === null && circleStyle === null){
+        if (markerStyle === null && circleStyle === null) {
             // Don't return a leaflet marker object if the style doesn't necessitate drawing anything to the screen
             return undefined;
         }
-        else if (circleStyle !== null){
+        else if (circleStyle !== null) {
             // inject circle props for serialization and return a circle
             const circleOptions = {
                 radius: circleStyle.circleRadius,
@@ -496,13 +500,13 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
                 dashOffset: circleStyle.circleStrokeDashOffset,
             } as CircleMarkerOptions;
             feature.properties.__circleOptions = circleOptions;
-            return L.circle(latlng, {...circleOptions, renderer: circleCanvas});
+            return L.circle(latlng, { ...circleOptions, renderer: circleCanvas });
         }
-        else if (markerStyle !== null){
+        else if (markerStyle !== null) {
             // inject marker div icon props for serialization and return a marker div icon
             const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
             feature.properties.__pointDivIconStyleProps = markerDivIconProps;
-            return L.marker(latlng, {icon: new L.DivIcon(markerDivIconProps)});
+            return L.marker(latlng, { icon: new L.DivIcon(markerDivIconProps) });
         }
     };
     return func;
@@ -513,15 +517,15 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
  * @param polygonCoords 
  * @returns 
  */
-function getPolygonCentroid(polygonCoords: Position[]): L.Point{
+function getPolygonCentroid(polygonCoords: Position[]): L.Point {
     const points: Array<L.Point> = [];
-    for (let coord of polygonCoords){
+    for (let coord of polygonCoords) {
         points.push(new L.Point(coord[0], coord[1]))
     }
     return getCentroid(points);
 }
 
-async function showSpinner(){
+async function showSpinner() {
 
     // Don't let users submit the form while the map-preview is loading.
     const saveBtn = expectQuerySelector(document.body, "input[name='_save']") as HTMLInputElement;
@@ -533,7 +537,7 @@ async function showSpinner(){
 
     const mapPreviewEl = document.getElementById("map-preview");
     const spinnerEl = document.getElementById("map-spinner");
-    if (mapPreviewEl !== null && spinnerEl !== null){
+    if (mapPreviewEl !== null && spinnerEl !== null) {
         mapPreviewEl.classList.add('blur');
         spinnerEl.classList.remove('hidden');
     } else {
@@ -542,18 +546,18 @@ async function showSpinner(){
 
 }
 
-function hideSpinner(){
-    
+function hideSpinner() {
+
     const saveBtn = expectQuerySelector(document.body, "input[name='_save']") as HTMLInputElement;
     const addAnotherBtn = expectQuerySelector(document.body, "input[name='_addanother']") as HTMLInputElement;
     const continueBtn = expectQuerySelector(document.body, "input[name='_continue']") as HTMLInputElement;
     saveBtn.disabled = false;
     addAnotherBtn.disabled = false;
     continueBtn.disabled = false;
-    
+
     const mapPreviewEl = document.getElementById("map-preview");
     const spinnerEl = document.getElementById("map-spinner");
-    if (mapPreviewEl !== null && spinnerEl !== null){
+    if (mapPreviewEl !== null && spinnerEl !== null) {
         mapPreviewEl.classList.remove('blur');
         spinnerEl.classList.add('hidden');
     } else {
@@ -563,7 +567,7 @@ function hideSpinner(){
 
 function showSpinnerAfter(numSeconds: number, state: MapPreviewState): void {
     setTimeout(() => {
-        if (state.isUpdating){
+        if (state.isUpdating) {
             showSpinner();
         }
     }, numSeconds * 1000)
@@ -606,12 +610,11 @@ function extractLatLngGroups(coordinates: any): Position[][] {
  * to render a popup.
  */
 function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string | null, popupPermanent: boolean): PopupMetadata {
-    if (popupTemplate === null){
+    if (popupTemplate === null) {
         return {
             __hasPopup: false,
             __popupHTML: null,
             __popupOptions: null,
-            __popupPermanent: false,
         };
     }
 
@@ -629,15 +632,13 @@ function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string
         // to be the same size as well.
         minWidth: hasImage ? 250 : 0,
         // Permanent popups stay open when other popups are opened, or when the map is clicked.
-        autoClose: !popupPermanent,
         closeOnClick: !popupPermanent,
-    };
+    } as PopupOptions;
 
     return {
         __hasPopup: true,
         __popupHTML: renderedPopup,
         __popupOptions: popupOptions,
-        __popupPermanent: popupPermanent,
     };
 }
 
@@ -650,8 +651,8 @@ function getPopupMetadata(feature: Feature<Geometry, any>, popupTemplate: string
 function getPopupTemplate(appliedStyles: Array<AppliedStyle>): [string | null, boolean] {
     let popupTemplate = null;
     let popupPermanent = false;
-    for (let appliedStyle of appliedStyles){
-        if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== "" && appliedStyle.styleOnLayer.drawPopup === true){
+    for (let appliedStyle of appliedStyles) {
+        if (appliedStyle.popupTemplate !== null && appliedStyle.popupTemplate !== "" && appliedStyle.styleOnLayer.drawPopup === true) {
             popupTemplate = appliedStyle.popupTemplate;
             popupPermanent = appliedStyle.styleOnLayer.popupPermanent;
         }
@@ -663,11 +664,8 @@ function getPopupTemplate(appliedStyles: Array<AppliedStyle>): [string | null, b
  * Bind a popup to the given leaflet layer, opening it as soon as the layer is added to the map if the popup is permanent.
  */
 function bindPopupFromMetadata(layer: L.Layer, popupMetadata: PopupMetadata): void {
-    if (popupMetadata.__hasPopup === true && popupMetadata.__popupHTML !== null && popupMetadata.__popupOptions !== null){
+    if (popupMetadata.__hasPopup === true && popupMetadata.__popupHTML !== null && popupMetadata.__popupOptions !== null) {
         layer.bindPopup(popupMetadata.__popupHTML, popupMetadata.__popupOptions);
-        if (popupMetadata.__popupPermanent === true){
-            layer.on("add", () => layer.openPopup());
-        }
     }
 }
 
@@ -675,16 +673,16 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
 
     // Always remove the previous layer, if there is one, from the map. 
     // Otherwse, it overlaps with the new layer being drawn.
-    if (state.currentLayer !== null){
+    if (state.currentLayer !== null) {
         map.removeLayer(state.currentLayer);
     }
     state.centroidMarkers.clearLayers();
     state.centroidTooltips.clearLayers();
 
     // Update currentLayer if we are receiving new map data.
-    if ("MapData" === update.type){
+    if ("MapData" === update.type) {
         const newGeoJson = (update as MapDataUpdate).newGeoJsonData;
-        if (newGeoJson === null){
+        if (newGeoJson === null) {
             state.currentLayer = null;
         } else {
             state.currentLayer = L.geoJSON(newGeoJson);
@@ -701,11 +699,11 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
      * Begin drawing the map.
      */
 
-    if (state.currentLayer === null){
+    if (state.currentLayer === null) {
         // Exit if there is no layer to draw at this point...
         return;
     }
-    
+
     const baseMediaUrl = expectEl('injected-media-url').innerHTML;
     const anyMarkerStyles = state.stylesOnLayer.filter(styleOnLayer => styleOnLayer.style.drawMarker == true).length > 0;
     const styledGeoJsonData = L.geoJSON(state.currentLayer.toGeoJSON(), {
@@ -718,21 +716,21 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
             const [popupTemplate, popupPermanent] = getPopupTemplate(appliedStyles);
             const popupMetadata = getPopupMetadata(feature, popupTemplate, popupPermanent);
             bindPopupFromMetadata(layer, popupMetadata);
-            if (popupMetadata.__hasPopup === true){
-                feature.properties = {...feature.properties, ...popupMetadata};
+            if (popupMetadata.__hasPopup === true) {
+                feature.properties = { ...feature.properties, ...popupMetadata };
             }
 
             const [featureCenterLng, featureCenterLat] = centerOfMass(feature).geometry.coordinates;
 
             // Flatten the list of applied styles to a single tooltip and apply it, if one is enabled.
             let tooltip: Tooltip | null = null;
-            for (let appliedStyle of appliedStyles){
-                if (appliedStyle.styleOnLayer.drawTooltip === true){
+            for (let appliedStyle of appliedStyles) {
+                if (appliedStyle.styleOnLayer.drawTooltip === true) {
                     tooltip = appliedStyle.styleOnLayer.tooltip;
                     break;
                 }
             }
-            if (tooltip !== null){
+            if (tooltip !== null) {
                 const renderedTooltipLabel = Mustache.render(tooltip.label, feature.properties);
                 const tooltipOptions = {
                     offset: new L.Point(tooltip.offsetX, tooltip.offsetY),
@@ -746,16 +744,16 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
                 leafletTooltip.setLatLng([featureCenterLat, featureCenterLng]);
                 leafletTooltip.setContent(renderedTooltipLabel);
                 leafletTooltip.addTo(state.centroidTooltips);
-                feature.properties = {...feature.properties, "__hasTooltip": true, "__tooltipLat": featureCenterLat, "__tooltipLng": featureCenterLng, "__tooltipHTML": renderedTooltipLabel, "__tooltipOptions": tooltipOptions};
+                feature.properties = { ...feature.properties, "__hasTooltip": true, "__tooltipLat": featureCenterLat, "__tooltipLng": featureCenterLng, "__tooltipHTML": renderedTooltipLabel, "__tooltipOptions": tooltipOptions };
             } else {
-                feature.properties = {...feature.properties, "__hasTooltip": false};
+                feature.properties = { ...feature.properties, "__hasTooltip": false };
             }
 
             // Draw centroid icon markers when a marker icon style is applied to a polygon feature
             const isPolygon = feature.geometry.type === "MultiPolygon" || feature.geometry.type == "Polygon";
-            if (isPolygon && anyMarkerStyles){
+            if (isPolygon && anyMarkerStyles) {
                 const markerStyles = appliedStyles.filter(appliedStyle => appliedStyle.styleOnLayer.style.drawMarker == true);
-                if (markerStyles.length > 0){
+                if (markerStyles.length > 0) {
                     const markerStyle = markerStyles[0].styleOnLayer.style; // Just take the first marker style if multiple applied.
                     const bindCentroidMarkerIcon = (lat: Number, lng: Number) => {
                         const markerDivIconProps = getMarkerDivIconProps(baseMediaUrl, markerStyle);
@@ -826,15 +824,15 @@ const initStylesOnLayerResponsiveUI = (subscriberManager: DynamicSubscriberManag
     };
 
     const registerCheckbox = (
-        checkboxSelector: string, 
-        affectedLabelsSubstring: string, 
+        checkboxSelector: string,
+        affectedLabelsSubstring: string,
         callback: (checkboxFormRow: HTMLElement | null, formRows: Array<HTMLElement>, isChecked: boolean) => void,
     ) => {
         subscriberManager.subscribeEventListener("input", checkboxSelector, (event) => {
-            if (event.target !== null && event.target instanceof HTMLInputElement){
+            if (event.target !== null && event.target instanceof HTMLInputElement) {
                 // Grab parent inline when checkbox clicked
                 const inline = event.target.closest("div[id*='stylesonlayer_set-']");
-                if (inline === null || !(inline instanceof HTMLElement)){
+                if (inline === null || !(inline instanceof HTMLElement)) {
                     throw new Error("Could not find 'draw_tooltip' form-field parent row!");
                 }
                 // Run callback on matching labelled form-rows
@@ -854,8 +852,8 @@ const initStylesOnLayerResponsiveUI = (subscriberManager: DynamicSubscriberManag
 
     // Register the draw-tooltip checkbox
     registerCheckbox("input[id*='-draw_tooltip']", "Tooltip", (checkboxFormRow, formRows, checked) => {
-        for (let formRow of formRows){
-            if (checked === true){
+        for (let formRow of formRows) {
+            if (checked === true) {
                 formRow.style.display = "block";
                 formRow.style.setProperty("background-color", EXPAND_BG_COLOR);
                 checkboxFormRow?.style.setProperty("background-color", EXPAND_BG_COLOR_CHECKBOX);
@@ -870,8 +868,8 @@ const initStylesOnLayerResponsiveUI = (subscriberManager: DynamicSubscriberManag
 
     // Register the draw-tooltip checkbox
     registerCheckbox("input[id*='-draw_popup']", "Popup", (checkboxFormRow, formRows, checked) => {
-        for (let formRow of formRows){
-            if (checked === true){
+        for (let formRow of formRows) {
+            if (checked === true) {
                 formRow.style.display = "block";
                 formRow.style.setProperty("background-color", EXPAND_BG_COLOR);
                 checkboxFormRow?.style.setProperty("background-color", EXPAND_BG_COLOR_CHECKBOX);
@@ -901,11 +899,11 @@ const initStylesOnLayerResponsiveUI = (subscriberManager: DynamicSubscriberManag
  *      from another django form page, e.g., style, where the changes need to be reflected in the layer preview.
  */
 const initStyleUpdateTriggers = (subscriberManager: DynamicSubscriberManager, map: L.Map, mapDataSelectSpan: HTMLSpanElement, mapPreviewState: MapPreviewState) => {
-    
+
     // Shorthand for redrawing the map by fetching new styles / popup info
     const doStyleUpdate = () => {
         mapDataFromSpan(mapDataSelectSpan).then((mapData) => {
-            if (mapData?.providerState === "GEOJSON"){
+            if (mapData?.providerState === "GEOJSON") {
                 mapPreviewState.isUpdating = true;
                 showSpinnerAfter(1, mapPreviewState);
                 getStyleUpdate().then(styleUpdate => {
@@ -914,7 +912,7 @@ const initStyleUpdateTriggers = (subscriberManager: DynamicSubscriberManager, ma
             }
         });
     };
-    
+
     // We want to throttle the updates for continous input types (like sliders)
     const throttledStyleUpdate = new ThrottledSignalReceiver(1000, doStyleUpdate);
 
@@ -937,14 +935,14 @@ const initStyleUpdateTriggers = (subscriberManager: DynamicSubscriberManager, ma
     const summernoteTextAreaSelectors = ["textarea[id*='popup']", "textarea[id*='label']"];
     const pollSummernoteEditorChanges = () => {
         currentEditorText = "";
-        for (let selector of summernoteTextAreaSelectors){
-            for (let el of document.querySelectorAll(selector)){
-                if (el instanceof HTMLTextAreaElement){
+        for (let selector of summernoteTextAreaSelectors) {
+            for (let el of document.querySelectorAll(selector)) {
+                if (el instanceof HTMLTextAreaElement) {
                     currentEditorText += el.value;
                 }
             }
         }
-        if (currentEditorText !== previousEditorText){
+        if (currentEditorText !== previousEditorText) {
             doStyleUpdate();
             previousEditorText = currentEditorText;
         }
@@ -953,7 +951,7 @@ const initStyleUpdateTriggers = (subscriberManager: DynamicSubscriberManager, ma
     pollSummernoteEditorChanges();
 
     // 3. Checkboxes and dropdowns
-    subscriberManager.subscribeMutationObserver({childList: true, subtree: true}, "span[id*='select2-id_stylesonlayer_set']", doStyleUpdate); // Select-2 (autocomplete) dropdown needs DOM observer
+    subscriberManager.subscribeMutationObserver({ childList: true, subtree: true }, "span[id*='select2-id_stylesonlayer_set']", doStyleUpdate); // Select-2 (autocomplete) dropdown needs DOM observer
     subscriberManager.subscribeEventListener("input", "input[id*='-draw_popup']", doStyleUpdate);
     subscriberManager.subscribeEventListener("input", "input[id$='-popup_permanent']", doStyleUpdate);
     subscriberManager.subscribeEventListener("input", "input[id*='-draw_tooltip']", doStyleUpdate);
@@ -968,87 +966,89 @@ const initStyleUpdateTriggers = (subscriberManager: DynamicSubscriberManager, ma
             // This can happen after a user edits one of the inline styles and then clicks on the layer edit tab.
             doStyleUpdate();
         }
-    });    
+    });
 };
 
-document.addEventListener("DOMContentLoaded", () => {(async () => {
-    
-    const TILE_LAYER_OPTS = {
-        minZoom: 0,
-        maxZoom: 22,
-        updateWhenIdle: true,
-        zIndex: 0,
-        attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>',
-    }
-    const MAPBOX_USER = 'rushadmin'
-    const MAPBOX_STYLEID = 'clw2m6f9b018001obfxcc747g'
-    const MAPBOX_TOKEN = 'pk.eyJ1IjoicnVzaGFkbWluIiwiYSI6ImNsdzJtYmRydzBuNDIyam5yZ2pwMG16cnUifQ.SkSSdHcrPq4u8HSitBvJcg'
-    const API_URL = `https://api.mapbox.com/styles/v1/`
-    const API_TILE_PATH = `${MAPBOX_USER}/${MAPBOX_STYLEID}/tiles/256/{z}/{x}/{y}@2x`
-    const API_PARAMS = `?access_token=${MAPBOX_TOKEN}`
+document.addEventListener("DOMContentLoaded", () => {
+    (async () => {
 
-    // Initialize leaflet map
-    let map = L.map('map-preview').setView([0, 0], 2);
-    L.tileLayer(API_URL + API_TILE_PATH + API_PARAMS, TILE_LAYER_OPTS).addTo(map);
-
-    // Initialize object to track map preview state
-    let mapPreviewState: MapPreviewState = {
-        isUpdating: true,
-        stylesOnLayer: [],
-        currentLayer: null,
-        centroidMarkers: new L.LayerGroup(),
-        centroidTooltips: new L.LayerGroup(),
-    };
-    mapPreviewState.centroidMarkers.addTo(map);
-    mapPreviewState.centroidTooltips.addTo(map);
-
-    // Move spinner from top of page to inside the map preview box and show the spinner initially as the map preview is drawn
-    const mapDataSelectSpan = await waitForElementById("id_map_data");
-    (await waitForElementById('id_map_data_helptext')).appendChild(await waitForElementById("map-spinner"));
-    const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
-    hideSpinner(); // Spinner should be turned off by default... (this is needed so non-gejson map data layers don't initialize with a spinner that never goes away.)
-    if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON"){
-        // Render the spinner initially if the being edited is for GEOJSON map-data.
-        showSpinner();
-    }
-    
-    const subscriberManager = new DynamicSubscriberManager(document.body);
-    initStyleUpdateTriggers(subscriberManager, map, mapDataSelectSpan, mapPreviewState);
-    initStylesOnLayerResponsiveUI(subscriberManager);
-
-    // Listen to redraw the map when the map-data is changed.
-    const mapPreviewEl = await waitForElementById("map-preview");
-    //const stylesOnLayersGroupEl = await waitForElementById("stylesonlayer_set-group");
-    async function onMapDataDropdownChange(){
-        const mapData = await mapDataFromSpan(mapDataSelectSpan);
-        const hideMapPreview = () => {
-            mapPreviewEl.style.display = 'none';
-        };
-        const showMapPreview = () => {
-            mapPreviewEl.style.display = 'block';
-        };
-        if (mapData?.providerState === "GEOJSON"){
-            showMapPreview();
-            mapPreviewState.isUpdating = true;
-            showSpinnerAfter(1, mapPreviewState);
-            getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
-        } else {
-            // Hide map preview and styles on layers when we are not dealing with GEOJSON map data for this layer...
-            hideMapPreview();
+        const TILE_LAYER_OPTS = {
+            minZoom: 0,
+            maxZoom: 22,
+            updateWhenIdle: true,
+            zIndex: 0,
+            attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>',
         }
-    };
-    onMapDataDropdownChange(); // for initial load
-    mapDataSelectSpan.addEventListener("change", onMapDataDropdownChange); // When new map data is selected
+        const MAPBOX_USER = 'rushadmin'
+        const MAPBOX_STYLEID = 'clw2m6f9b018001obfxcc747g'
+        const MAPBOX_TOKEN = 'pk.eyJ1IjoicnVzaGFkbWluIiwiYSI6ImNsdzJtYmRydzBuNDIyam5yZ2pwMG16cnUifQ.SkSSdHcrPq4u8HSitBvJcg'
+        const API_URL = `https://api.mapbox.com/styles/v1/`
+        const API_TILE_PATH = `${MAPBOX_USER}/${MAPBOX_STYLEID}/tiles/256/{z}/{x}/{y}@2x`
+        const API_PARAMS = `?access_token=${MAPBOX_TOKEN}`
 
-    // Draw the initial map using the current map-data and style info.
-    Promise.all([
-        getStyleUpdate(), 
-        getMapDataUpdate(mapDataSelectSpan),
-    ]).then(([styleUpdate, mapDataUpdate]: [StyleUpdate, MapDataUpdate]) => {
-        // Inefficient, but meh.
-        drawMapPreview(map, mapPreviewState, mapDataUpdate);
-        mapPreviewState.isUpdating = true; // Still doing the initial update...
-        drawMapPreview(map, mapPreviewState, styleUpdate);
-    });
+        // Initialize leaflet map
+        let map = L.map('map-preview').setView([0, 0], 2);
+        L.tileLayer(API_URL + API_TILE_PATH + API_PARAMS, TILE_LAYER_OPTS).addTo(map);
 
-})();});
+        // Initialize object to track map preview state
+        let mapPreviewState: MapPreviewState = {
+            isUpdating: true,
+            stylesOnLayer: [],
+            currentLayer: null,
+            centroidMarkers: new L.LayerGroup(),
+            centroidTooltips: new L.LayerGroup(),
+        };
+        mapPreviewState.centroidMarkers.addTo(map);
+        mapPreviewState.centroidTooltips.addTo(map);
+
+        // Move spinner from top of page to inside the map preview box and show the spinner initially as the map preview is drawn
+        const mapDataSelectSpan = await waitForElementById("id_map_data");
+        (await waitForElementById('id_map_data_helptext')).appendChild(await waitForElementById("map-spinner"));
+        const initialMapDataProviderState = (await mapDataFromSpan(mapDataSelectSpan))?.providerState;
+        hideSpinner(); // Spinner should be turned off by default... (this is needed so non-gejson map data layers don't initialize with a spinner that never goes away.)
+        if (initialMapDataProviderState && initialMapDataProviderState === "GEOJSON") {
+            // Render the spinner initially if the being edited is for GEOJSON map-data.
+            showSpinner();
+        }
+
+        const subscriberManager = new DynamicSubscriberManager(document.body);
+        initStyleUpdateTriggers(subscriberManager, map, mapDataSelectSpan, mapPreviewState);
+        initStylesOnLayerResponsiveUI(subscriberManager);
+
+        // Listen to redraw the map when the map-data is changed.
+        const mapPreviewEl = await waitForElementById("map-preview");
+        //const stylesOnLayersGroupEl = await waitForElementById("stylesonlayer_set-group");
+        async function onMapDataDropdownChange() {
+            const mapData = await mapDataFromSpan(mapDataSelectSpan);
+            const hideMapPreview = () => {
+                mapPreviewEl.style.display = 'none';
+            };
+            const showMapPreview = () => {
+                mapPreviewEl.style.display = 'block';
+            };
+            if (mapData?.providerState === "GEOJSON") {
+                showMapPreview();
+                mapPreviewState.isUpdating = true;
+                showSpinnerAfter(1, mapPreviewState);
+                getMapDataUpdate(mapDataSelectSpan).then((mapDataUpdate) => drawMapPreview(map, mapPreviewState, mapDataUpdate));
+            } else {
+                // Hide map preview and styles on layers when we are not dealing with GEOJSON map data for this layer...
+                hideMapPreview();
+            }
+        };
+        onMapDataDropdownChange(); // for initial load
+        mapDataSelectSpan.addEventListener("change", onMapDataDropdownChange); // When new map data is selected
+
+        // Draw the initial map using the current map-data and style info.
+        Promise.all([
+            getStyleUpdate(),
+            getMapDataUpdate(mapDataSelectSpan),
+        ]).then(([styleUpdate, mapDataUpdate]: [StyleUpdate, MapDataUpdate]) => {
+            // Inefficient, but meh.
+            drawMapPreview(map, mapPreviewState, mapDataUpdate);
+            mapPreviewState.isUpdating = true; // Still doing the initial update...
+            drawMapPreview(map, mapPreviewState, styleUpdate);
+        });
+
+    })();
+});
