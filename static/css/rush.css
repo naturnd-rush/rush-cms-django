@@ -1,17 +1,19 @@
 /* Tooltips */
 .leaflet-tooltip.leaflet-label {
-  padding: 0;
-  background-color: transparent;
-  border: unset;
-  box-shadow: unset;
-  font-size: 1.0rem;
-  color: white;
-  font-weight: 700;
-  font-family: 'Inter', sans-serif;
-  text-shadow: -2px -2px 0 black, 2px -2px 0 black, -2px 2px 0 black, 2px 2px 0 black;;
+    padding: 0;
+    background-color: transparent;
+    border: unset;
+    box-shadow: unset;
+    font-size: 1.0rem;
+    color: white;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    -webkit-text-stroke: 4px black;
+    paint-order: stroke fill;
 }
+
 .leaflet-tooltip.leaflet-label::before {
-  display: 'none'
+    display: none;
 }
 
 /* Global Variables */
@@ -20,7 +22,16 @@ body {
 }
 
 /* Default Text Color */
-p, h1, h2, h3, h4, h5, h6, .rush-title, .rush-subtitle, .rush-hint {
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.rush-title,
+.rush-subtitle,
+.rush-hint {
     color: var(--rush-text-color)
 }
 
@@ -58,7 +69,12 @@ p,
     font-size: 0.75rem;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
     font-family: Poppins;
     font-weight: 500;
 }
