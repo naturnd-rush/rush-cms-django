@@ -10,6 +10,7 @@ from django.db.models import Prefetch, QuerySet
 from graphene.types import ResolveInfo
 from graphene_django.types import DjangoObjectType
 from graphql import GraphQLError
+import rapidfuzz
 
 from rush import models
 from rush.context_processors import base_url_from_request
@@ -471,6 +472,15 @@ class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
         )
 
 
+class LayerSearchResultType(graphene.ObjectType):
+    """
+    A layer matched by a fuzzy search on its name, along with how well it matched.
+    """
+
+    layer = graphene.Field(LayerTypeWithoutSerializedLeafletJSON)
+    score = graphene.Float(description="The rapidfuzz match score, from 0 to 100.")
+
+
 class LayerOnLayerGroupType(DjangoObjectType):
 
     class Meta:
@@ -841,6 +851,13 @@ class Query(graphene.ObjectType):
         LayerType, id=graphene.UUID(required=True), channels=CHANNELS_ARG
     )
 
+    search_layers = graphene.List(
+        LayerSearchResultType,
+        query=graphene.String(required=True),
+        limit=graphene.Int(default_value=10),
+        channels=CHANNELS_ARG,
+    )
+
     all_questions = graphene.List(QuestionType, channels=CHANNELS_ARG)
     question = graphene.Field(
         QuestionType, id=graphene.UUID(required=True), channels=CHANNELS_ARG
@@ -890,6 +907,29 @@ class Query(graphene.ObjectType):
             .distinct()
             .get(pk=id)
         )
+
+    def resolve_search_layers(
+        self, info, query: str, limit: int, channels: list[str] | None = None
+    ):
+        layers = list(
+            models.Layer.objects.filter(
+                channels__in=scope_request_to_channels(info, channels)
+            )
+            .distinct()
+            .select_related("map_data")
+            .defer("serialized_leaflet_json", "map_data___geojson")
+        )
+        matches = rapidfuzz.process.extract(
+            query,
+            [layer.name for layer in layers],
+            scorer=rapidfuzz.fuzz.WRatio,
+            processor=rapidfuzz.utils.default_process,
+            limit=limit,
+        )
+        return [
+            LayerSearchResultType(layer=layers[index], score=score)
+            for _, score, index in matches
+        ]
 
     def resolve_layer_group(self, info, question_id):
         return (
