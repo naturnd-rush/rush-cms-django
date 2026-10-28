@@ -2,7 +2,7 @@ import json
 import logging
 from typing import List
 from urllib.parse import urljoin
-
+from itertools import batched
 import graphene
 from bs4 import BeautifulSoup
 from django.conf import settings
@@ -472,15 +472,6 @@ class LayerTypeWithoutSerializedLeafletJSON(DjangoObjectType):
         )
 
 
-class LayerSearchResultType(graphene.ObjectType):
-    """
-    A layer matched by a fuzzy search on its name, along with how well it matched.
-    """
-
-    layer = graphene.Field(LayerTypeWithoutSerializedLeafletJSON)
-    score = graphene.Float(description="The rapidfuzz match score, from 0 to 100.")
-
-
 class LayerOnLayerGroupType(DjangoObjectType):
 
     class Meta:
@@ -749,6 +740,36 @@ class QuestionType(DjangoObjectType):
         )
 
 
+class LayerSearchResultTextMatchSnippetType(graphene.ObjectType):
+    """
+    A snippet of text that has a high match score against the query.
+    """
+
+    snippet = graphene.String()
+    score = graphene.Float()
+
+
+class LayerSearchResultQuestionTabTextMatchSnippet(graphene.ObjectType):
+    """
+    A snippet of text related to a specific question tab that has a high match score against the query.
+    """
+
+    question = graphene.Field(QuestionType)
+    question_tab = graphene.Field(QuestionTabType)
+    snippet = graphene.Field(LayerSearchResultTextMatchSnippetType)
+
+
+class LayerSearchResultType(graphene.ObjectType):
+    """
+    A layer matched by a fuzzy search on its name, along with how well it matched.
+    """
+
+    layer = graphene.Field(LayerTypeWithoutSerializedLeafletJSON)
+    layer_title_score = graphene.Float(description="The rapidfuzz match score, from 0 to 100.")
+    legend_description_snippets = graphene.List(LayerSearchResultTextMatchSnippetType)
+    question_tab_snippets = graphene.List(LayerSearchResultQuestionTabTextMatchSnippet)
+
+
 class PageType(DjangoObjectType):
     class Meta:
         model = models.Page
@@ -911,25 +932,78 @@ class Query(graphene.ObjectType):
     def resolve_search_layers(
         self, info, query: str, limit: int, channels: list[str] | None = None
     ):
-        layers = list(
-            models.Layer.objects.filter(
-                channels__in=scope_request_to_channels(info, channels)
+        SNIPPET_WORD_CHUNK_SIZE = 8
+        MAX_LEGEND_DESCRIPTION_SNIPPETS = 5
+        MAX_SNIPPETS_PER_QUESTION_TAB = 5
+
+        def match_snippets(
+            html: str, max_snippets: int
+        ) -> list[LayerSearchResultTextMatchSnippetType]:
+            """
+            Split the (HTML) text into word chunks and return the best matching chunks against the query.
+            """
+            words = BeautifulSoup(html, "html.parser").get_text(" ").split()
+            chunks = [" ".join(chunk) for chunk in batched(words, SNIPPET_WORD_CHUNK_SIZE)]
+            matches = rapidfuzz.process.extract(
+                query,
+                chunks,
+                scorer=rapidfuzz.fuzz.WRatio,
+                processor=rapidfuzz.utils.default_process,
+                limit=max_snippets,
             )
+            return [
+                LayerSearchResultTextMatchSnippetType(snippet=snippet, score=score)
+                for snippet, score, _ in matches
+            ]
+
+        scoped_channels = scope_request_to_channels(info, channels)
+        layers = list(
+            models.Layer.objects.filter(channels__in=scoped_channels)
             .distinct()
             .select_related("map_data")
             .defer("serialized_leaflet_json", "map_data___geojson")
+            .prefetch_related(
+                Prefetch(
+                    # only search question tabs that are visible on the requested channels
+                    "question_tabs",
+                    queryset=models.QuestionTab.objects.filter(
+                        question__channels__in=scoped_channels
+                    )
+                    .distinct()
+                    .select_related("question"),
+                )
+            )
         )
-        matches = rapidfuzz.process.extract(
-            query,
-            [layer.name for layer in layers],
-            scorer=rapidfuzz.fuzz.WRatio,
-            processor=rapidfuzz.utils.default_process,
-            limit=limit,
-        )
-        return [
-            LayerSearchResultType(layer=layers[index], score=score)
-            for _, score, index in matches
-        ]
+        results = []
+        for layer in layers:
+            title_score = rapidfuzz.fuzz.WRatio(
+                query,
+                layer.name,
+                processor=rapidfuzz.utils.default_process,
+            )
+            question_tab_snippets = [
+                LayerSearchResultQuestionTabTextMatchSnippet(
+                    question=question_tab.question,
+                    question_tab=question_tab,
+                    snippet=snippet,
+                )
+                for question_tab in layer.question_tabs.all()
+                for snippet in match_snippets(
+                    question_tab.content, MAX_SNIPPETS_PER_QUESTION_TAB
+                )
+            ]
+            results.append(
+                LayerSearchResultType(
+                    layer=layer,
+                    layer_title_score=title_score,
+                    legend_description_snippets=match_snippets(
+                        layer.description, MAX_LEGEND_DESCRIPTION_SNIPPETS
+                    ),
+                    question_tab_snippets=question_tab_snippets,
+                )
+            )
+        results.sort(key=lambda result: result.layer_title_score, reverse=True)
+        return results[:limit]
 
     def resolve_layer_group(self, info, question_id):
         return (
