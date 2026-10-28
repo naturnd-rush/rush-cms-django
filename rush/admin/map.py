@@ -5,8 +5,11 @@ from decimal import Decimal
 from typing import Any, List
 
 import adminsortable2.admin as sortable_admin
+import rapidfuzz
 from django import forms
 from django.contrib import admin
+from django.contrib.admin.views.main import ORDER_VAR
+from django.db.models import Case, FloatField, Value, When
 from django.http import HttpRequest, HttpResponseRedirect
 from django.utils.safestring import mark_safe
 from silk.profiling.dynamic import silk_profile
@@ -321,6 +324,35 @@ class LayerAdmin(  # type: ignore
     description_preview = truncate_admin_text_from("description")
     list_filter = [ChannelFilter]
     actions = ["duplicate_object"]
+
+    # Layers whose names score below this (out of 100) against the search term are hidden.
+    FUZZY_SEARCH_SCORE_CUTOFF = 60
+
+    def get_search_results(self, request, queryset, search_term):
+        """
+        Fuzzy search layer names with rapidfuzz instead of Django's exact substring search, so
+        that typos and re-ordered words still find the layer. Best matches are listed first.
+        """
+        if not search_term.strip():
+            return super().get_search_results(request, queryset, search_term)
+        matches = rapidfuzz.process.extract(
+            search_term,
+            dict(queryset.values_list("id", "name")),
+            scorer=rapidfuzz.fuzz.WRatio,
+            processor=rapidfuzz.utils.default_process,
+            score_cutoff=self.FUZZY_SEARCH_SCORE_CUTOFF,
+            limit=None,
+        )
+        scores = [When(id=layer_id, then=Value(score)) for _, score, layer_id in matches]
+        queryset = queryset.filter(
+            id__in=[layer_id for _, _, layer_id in matches]
+        ).annotate(
+            fuzzy_search_score=Case(*scores, default=Value(0.0), output_field=FloatField())
+        )
+        # List the best matches first, unless the user clicked a column header to sort by it.
+        if ORDER_VAR not in request.GET:
+            queryset = queryset.order_by("-fuzzy_search_score", "-pk")
+        return queryset, False
 
     @admin.action(description="Duplicate selected items")
     def duplicate_object(self, request, queryset):
