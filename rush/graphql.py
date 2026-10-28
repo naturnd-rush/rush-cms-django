@@ -879,6 +879,13 @@ class Query(graphene.ObjectType):
         channels=CHANNELS_ARG,
     )
 
+    questions_by_layer = graphene.List(
+        QuestionType,
+        layer_id=graphene.UUID(required=True),
+        channels=CHANNELS_ARG,
+        description="The questions that have the given layer in one of their layer groups.",
+    )
+
     all_questions = graphene.List(QuestionType, channels=CHANNELS_ARG)
     question = graphene.Field(
         QuestionType, id=graphene.UUID(required=True), channels=CHANNELS_ARG
@@ -940,21 +947,25 @@ class Query(graphene.ObjectType):
             html: str, max_snippets: int
         ) -> list[LayerSearchResultTextMatchSnippetType]:
             """
-            Split the (HTML) text into word chunks and return the best matching chunks against the query.
+            Split the (HTML) text into word chunks and return the chunks that contain the query,
+            best matching first. Containment ignores case and punctuation.
             """
             words = BeautifulSoup(html, "html.parser").get_text(" ").split()
             chunks = [" ".join(chunk) for chunk in batched(words, SNIPPET_WORD_CHUNK_SIZE)]
-            matches = rapidfuzz.process.extract(
-                query,
-                chunks,
-                scorer=rapidfuzz.fuzz.WRatio,
-                processor=rapidfuzz.utils.default_process,
-                limit=max_snippets,
-            )
-            return [
-                LayerSearchResultTextMatchSnippetType(snippet=snippet, score=score)
-                for snippet, score, _ in matches
+            matches = [
+                LayerSearchResultTextMatchSnippetType(
+                    snippet=chunk,
+                    score=rapidfuzz.fuzz.WRatio(processed_query, processed_chunk),
+                )
+                for chunk in chunks
+                if processed_query
+                and processed_query
+                in (processed_chunk := rapidfuzz.utils.default_process(chunk))
             ]
+            matches.sort(key=lambda match: match.score, reverse=True)
+            return matches[:max_snippets]
+
+        processed_query = rapidfuzz.utils.default_process(query)
 
         scoped_channels = scope_request_to_channels(info, channels)
         layers = list(
@@ -1018,6 +1029,18 @@ class Query(graphene.ObjectType):
         return (
             optimized_question_resolve_qs()
             .filter(channels__in=scope_request_to_channels(info, channels))
+            .distinct()
+        )
+
+    def resolve_questions_by_layer(
+        self, info, layer_id, channels: list[str] | None = None
+    ):
+        return (
+            optimized_question_resolve_qs()
+            .filter(
+                channels__in=scope_request_to_channels(info, channels),
+                layer_groups__layers__layer__id=layer_id,
+            )
             .distinct()
         )
 
