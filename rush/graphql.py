@@ -943,6 +943,10 @@ class Query(graphene.ObjectType):
         MAX_LEGEND_DESCRIPTION_SNIPPETS = 5
         MAX_SNIPPETS_PER_QUESTION_TAB = 5
 
+        # The way rapid fuzz works makes the really common search term "and," overpower other, more
+        # important, contextual words. This is just a little hack to prevent that.
+        query = query.replace("and", "")
+
         def match_snippets(
             html: str, max_snippets: int
         ) -> list[LayerSearchResultTextMatchSnippetType]:
