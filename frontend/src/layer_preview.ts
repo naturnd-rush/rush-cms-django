@@ -34,6 +34,10 @@ export interface StyleOnLayer {
     popupTemplate: string | null,
     popupPermanent: boolean,
 
+    // inclusive zoom range this style is drawn at
+    minZoom: number,
+    maxZoom: number,
+
     drawTooltip: boolean,
     tooltip: Tooltip,
 
@@ -43,8 +47,16 @@ export interface MapPreviewState {
     isUpdating: boolean,
     stylesOnLayer: Array<StyleOnLayer>,
     currentLayer: L.GeoJSON<any, Geometry> | null,
+    // The unstyled map data. Every redraw starts from this, because the styled currentLayer drops features
+    // that aren't drawn (e.g., points outside their style's zoom range) and they'd never come back.
+    sourceGeoJson: FeatureCollection<Geometry, any> | null,
     centroidMarkers: L.LayerGroup,
     centroidTooltips: L.LayerGroup,
+    // The map zoom level used to decide which styles are drawn. Null means "ignore zoom ranges and
+    // draw every style", which is what we want when serializing the layer for saving.
+    zoom: number | null,
+    // Which styles were visible at the last draw (see visibleStylesKey).
+    visibleStylesKey: string,
 }
 
 /**
@@ -77,6 +89,33 @@ interface PopupMetadata {
     __popupOptions: PopupOptions | null;
 }
 
+// Must match StylesOnLayer.MIN_ZOOM / MAX_ZOOM on the Django model.
+const MIN_ZOOM = 0;
+const MAX_ZOOM = 23;
+
+/**
+ * Parse a zoom form value into an integer, falling back to the given default if it's empty or invalid.
+ */
+function parseZoom(value: string | undefined, fallback: number): number {
+    const parsed = value !== undefined ? Number.parseInt(value, 10) : Number.NaN;
+    return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+/**
+ * Whether the given style-on-layer should be drawn at the given zoom level (null means always draw it).
+ */
+function isVisibleAtZoom(styleOnLayer: StyleOnLayer, zoom: number | null): boolean {
+    return zoom === null || (styleOnLayer.minZoom <= zoom && zoom <= styleOnLayer.maxZoom);
+}
+
+/**
+ * A string key identifying which styles are visible at the given zoom. Used to skip redraws
+ * when zooming doesn't cross any style's zoom range boundary.
+ */
+function visibleStylesKey(stylesOnLayer: Array<StyleOnLayer>, zoom: number | null): string {
+    return stylesOnLayer.map(styleOnLayer => isVisibleAtZoom(styleOnLayer, zoom) ? "1" : "0").join("");
+}
+
 /**
  * Search all style-on-layer inlines and collect their form data + any related data that may exist.
  * Returns a list of style-on-layers to be rendered.
@@ -90,6 +129,8 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
         const popupTemplate = (inlineRow.querySelector("textarea[id*='popup']") as HTMLInputElement | null)?.value;
         const drawPopupChecked = (inlineRow.querySelector("input[id*='-draw_popup']") as HTMLInputElement | null)?.checked;
         const popupPermanent = (inlineRow.querySelector("input[id$='-popup_permanent']") as HTMLInputElement | null)?.checked;
+        const minZoom = (inlineRow.querySelector("input[id$='-min_zoom']") as HTMLInputElement | null)?.value;
+        const maxZoom = (inlineRow.querySelector("input[id$='-max_zoom']") as HTMLInputElement | null)?.value;
         const drawTooltipChecked = (inlineRow.querySelector("input[id*='-draw_tooltip']") as HTMLInputElement | null)?.checked;
         const tooltipLabel = (inlineRow.querySelector("textarea[id*='label']") as HTMLInputElement | null)?.value;
         const tooltipOffsetX = (inlineRow.querySelector("input[id*='offset_x']") as HTMLInputElement | null)?.value;
@@ -109,6 +150,8 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
             popupTemplate !== undefined &&
             drawPopupChecked !== undefined &&
             popupPermanent !== undefined &&
+            minZoom !== undefined &&
+            maxZoom !== undefined &&
             drawTooltipChecked !== undefined &&
             tooltipLabel !== undefined &&
             tooltipOffsetX !== undefined &&
@@ -134,6 +177,8 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
                 drawPopup: drawPopupChecked,
                 popupTemplate: popupTemplate,
                 popupPermanent: popupPermanent,
+                minZoom: parseZoom(minZoom, MIN_ZOOM),
+                maxZoom: parseZoom(maxZoom, MAX_ZOOM),
                 drawTooltip: drawTooltipChecked,
                 tooltip: tooltipData,
             };
@@ -155,6 +200,8 @@ export async function getStyleUpdate(): Promise<StyleUpdate> {
                 drawPopup: drawPopupChecked,
                 popupTemplate: popupTemplate,
                 popupPermanent: popupPermanent,
+                minZoom: parseZoom(minZoom, MIN_ZOOM),
+                maxZoom: parseZoom(maxZoom, MAX_ZOOM),
                 drawTooltip: drawTooltipChecked,
                 tooltip: tooltipData,
             };
@@ -256,10 +303,13 @@ export const inlineElements = {
  * @param stylesOnLayer the styles present on the current map layer.
  * @returns an array of styles that should be applied to the given feature. 
  */
-function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<StyleOnLayer>): Array<AppliedStyle> {
+function getAppliedStyles(feature: Feature<Geometry, any>, stylesOnLayer: Array<StyleOnLayer>, zoom: number | null): Array<AppliedStyle> {
     const parser = new Parser();
     let applied: Array<AppliedStyle> = [];
     for (let styleOnLayer of stylesOnLayer) {
+        if (!isVisibleAtZoom(styleOnLayer, zoom)) {
+            continue;
+        }
         const fieldMappingContainer = styleOnLayer.inlineRow.querySelector("td[class*='feature_mapping']");
         const fieldMappingErrors = fieldMappingContainer?.querySelector("div[id*='errors']");
         try {
@@ -333,7 +383,7 @@ function getPolygonStyleFunc(state: MapPreviewState): StyleFunction {
         // styles being applied to the same feature, we just give our
         // best guess at how the user wants their map to look by interpolating them
         // or overriding if they can't be interpolated.
-        let appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
+        let appliedStyles = getAppliedStyles(feature, state.stylesOnLayer, state.zoom);
 
         let drawFill = false;
         let fillOpacity = undefined;
@@ -468,7 +518,7 @@ function getPointStyleFunc(baseMediaUrl: string, state: MapPreviewState): (featu
         //          draw-marker is true.
         let markerStyle: Style | null = null;
         let circleStyle: Style | null = null;  // grab the first applied circle style as well
-        const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
+        const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer, state.zoom);
         for (let appliedStyle of appliedStyles) {
             const style = appliedStyle.styleOnLayer.style;
             if (style.drawMarker === true) {
@@ -684,7 +734,9 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
         const newGeoJson = (update as MapDataUpdate).newGeoJsonData;
         if (newGeoJson === null) {
             state.currentLayer = null;
+            state.sourceGeoJson = null;
         } else {
+            state.sourceGeoJson = newGeoJson;
             state.currentLayer = L.geoJSON(newGeoJson);
             map.fitBounds(state.currentLayer.getBounds());
         }
@@ -699,20 +751,58 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
      * Begin drawing the map.
      */
 
-    if (state.currentLayer === null) {
+    if (state.currentLayer === null || state.sourceGeoJson === null) {
         // Exit if there is no layer to draw at this point...
         return;
     }
 
     const baseMediaUrl = expectEl('injected-media-url').innerHTML;
-    const anyMarkerStyles = state.stylesOnLayer.filter(styleOnLayer => styleOnLayer.style.drawMarker == true).length > 0;
-    const styledGeoJsonData = L.geoJSON(state.currentLayer.toGeoJSON(), {
+    const sourceGeoJson = state.sourceGeoJson;
+
+    // Draw only the styles visible at the current zoom on the map preview.
+    state.zoom = map.getZoom();
+    state.visibleStylesKey = visibleStylesKey(state.stylesOnLayer, state.zoom);
+    const styledGeoJsonData = buildStyledLayer(sourceGeoJson, baseMediaUrl, state);
+    state.currentLayer = styledGeoJsonData;
+    styledGeoJsonData.addTo(map)
+    hideSpinner();
+    state.isUpdating = false;
+
+    // Save serialized leaflet json to a hidden field so it can be saved on the Layer model. If a zoom range is
+    // hiding some styles right now, re-build the layer with every style so the saved data doesn't depend on
+    // what zoom level the admin happened to be at.
+    let serializeState = state;
+    if (state.stylesOnLayer.some(styleOnLayer => !isVisibleAtZoom(styleOnLayer, state.zoom))) {
+        serializeState = {
+            ...state,
+            zoom: null,
+            centroidMarkers: new L.LayerGroup(),
+            centroidTooltips: new L.LayerGroup(),
+        };
+        serializeState.currentLayer = buildStyledLayer(sourceGeoJson, baseMediaUrl, serializeState);
+    }
+    const hiddenField = expectEl("id_serialized_leaflet_json") as HTMLInputElement;
+    hiddenField.value = serializeLayer(serializeState);
+
+}
+
+/**
+ * Build a styled leaflet GeoJSON layer from the given GeoJSON, using the styles (and zoom) in the given state.
+ * Centroid markers and tooltips are added to the state's centroidMarkers and centroidTooltips layer groups.
+ */
+function buildStyledLayer(sourceGeoJson: any, baseMediaUrl: string, state: MapPreviewState): L.GeoJSON<any, Geometry> {
+    const anyMarkerStyles = state.stylesOnLayer.filter(
+        styleOnLayer => styleOnLayer.style.drawMarker == true && isVisibleAtZoom(styleOnLayer, state.zoom)
+    ).length > 0;
+    // Style on a copy: the style functions write metadata (e.g., __circleOptions) onto feature properties,
+    // which would otherwise leak into later redraws of the source data.
+    return L.geoJSON(structuredClone(sourceGeoJson), {
         renderer: L.canvas(),
         style: getPolygonStyleFunc(state),
         pointToLayer: getPointStyleFunc(baseMediaUrl, state),
         onEachFeature: (feature, layer) => {
 
-            const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer);
+            const appliedStyles = getAppliedStyles(feature, state.stylesOnLayer, state.zoom);
             const [popupTemplate, popupPermanent] = getPopupTemplate(appliedStyles);
             const popupMetadata = getPopupMetadata(feature, popupTemplate, popupPermanent);
             bindPopupFromMetadata(layer, popupMetadata);
@@ -786,15 +876,6 @@ function drawMapPreview(map: L.Map, state: MapPreviewState, update: MapPreviewUp
             }
         },
     });
-    state.currentLayer = styledGeoJsonData;
-    styledGeoJsonData.addTo(map)
-    hideSpinner();
-    state.isUpdating = false;
-
-    // Save serialized leaflet json to a hidden field so it can be saved on the Layer model
-    const hiddenField = expectEl("id_serialized_leaflet_json") as HTMLInputElement;
-    hiddenField.value = serializeLayer(state);
-
 }
 
 /**
@@ -921,6 +1002,18 @@ const initStyleUpdateTriggers = (subscriberManager: DynamicSubscriberManager, ma
     subscriberManager.subscribeEventListener("input", "input[id*='-offset_x']", (e) => throttledStyleUpdate.trigger());
     subscriberManager.subscribeEventListener("input", "input[id*='-offset_y']", (e) => throttledStyleUpdate.trigger());
     subscriberManager.subscribeEventListener("input", "input[id*='-opacity']", (e) => throttledStyleUpdate.trigger());
+    subscriberManager.subscribeEventListener("input", "input[id$='-min_zoom']", () => throttledStyleUpdate.trigger());
+    subscriberManager.subscribeEventListener("input", "input[id$='-max_zoom']", () => throttledStyleUpdate.trigger());
+
+    // Redraw when zooming the map crosses a style's min / max zoom boundary.
+    map.on("zoomend", () => {
+        if (mapPreviewState.isUpdating || mapPreviewState.currentLayer === null) {
+            return;
+        }
+        if (visibleStylesKey(mapPreviewState.stylesOnLayer, map.getZoom()) !== mapPreviewState.visibleStylesKey) {
+            drawMapPreview(map, mapPreviewState, { type: "Style", newStylesOnLayers: mapPreviewState.stylesOnLayer } as StyleUpdate);
+        }
+    });
 
     // 2. Summernote editors
     // 
@@ -995,8 +1088,11 @@ document.addEventListener("DOMContentLoaded", () => {
             isUpdating: true,
             stylesOnLayer: [],
             currentLayer: null,
+            sourceGeoJson: null,
             centroidMarkers: new L.LayerGroup(),
             centroidTooltips: new L.LayerGroup(),
+            zoom: null,
+            visibleStylesKey: "",
         };
         mapPreviewState.centroidMarkers.addTo(map);
         mapPreviewState.centroidTooltips.addTo(map);
