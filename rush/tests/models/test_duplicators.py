@@ -598,6 +598,8 @@ def test_layer_duplicator_copies_styles_on_layer_data_by_value():
             "feature_mapping",
             "popup",
             "popup_permanent",
+            "min_zoom",
+            "max_zoom",
         )
         .order_by("display_order")
     ]
@@ -663,6 +665,8 @@ def test_layer_duplicator_copies_tooltip_data_by_value():
             "style_on_layer__feature_mapping",
             "style_on_layer__popup",
             "style_on_layer__popup_permanent",
+            "style_on_layer__min_zoom",
+            "style_on_layer__max_zoom",
         )
         .order_by("style_on_layer__display_order")
     ]

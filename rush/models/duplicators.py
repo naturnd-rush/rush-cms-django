@@ -206,6 +206,8 @@ class LayerDuplicator(DuplicatorBase):
                 feature_mapping=styles_on_layer.feature_mapping,
                 popup=styles_on_layer.popup,
                 popup_permanent=styles_on_layer.popup_permanent,
+                min_zoom=styles_on_layer.min_zoom,
+                max_zoom=styles_on_layer.max_zoom,
             )
 
             # create double-related tooltip (if it exists)

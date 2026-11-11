@@ -278,6 +278,8 @@ class StylesOnLayersType(DjangoObjectType):
             "display_order",
             "style",
             "layer",
+            "min_zoom",
+            "max_zoom",
         ]
 
     legend_description = graphene.String()

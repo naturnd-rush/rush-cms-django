@@ -443,6 +443,8 @@ def create_test_styles_on_layer(
     feature_mapping="true",
     popup="<h1>Popup text!</h1>",
     popup_permanent=True,
+    min_zoom=3,
+    max_zoom=18,
     tooltip: None | Callable[[StylesOnLayer], Tooltip] = DEFAULT_TOOLTIP_PROVIDER,
 ) -> StylesOnLayer:
     style = style if not isinstance(style, Callable) else style()
@@ -459,6 +461,8 @@ def create_test_styles_on_layer(
         feature_mapping=feature_mapping,
         popup=popup,
         popup_permanent=popup_permanent,
+        min_zoom=min_zoom,
+        max_zoom=max_zoom,
     )
     # by default we add a tooltip, but it can also be set to None
     if tooltip is not None:
