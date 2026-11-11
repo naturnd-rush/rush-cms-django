@@ -343,11 +343,15 @@ class LayerAdmin(  # type: ignore
             score_cutoff=self.FUZZY_SEARCH_SCORE_CUTOFF,
             limit=None,
         )
-        scores = [When(id=layer_id, then=Value(score)) for _, score, layer_id in matches]
+        scores = [
+            When(id=layer_id, then=Value(score)) for _, score, layer_id in matches
+        ]
         queryset = queryset.filter(
             id__in=[layer_id for _, _, layer_id in matches]
         ).annotate(
-            fuzzy_search_score=Case(*scores, default=Value(0.0), output_field=FloatField())
+            fuzzy_search_score=Case(
+                *scores, default=Value(0.0), output_field=FloatField()
+            )
         )
         # List the best matches first, unless the user clicked a column header to sort by it.
         if ORDER_VAR not in request.GET:

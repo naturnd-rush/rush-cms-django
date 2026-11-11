@@ -21,6 +21,7 @@ from rush.models.validators import (
     OGM_MAP_EXPLORE_RE,
 )
 from rush.utils import log_execution_time_with_result
+from django.db.models import F
 
 """
 The GraphQL Schema for RUSH models. For more information see: https://docs.graphene-python.org/projects/django/en/latest/.
@@ -765,7 +766,9 @@ class LayerSearchResultType(graphene.ObjectType):
     """
 
     layer = graphene.Field(LayerTypeWithoutSerializedLeafletJSON)
-    layer_title_score = graphene.Float(description="The rapidfuzz match score, from 0 to 100.")
+    layer_title_score = graphene.Float(
+        description="The rapidfuzz match score, from 0 to 100."
+    )
     legend_description_snippets = graphene.List(LayerSearchResultTextMatchSnippetType)
     question_tab_snippets = graphene.List(LayerSearchResultQuestionTabTextMatchSnippet)
 
@@ -945,7 +948,7 @@ class Query(graphene.ObjectType):
 
         # The way rapid fuzz works makes the really common search term "and," overpower other, more
         # important, contextual words. This is just a little hack to prevent that.
-        query = query.replace("and", "")
+        query = query.replace(" and ", "")
 
         def match_snippets(
             html: str, max_snippets: int
@@ -955,7 +958,9 @@ class Query(graphene.ObjectType):
             best matching first. Containment ignores case and punctuation.
             """
             words = BeautifulSoup(html, "html.parser").get_text(" ").split()
-            chunks = [" ".join(chunk) for chunk in batched(words, SNIPPET_WORD_CHUNK_SIZE)]
+            chunks = [
+                " ".join(chunk) for chunk in batched(words, SNIPPET_WORD_CHUNK_SIZE)
+            ]
             matches = [
                 LayerSearchResultTextMatchSnippetType(
                     snippet=chunk,
@@ -1002,7 +1007,13 @@ class Query(graphene.ObjectType):
                     question_tab=question_tab,
                     snippet=snippet,
                 )
-                for question_tab in layer.question_tabs.all()
+                for question_tab in models.QuestionTab.objects.filter(
+                    question__channels__in=scoped_channels,
+                    question__layer_groups__layers__layer__id__in=[x.id for x in layers],
+                )
+                .annotate(layer_id=F("question__layer_groups__layers__layer__id"))
+                .select_related("question")
+                .distinct()
                 for snippet in match_snippets(
                     question_tab.content, MAX_SNIPPETS_PER_QUESTION_TAB
                 )
