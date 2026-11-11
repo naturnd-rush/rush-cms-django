@@ -64,10 +64,22 @@ class StylesOnLayerInlineForm(forms.ModelForm):
             "popup",
             "popup_strict_clean",
             "popup_permanent",
+            "min_zoom",
+            "max_zoom",
         ]
         widgets = {
             "popup": SummernoteWidget(),
             "feature_mapping": forms.Textarea(attrs={"rows": 1, "cols": 50}),
+            "min_zoom": utils.SliderAndTextboxNumberInput(
+                min=models.StylesOnLayer.MIN_ZOOM,
+                max=models.StylesOnLayer.MAX_ZOOM,
+                step=1,
+            ),
+            "max_zoom": utils.SliderAndTextboxNumberInput(
+                min=models.StylesOnLayer.MIN_ZOOM,
+                max=models.StylesOnLayer.MAX_ZOOM,
+                step=1,
+            ),
         }
 
     def _init_tooltip_fields(self) -> None:
