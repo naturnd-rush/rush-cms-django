@@ -12,7 +12,9 @@ from .models.helpers import (
 
 
 def _query(client: Client, query: str) -> dict:
-    response = client.post("/graphql/", {"query": query}, content_type="application/json")
+    response = client.post(
+        "/graphql/", {"query": query}, content_type="application/json"
+    )
     body = response.json()
     assert "errors" not in body, body
     return body["data"]
