@@ -1,5 +1,6 @@
 import json
 import logging
+from collections import defaultdict
 from typing import List
 from urllib.parse import urljoin
 from itertools import batched
@@ -21,7 +22,6 @@ from rush.models.validators import (
     OGM_MAP_EXPLORE_RE,
 )
 from rush.utils import log_execution_time_with_result
-from django.db.models import F
 
 """
 The GraphQL Schema for RUSH models. For more information see: https://docs.graphene-python.org/projects/django/en/latest/.
@@ -984,18 +984,31 @@ class Query(graphene.ObjectType):
             .distinct()
             .select_related("map_data")
             .defer("serialized_leaflet_json", "map_data___geojson")
-            .prefetch_related(
-                Prefetch(
-                    # only search question tabs that are visible on the requested channels
-                    "question_tabs",
-                    queryset=models.QuestionTab.objects.filter(
-                        question__channels__in=scoped_channels
-                    )
-                    .distinct()
-                    .select_related("question"),
-                )
-            )
         )
+
+        # Find which (channel-visible) questions each layer is on. DISTINCT here only covers two ids,
+        # instead of every QuestionTab + Question column (including the large tab content).
+        visible_question_ids = models.Question.objects.filter(
+            channels__in=scoped_channels
+        ).values("id")
+        question_ids_by_layer_id = defaultdict(set)
+        for layer_id, question_id in (
+            models.LayerOnLayerGroup.objects.filter(
+                layer_id__in=[layer.id for layer in layers],
+                layer_group_on_question__question_id__in=visible_question_ids,
+            )
+            .values_list("layer_id", "layer_group_on_question__question_id")
+            .distinct()
+        ):
+            question_ids_by_layer_id[layer_id].add(question_id)
+
+        # Fetch the question tabs for all those questions in a single query.
+        question_tabs_by_question_id = defaultdict(list)
+        for question_tab in models.QuestionTab.objects.filter(
+            question_id__in=set().union(*question_ids_by_layer_id.values())
+        ).select_related("question"):
+            question_tabs_by_question_id[question_tab.question_id].append(question_tab)
+
         results = []
         for layer in layers:
             title_score = rapidfuzz.fuzz.WRatio(
@@ -1009,13 +1022,8 @@ class Query(graphene.ObjectType):
                     question_tab=question_tab,
                     snippet=snippet,
                 )
-                for question_tab in models.QuestionTab.objects.filter(
-                    question__channels__in=scoped_channels,
-                    question__layer_groups__layers__layer__id__in=[x.id for x in layers],
-                )
-                .annotate(layer_id=F("question__layer_groups__layers__layer__id"))
-                .select_related("question")
-                .distinct()
+                for question_id in question_ids_by_layer_id[layer.id]
+                for question_tab in question_tabs_by_question_id[question_id]
                 for snippet in match_snippets(
                     question_tab.content, MAX_SNIPPETS_PER_QUESTION_TAB
                 )
